@@ -804,7 +804,7 @@ def get_problem(mover):
 	pstats.Stats(pr).sort_stats('cumtime').print_stats()
 
 	set_obj_xytheta(get_body_xytheta(mover.objects[0]), mover.objects[0])
-	action = Operator('two_arm_pick_two_arm_place', {'object': mover.objects[0]})
+	action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': mover.objects[0].GetName(), 'two_arm_place_region': mover.regions['loading_region']})
 	pr = cProfile.Profile()
 	pr.enable()
 	nextstate = PaPState(mover, goal, state, action)
@@ -818,6 +818,7 @@ def get_problem(mover):
 	from learn.data_traj import extract_example, extract_individual_example
 	from learn.model import Model
 	from learn.gnn import GNN
+	from learn.pap_gnn import PaPGNN
 	import collections
 	mconfig_type = collections.namedtuple('mconfig_type', 'operator n_msg_passing n_layers num_fc_layers n_hidden no_goal_nodes top_k optimizer lr use_mse batch_size seed num_train val_portion num_test mse_weight diff_weight_msg_passing same_vertex_model weight_initializer loss')
 	pick_mconfig = mconfig_type(
@@ -868,18 +869,45 @@ def get_problem(mover):
 		weight_initializer='glorot_uniform',
 		loss=config.loss,
 	)
+	pap_mconfig = mconfig_type(
+		operator = 'two_arm_pick_two_arm_place',
+		n_msg_passing = 0,
+		n_layers = 2,
+		num_fc_layers = 2,
+		n_hidden = 32,
+		no_goal_nodes = False,
+
+		top_k = 3,
+		optimizer = 'adam',
+		lr = 1e-4,
+		use_mse = True,
+
+		batch_size='32',
+		seed=0,
+		num_train=2561,
+		val_portion=.1,
+		num_test=600,
+		mse_weight=.2,
+		diff_weight_msg_passing=False,
+		same_vertex_model=False,
+		weight_initializer='glorot_uniform',
+		loss=config.loss,
+	)
 	num_entities = 11
-	num_node_features = 11
-	num_edge_features = 2
+	num_node_features = 10
+	num_edge_features = 16
 	entity_names = list(state.nodes.keys())
-	with tf.variable_scope('pick'):
-		#pick_model = Model(num_entities, num_node_features, num_edge_features, 1, pick_mconfig)
-		pick_model = GNN(num_entities, num_node_features, num_edge_features, pick_mconfig, entity_names)
-	pick_model.load_weights()
-	with tf.variable_scope('place'):
-		#place_model = Model(num_entities, num_node_features, num_edge_features, 1, place_mconfig)
-		place_model = GNN(num_entities, num_node_features, num_edge_features, place_mconfig, entity_names)
-	place_model.load_weights()
+	#with tf.variable_scope('pick'):
+	#	#pick_model = Model(num_entities, num_node_features, num_edge_features, 1, pick_mconfig)
+	#	pick_model = GNN(num_entities, num_node_features, num_edge_features, pick_mconfig, entity_names)
+	#pick_model.load_weights()
+	#with tf.variable_scope('place'):
+	#	#place_model = Model(num_entities, num_node_features, num_edge_features, 1, place_mconfig)
+	#	place_model = GNN(num_entities, num_node_features, num_edge_features, place_mconfig, entity_names)
+	#place_model.load_weights()
+	with tf.variable_scope('pap'):
+		pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names)
+	pap_model.load_weights()
 
 	pnodes = tf.placeholder(tf.float32, (1, num_entities, num_node_features))
 	pedges = tf.placeholder(tf.float32, (1, num_entities, num_entities, num_edge_features))
@@ -914,6 +942,12 @@ def get_problem(mover):
 			return -place_model.predict(state, action) + (2 if state.edges[(o,'home_region')][1] else 0) - sum(state.edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
 			#return -place_model.sess.run(eval_place_model, {pnodes: nodes, pedges: edges, paction_params: action_params}) + (2 if state.edges[(o,'home_region')][1] else 0) - sum(state.edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
 			#return -place_model.sess.run(eval_place_model, {pnodes: [nodes], pedges: [edges], paction_params: [action_params]}) + (2 if state.edges[(o,'home_region')][1] else 0) - sum(state.edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
+		elif action.type == 'two_arm_pick_two_arm_place':
+			o = action.discrete_parameters['two_arm_place_object']
+			r = action.discrete_parameters['two_arm_place_region'].name
+			nodes, edges, actions, _ = extract_individual_example(state, action)
+			nodes = nodes[...,6:]
+			return -pap_model.predict_with_raw_input_format(nodes[None,...], edges[None,...], actions[None,...]) #+ (2 if state.binary_edges[(o,'home_region')][1] else 0) - sum(state.binary_edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
 		else:
 			assert False
 
@@ -1015,8 +1049,10 @@ def get_problem(mover):
 	action_queue = Queue.PriorityQueue() # (heuristic, nan, operator skeleton, state. trajectory)
 	initnode = Node(None, None, state)
 	for o in obj_names:
-		action = Operator('two_arm_pick', {'object': o})
-		action_queue.put((heuristic(state, action), float('nan'), action, initnode))
+		#action = Operator('two_arm_pick', {'object': o})
+		for r in ('home_region', 'loading_region'):
+			action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': mover.regions[r]})
+			action_queue.put((heuristic(state, action), float('nan'), action, initnode))
 	iter = 0
 	while True:
 		iter += 1
@@ -1251,6 +1287,162 @@ def get_problem(mover):
 				for o in obj_names:
 					newaction = Operator('two_arm_pick', {'object': o})
 					action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
+
+				break
+
+		elif action.type == 'two_arm_pick_two_arm_place':
+			o = action.discrete_parameters['two_arm_place_object']
+			obj = mover.env.GetKinBody(o)
+
+			old_q = get_body_xytheta(mover.robot)
+			old_p = get_body_xytheta(obj)
+
+			for _ in range(10):
+				pick_action = None
+				mover.enable_objects_in_region('entire_region')
+				for _ in range(10):
+					a = ps.predict(obj, mover.regions['entire_region'], 10)
+					if a['base_pose'] is not None:
+						pick_action = a
+						break
+						#set_robot_config(q, mover.robot)
+						#if not mover.env.CheckCollision(mover.robot):
+						#	print('free pick')
+						#	pick_action = action
+						#	break
+
+				if pick_action is None:
+					print('pick_action is None')
+					set_robot_config(old_q, mover.robot)
+					set_obj_xytheta(old_p, obj)
+					continue
+
+				start_neighbors = {
+					i for i,q in enumerate(prm_vertices)
+					if np.linalg.norm((q - old_q)[:2]) < .8
+				}
+				pick_neighbors = {
+					i for i,q in enumerate(prm_vertices)
+					if np.linalg.norm((q - pick_action['base_pose'])[:2]) < .8
+				}
+				if np.linalg.norm((pick_action['base_pose'] - old_q)[:2]) < .8:
+					pick_traj = []
+				else:
+					pick_traj = dfs(start_neighbors, lambda i: i in pick_neighbors, lambda i: collide(i))
+
+				if pick_traj is None:
+					print('pick_traj is None')
+					set_robot_config(old_q, mover.robot)
+					set_obj_xytheta(old_p, obj)
+					continue
+
+				set_robot_config(pick_action['base_pose'], mover.robot)
+				#grab_obj(obj)
+				#newstate = PaPState(mover, goal, state, action)
+				#newstate.make_pklable()
+				#release_obj()
+				#pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
+				#action.set_continuous_parameters(pick_action)
+				#newnode = Node(node, action, newstate)
+
+				#success = True
+
+				#for r in ('home_region', 'loading_region'):
+				#	newaction = Operator('two_arm_place', {'object': o, 'region': mover.regions[r]})
+				#	action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth - 0., float('nan'), newaction, newnode))
+
+			r = action.discrete_parameters['two_arm_place_region'].name
+			o = action.discrete_parameters['two_arm_place_object']
+			obj = mover.env.GetKinBody(o)
+
+			old_q = get_body_xytheta(mover.robot)
+			old_p = get_body_xytheta(obj)
+
+			for _ in range(10):
+				place_action = None
+				mover.enable_objects_in_region('entire_region')
+				for _ in range(10):
+					grab_obj(obj)
+					a = pls.predict(obj, mover.regions[r], 10)
+					if len(mover.robot.GetGrabbed()) > 0:
+						release_obj()
+					q = a['base_pose']
+					p = a['object_pose']
+					if q is not None and p is not None:
+						#set_robot_config(q, mover.robot)
+						#set_obj_xytheta(p, obj)
+						#if not mover.env.CheckCollision(mover.robot) and not mover.env.CheckCollision(obj):
+						if True:
+							place_action = a
+							break
+				set_robot_config(old_q, mover.robot)
+
+				if place_action is None:
+					print('place_action is None')
+					set_robot_config(old_q, mover.robot)
+					set_obj_xytheta(old_p, obj)
+					continue
+
+				#grab_obj(mover.robot, obj)
+				set_obj_xytheta([1000,1000,0], obj)
+				pick_neighbors = {
+					i for i,q in enumerate(prm_vertices)
+					if np.linalg.norm((q - old_q)[:2]) < .8
+				}
+				place_neighbors = {
+					i for i,q in enumerate(prm_vertices)
+					if np.linalg.norm((q - place_action['base_pose'])[:2]) < .8
+				}
+				if np.linalg.norm((place_action['base_pose'] - old_q)[:2]) < .8:
+					place_traj = []
+				else:
+					place_traj = dfs(list(pick_neighbors), lambda i: i in place_neighbors, lambda i: collide(i))
+				#release_obj(mover.robot, obj)
+
+				if place_traj is None:
+					print('place_traj is None')
+					set_robot_config(old_q, mover.robot)
+					set_obj_xytheta(old_p, obj)
+					continue
+
+				#newplan = copy.deepcopy(plan)
+				#state.make_pklable()
+				#newplan.append((o, r, pick_action['base_pose'], place_action['base_pose'], place_action['object_pose'],
+				#	[get_body_xytheta(mover.robot)] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']],
+				#	[pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']],
+				#copy.deepcopy(state)))
+				#state.make_plannable(mover)
+				#print('action successful')
+				#print(newplan[-1][:5])
+				success = True
+
+				set_robot_config(place_action['base_pose'], mover.robot)
+				set_obj_xytheta(place_action['object_pose'], obj)
+				newstate = PaPState(mover, goal, node.state, action)
+				newstate.make_pklable()
+				place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
+				action.set_continuous_parameters(place_action)
+				newnode = Node(node, action, newstate)
+
+
+				if all(mover.regions['home_region'].contains_point(get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in obj_names[:num_objects]):
+					print("found successful plan: {}".format(num_objects))
+					trajectory = Trajectory()
+					plan = list(newnode.backtrack())[::-1]
+					trajectory.states = [nd.state for nd in plan]
+					trajectory.actions = [nd.action for nd in plan[1:]]
+					trajectory.rewards = [nd.reward for nd in plan[1:]]
+					trajectory.state_prime = [nd.state for nd in plan[1:]]
+					trajectory.seed = mover.seed
+					print(trajectory)
+					if len(mover.robot.GetGrabbed()) > 0:
+						release_obj()
+					return trajectory, iter
+
+				for o in obj_names:
+					for r in ('home_region', 'loading_region'):
+						newaction = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': mover.regions[r]})
+						action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
 
 				break
 

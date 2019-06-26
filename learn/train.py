@@ -69,8 +69,9 @@ def train(config):
     nodes, edges, actions, costs = data_traj.load_data(
         './test_results/hpn_results_on_mover_domain/1/trajectory_data//',
         desired_operator_type=config.operator)
-    num_training = min(config.num_train, len(nodes))
+
     num_test = min(config.num_test, len(nodes))
+    num_training = min(config.num_train, len(nodes) - num_test)
     config.num_train = num_training
     config.num_test = num_test
     nodes = nodes[:, :, 6:]
