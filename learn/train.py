@@ -67,8 +67,9 @@ def train(config):
     seed = config.seed
 
     nodes, edges, actions, costs = data_traj.load_data(
-        '../tamp-qlearning/test_results/hpn_results_on_mover_domain/1/trajectory_data//',
+        './test_results/hpn_results_on_mover_domain/1/trajectory_data//',
         desired_operator_type=config.operator)
+    import pdb;pdb.set_trace()
     num_training = min(config.num_train, len(nodes))
     num_test = min(config.num_test, len(nodes))
     config.num_train = num_training
@@ -77,7 +78,6 @@ def train(config):
     m = create_gnn_model(nodes, edges, config)
     callbacks = create_callbacks(m.weight_file_name)
     training_inputs, training_targets = create_train_data(nodes, edges, actions, costs, num_training)
-
     tnodes = nodes[-num_test:]
     tedges = edges[-num_test:]
     tactions = actions[-num_test:]
