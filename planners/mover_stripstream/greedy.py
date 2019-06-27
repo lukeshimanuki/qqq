@@ -35,7 +35,7 @@ from trajectory_representation.shortest_path_pick_and_place_state import Shortes
 from trajectory_representation.minimum_constraint_pick_and_place_state import MinimiumConstraintPaPState
 from trajectory_representation.trajectory import Trajectory
 
-from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_place_object, get_body_xytheta, grab_obj, release_obj
+from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, two_arm_place_object, get_body_xytheta, grab_obj, release_obj, fold_arms
 
 from motion_planner import rrt_region
 
@@ -1116,15 +1116,15 @@ def get_problem(mover):
 				#	obj = mover.env.GetKinBody(holding)
 				#	old_p = get_body_xytheta(obj)
 				#	grab_obj(mover.robot, obj)
-				old_q = get_body_xytheta(mover.robot)
+				#old_q = get_body_xytheta(mover.robot)
 				set_robot_config(q, mover.robot)
-				if mover.env.CheckCollision(mover.robot):# or holding is not None and mover.env.CheckCollision(obj):
-					set_robot_config(old_q, mover.robot)
+				if mover.env.CheckCollision(mover.robot) or holding is not None and mover.env.CheckCollision(holding):
+					#set_robot_config(old_q, mover.robot)
 					#if holding is not None:
 					#	set_obj_xytheta(old_p, obj)
 					#	release_obj(mover.robot, obj)
 					return True
-				set_robot_config(old_q, mover.robot)
+				#set_robot_config(old_q, mover.robot)
 				#if holding is not None:
 				#	set_obj_xytheta(old_p, obj)
 				#	release_obj(mover.robot, obj)
@@ -1358,7 +1358,7 @@ def get_problem(mover):
 					set_obj_xytheta(old_p, obj)
 					continue
 
-				set_robot_config(pick_action['base_pose'], mover.robot)
+				#set_robot_config(pick_action['base_pose'], mover.robot)
 				#grab_obj(obj)
 				#newstate = PaPState(mover, goal, state, action)
 				#newstate.make_pklable()
@@ -1382,17 +1382,25 @@ def get_problem(mover):
 			o = action.discrete_parameters['two_arm_place_object']
 			obj = mover.env.GetKinBody(o)
 
-			old_q = get_body_xytheta(mover.robot)
-			old_p = get_body_xytheta(obj)
+			#old_q = get_body_xytheta(mover.robot)
+			#old_p = get_body_xytheta(obj)
+
+			success = False
+
+			def reset_for_place():
+				if len(mover.robot.GetGrabbed()) > 0:
+					release_obj()
+				fold_arms()
+				set_robot_config(old_q, mover.robot)
+				set_obj_xytheta(old_p, obj)
+				two_arm_pick_object(obj, pick_action)
 
 			for _ in range(10):
 				place_action = None
 				mover.enable_objects_in_region('entire_region')
 				for _ in range(10):
-					grab_obj(obj)
+					reset_for_place()
 					a = pls.predict(obj, mover.regions[r], 10)
-					if len(mover.robot.GetGrabbed()) > 0:
-						release_obj()
 					q = a['base_pose']
 					p = a['object_pose']
 					if q is not None and p is not None:
@@ -1402,34 +1410,60 @@ def get_problem(mover):
 						if True:
 							place_action = a
 							break
-				set_robot_config(old_q, mover.robot)
+
+				#set_robot_config(old_q, mover.robot)
 
 				if place_action is None:
 					print('place_action is None')
-					set_robot_config(old_q, mover.robot)
-					set_obj_xytheta(old_p, obj)
+					#set_robot_config(old_q, mover.robot)
+					#set_obj_xytheta(old_p, obj)
 					continue
 
 				#grab_obj(mover.robot, obj)
-				set_obj_xytheta([1000,1000,0], obj)
+				#set_obj_xytheta([1000,1000,0], obj)
 				pick_neighbors = {
 					i for i,q in enumerate(prm_vertices)
-					if np.linalg.norm((q - old_q)[:2]) < .8
+					if np.linalg.norm((q - pick_action['base_pose'])[:2]) < .8
 				}
 				place_neighbors = {
 					i for i,q in enumerate(prm_vertices)
 					if np.linalg.norm((q - place_action['base_pose'])[:2]) < .8
 				}
-				if np.linalg.norm((place_action['base_pose'] - old_q)[:2]) < .8:
+				if np.linalg.norm((place_action['base_pose'] - pick_action['base_pose'])[:2]) < .8:
 					place_traj = []
 				else:
-					place_traj = dfs(list(pick_neighbors), lambda i: i in place_neighbors, lambda i: collide(i))
+					set_robot_config(old_q, mover.robot)
+					set_obj_xytheta(old_p, obj)
+					two_arm_pick_object(obj, pick_action)
+					if mover.env.CheckCollision(mover.robot) or mover.env.CheckCollision(obj):
+						print('pick in collision')
+						two_arm_place_object(place_action)
+						continue
+					place_traj = dfs(list(pick_neighbors), lambda i: i in place_neighbors, lambda i: collide(i, holding=obj))
+					assert len(mover.robot.GetGrabbed()) > 0
+					if place_traj is not None:
+						for i in place_traj:
+							if collide(i, holding=obj):
+								print('in collision: {}'.format(i))
+								import pdb; pdb.set_trace()
+
+							set_robot_config(prm_vertices[i], mover.robot)
+
+							if mover.env.CheckCollision(mover.robot):
+								import pdb; pdb.set_trace()
+							for objj in mover.objects:
+								if mover.env.CheckCollision(objj):
+									import pdb; pdb.set_trace()
+					two_arm_place_object(place_action)
+					if mover.env.CheckCollision(mover.robot) or mover.env.CheckCollision(obj):
+						print('place in collision')
+						continue
 				#release_obj(mover.robot, obj)
 
 				if place_traj is None:
 					print('place_traj is None')
-					set_robot_config(old_q, mover.robot)
-					set_obj_xytheta(old_p, obj)
+					#set_robot_config(old_q, mover.robot)
+					#set_obj_xytheta(old_p, obj)
 					continue
 
 				#newplan = copy.deepcopy(plan)
@@ -1443,12 +1477,30 @@ def get_problem(mover):
 				#print(newplan[-1][:5])
 				success = True
 
-				set_robot_config(place_action['base_pose'], mover.robot)
-				set_obj_xytheta(place_action['object_pose'], obj)
+				#set_robot_config(place_action['base_pose'], mover.robot)
+				#set_obj_xytheta(place_action['object_pose'], obj)
+				place_action['path'] = [pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
+				action.set_continuous_parameters((pick_action, place_action))
+
+				set_robot_config(old_q, mover.robot)
+				set_obj_xytheta(old_p, obj)
+				two_arm_pick_object(obj, pick_action)
+				for q in place_action['path']:
+					#if collide(i, holding=obj):
+					#	print('in collision: {}'.format(i))
+					#	import pdb; pdb.set_trace()
+
+					set_robot_config(q, mover.robot)
+
+					if mover.env.CheckCollision(mover.robot):
+						import pdb; pdb.set_trace()
+					for objj in mover.objects:
+						if mover.env.CheckCollision(objj):
+							import pdb; pdb.set_trace()
+				two_arm_place_object(place_action)
+
 				newstate = ShortestPathPaPState(mover, goal, node.state, action)
 				newstate.make_pklable()
-				place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
-				action.set_continuous_parameters((pick_action, place_action))
 				newnode = Node(node, action, newstate)
 
 
@@ -1462,8 +1514,8 @@ def get_problem(mover):
 					trajectory.state_prime = [nd.state for nd in plan[1:]]
 					trajectory.seed = mover.seed
 					print(trajectory)
-					if len(mover.robot.GetGrabbed()) > 0:
-						release_obj()
+					#if len(mover.robot.GetGrabbed()) > 0:
+					#	release_obj()
 					return trajectory, iter
 
 				for o in obj_names:
@@ -1771,7 +1823,7 @@ def generate_training_data_single(seed, examples):
 	print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
 	mover.reset_to_init_state_stripstream()
-	if config.simulate:
+	if not config.dontsimulate:
 		if config.visualize_sim:
 			mover.env.SetViewer('qtcoin')
 			set_viewer_options(mover.env)
@@ -1822,9 +1874,18 @@ def generate_training_data_single(seed, examples):
 							collision = True
 					if collision:
 						print('collision')
+						if config.visualize_sim:
+							raw_input('Continue after collision?')
 				check_collisions()
 				o = action.discrete_parameters['two_arm_place_object']
 				pick_params, place_params = action.continuous_parameters
+
+				full_path = [get_body_xytheta(mover.robot)[0]] + pick_params['path'] + [pick_params['base_pose']] + place_params['path'] + [place_params['base_pose']]
+				for i,(q1, q2) in enumerate(zip(full_path[:-1], full_path[1:])):
+					if np.linalg.norm(np.squeeze(q1)[:2] - np.squeeze(q2)[:2]) > 1:
+						print(i, q1, q2)
+						import pdb; pdb.set_trace()
+
 				pickq = pick_params['base_pose']
 				pickt = pick_params['path']
 				check_collisions(pickq)
@@ -1834,12 +1895,13 @@ def generate_training_data_single(seed, examples):
 				if len(pickt) > 0:
 					for q1, q2 in zip(pickt[:-1], pickt[1:]):
 						handles.append(draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
-				set_robot_config(pickq, mover.robot)
+				#set_robot_config(pickq, mover.robot)
+				#if config.visualize_sim:
+				#	raw_input('Continue?')
+				#set_obj_xytheta([1000,1000,0], obj)
+				two_arm_pick_object(obj, pick_params)
 				if config.visualize_sim:
-					raw_input('Continue?')
-				set_obj_xytheta([1000,1000,0], obj)
-				if config.visualize_sim:
-					raw_input('Continue?')
+					raw_input('Place?')
 
 				o = action.discrete_parameters['two_arm_place_object']
 				r = action.discrete_parameters['two_arm_place_region']
@@ -1853,10 +1915,11 @@ def generate_training_data_single(seed, examples):
 				if len(placet) > 0:
 					for q1, q2 in zip(placet[:-1], placet[1:]):
 						handles.append(draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
-				set_robot_config(placeq, mover.robot)
-				if config.visualize_sim:
-					raw_input('Continue?')
-				set_obj_xytheta(placep, obj)
+				#set_robot_config(placeq, mover.robot)
+				#if config.visualize_sim:
+				#	raw_input('Continue?')
+				#set_obj_xytheta(placep, obj)
+				two_arm_place_object(place_params)
 				if config.visualize_sim:
 					raw_input('Continue?')
 
@@ -1936,10 +1999,10 @@ if __name__ == '__main__':
 	parser.add_argument('-seed', type=int, default=0)
 	parser.add_argument('-train_seed', type=int, default=0)
 	parser.add_argument('-num_objects', type=int, default=1)
-	parser.add_argument('-visualize_plan', type=bool, default=False)
-	parser.add_argument('-visualize_sim', type=bool, default=False)
-	parser.add_argument('-simulate', type=bool, default=True)
-	parser.add_argument('-plan', type=bool, default=False)
+	parser.add_argument('-visualize_plan', action='store_true', default=False)
+	parser.add_argument('-visualize_sim', action='store_true', default=False)
+	parser.add_argument('-dontsimulate', action='store_true', default=False)
+	parser.add_argument('-plan', action='store_true', default=False)
 	parser.add_argument('-loss', type=str, default='largemargin')
 
 	config = parser.parse_args()
