@@ -897,7 +897,7 @@ def get_problem(mover):
 	)
 	num_entities = 11
 	num_node_features = 10
-	num_edge_features = 16
+	num_edge_features = 44
 	entity_names = list(state.nodes.keys())
 	#with tf.variable_scope('pick'):
 	#	#pick_model = Model(num_entities, num_node_features, num_edge_features, 1, pick_mconfig)
@@ -1811,10 +1811,25 @@ def generate_training_data_single(seed, examples):
 				if config.visualize_sim:
 					raw_input('Continue?')
 			elif action.type == 'two_arm_pick_two_arm_place':
+				def check_collisions(q=None):
+					if q is not None:
+						set_robot_config(q, mover.robot)
+					collision = False
+					if mover.env.CheckCollision(mover.robot):
+						collision = True
+					for obj in mover.objects:
+						if mover.env.CheckCollision(obj):
+							collision = True
+					if collision:
+						print('collision')
+				check_collisions()
 				o = action.discrete_parameters['two_arm_place_object']
 				pick_params, place_params = action.continuous_parameters
 				pickq = pick_params['base_pose']
 				pickt = pick_params['path']
+				check_collisions(pickq)
+				for q in pickt:
+					check_collisions(q)
 				obj = mover.env.GetKinBody(o)
 				if len(pickt) > 0:
 					for q1, q2 in zip(pickt[:-1], pickt[1:]):
@@ -1831,6 +1846,9 @@ def generate_training_data_single(seed, examples):
 				placeq = place_params['base_pose']
 				placep = place_params['object_pose']
 				placet = place_params['path']
+				check_collisions(placeq)
+				for q in placet:
+					check_collisions(q)
 				obj = mover.env.GetKinBody(o)
 				if len(placet) > 0:
 					for q1, q2 in zip(placet[:-1], placet[1:]):
@@ -1841,6 +1859,8 @@ def generate_training_data_single(seed, examples):
 				set_obj_xytheta(placep, obj)
 				if config.visualize_sim:
 					raw_input('Continue?')
+
+				check_collisions()
 			else:
 				assert False
 
