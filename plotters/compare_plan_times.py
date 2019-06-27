@@ -6,6 +6,7 @@ import numpy as np
 def get_plan_times(test_dir, test_files, t_limit):
     successes = []
     time_taken = []
+    print "Getting test stats from %d files in %s" % (len(test_files), test_dir)
     for filename in test_files:
         stat = pickle.load(open(test_dir + filename, 'r'))
         time_taken.append(stat['time_taken'])
@@ -13,11 +14,11 @@ def get_plan_times(test_dir, test_files, t_limit):
             successes.append(stat['found_solution'])
         else:
             successes.append(False)
+        print filename, stat['time_taken']
 
     CI95 = 1.96 * np.std(time_taken) / np.sqrt(len(time_taken))
     print "Time taken %.3f +- %.3f" % (np.mean(time_taken), CI95)
     print "Success rate %.3f" % np.mean(successes)
-    import pdb;pdb.set_trace()
 
 
 def main():

@@ -391,13 +391,10 @@ def prm_connect(q1, q2, distance, sample, extend, collision_checker, iterations)
             return None
 
         if is_multiple_goals:
-            q2 = [q_goal for q_goal in q2] # make a copy
-            for q_goal_idx, q_goal in enumerate(q2):
-                if non_prm_config_collision_checker(q_goal):
-                    del q2[q_goal_idx]
+            q2_original = q2
+            q2 = [q_goal for q_goal in q2_original if not non_prm_config_collision_checker(q_goal)]
 
             if len(q2) == 0:
-                #print "all goal configs in collision"
                 return None
 
     if is_single_goal and are_base_confs_close_enough(q1, q2, xy_threshold=0.8, th_threshold=50.):

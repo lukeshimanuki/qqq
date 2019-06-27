@@ -2,7 +2,7 @@ import numpy as np
 
 
 def upper_confidence_bound(n, n_sa):
-    return 2 * np.sqrt(np.log(n+1) / float(n_sa+1))
+    return 2 * np.sqrt(n+1) / float(n_sa + 1)
 
 
 class TreeNode:
@@ -71,8 +71,6 @@ class TreeNode:
 
         return max_child
 
-
-
     def choose_new_arm(self):
         new_arm = self.A[-1]  # what to do if the new action is not a feasible one?
         is_new_arm_feasible = np.max(self.reward_history[new_arm]) > -2
@@ -106,7 +104,7 @@ class TreeNode:
 
     def is_action_tried(self, action):
         return action in self.children
-        #return action in self.Q.keys()
+        # return action in self.Q.keys()
 
     def update_node_statistics(self, action, sum_rewards, reward):
         self.Nvisited += 1

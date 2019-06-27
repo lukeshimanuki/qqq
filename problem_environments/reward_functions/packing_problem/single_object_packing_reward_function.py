@@ -9,6 +9,7 @@ class ObjectPackingRewardFunction(RewardFunction):
         RewardFunction.__init__(self, problem_env)
         self.goal_objects = [self.problem_env.env.GetKinBody(obj_name) for obj_name in goal_objects]
         self.goal_region = self.problem_env.regions[goal_region]
+        self.achieved = []
         #set_color(self.goal_object, [1, 0, 0])
 
     def apply_operator_instance_and_get_reward(self, operator_instance, is_op_feasible):
@@ -25,10 +26,12 @@ class ObjectPackingRewardFunction(RewardFunction):
     def is_one_of_entities_in_goal_region(self, entity, prev_region=None):
         is_goal_entity = entity in self.goal_objects
         if is_goal_entity and self.goal_region.contains(entity.ComputeAABB()):
-            if prev_region is not None and prev_region != self.goal_region:
+            if (entity, self.goal_region) in self.achieved:
+                return False
+            else:
+                self.achieved.append((entity, self.goal_region))
                 return True
-            elif prev_region is None:
-                return True
+
         return False
 
     def apply_operator_skeleton_and_get_reward(self, operator_instance):

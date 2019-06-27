@@ -17,7 +17,7 @@ from mover_library.utils import visualize_path, two_arm_pick_object
 from manipulation.bodies.bodies import set_color
 
 from pick_and_place_state import PaPState
-
+import numpy as np
 
 class ShortestPathPaPState(PaPState):
     def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None):
@@ -115,31 +115,23 @@ class ShortestPathPaPState(PaPState):
         operator_skeleton.continuous_parameters['q_goal'] = motion_plan_goals  # to make it consistent with Dpl
         return operator_skeleton
 
+
     def set_cached_pick_paths(self, parent_state, moved_obj):
         motion_planner = BaseMotionPlanner(self.problem_env, 'prm')
         for obj, op_instance in self.pick_used.items():
             motion_plan_goals = op_instance.continuous_parameters['q_goal']
             assert len(motion_plan_goals) > 0
             self.cached_pick_paths[obj] = None
-            # parent_state_has_cached_path_for_obj \
-            #    = parent_state is not None and obj in parent_state.cached_pick_paths and obj != moved_obj
-            parent_state_has_cached_path_for_obj = False
-            if parent_state_has_cached_path_for_obj:
-                # todo this can be used only if we have not moved robot config very much
-                # path = parent_state.cached_pick_paths[obj]
-                pass
+
+            path, status = motion_planner.get_motion_plan(motion_plan_goals, cached_collisions=self.collides)
+            if status == 'HasSolution':
+                self.reachable_entities.append(obj)
             else:
-                # we have to do it anyways for checking reachability
-                path, status = motion_planner.get_motion_plan(motion_plan_goals, cached_collisions=self.collides)
-                if status == 'HasSolution':
-                    self.reachable_entities.append(obj)
-                else:
-                    path, _ = motion_planner.get_motion_plan(motion_plan_goals, cached_collisions={})
+                path, _ = motion_planner.get_motion_plan(motion_plan_goals, cached_collisions={})
 
             assert path is not None
             self.cached_pick_paths[obj] = path
             op_instance.low_level_motion = path
-            #op_instance.continuous_parameters['q_goal'] = self.cached_pick_paths[obj][-1] # I set it to a particular one - why? So that I can use setcachedplace
 
     def set_cached_place_paths(self, parent_state, moved_obj):
         motion_planner = BaseMotionPlanner(self.problem_env, 'prm')

@@ -47,28 +47,23 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
         q_vals = []
         for a in self.A:
             q_vals.append(self.Q[a])
-            """
             obj_name = a.discrete_parameters['object']
             region_name = a.discrete_parameters['region']
             print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f UCB? %.5f" \
                   % (obj_name, region_name, self.state.is_entity_reachable(obj_name),
                      obj_name in self.state.goal_entities, self.Q[a], self.compute_ucb_value(self.Q[a], a))
-            """
 
         best_action = self.get_action_with_highest_ucb_value(self.A, q_vals)  # but your Nsa are all zero?
         while self.is_action_redundant(best_action):
             self.N[best_action] += 1
             best_action = self.get_action_with_highest_ucb_value(self.A, q_vals)  # but your Nsa are all zero?
-            print 'Redundant action detected'
-            #import pdb;pdb.set_trace()
-        """
+            print 'Redundant action detecte'
         print "Chosen action", best_action.discrete_parameters['object'], best_action.discrete_parameters['region']
         print self.state.get_entities_in_pick_way('square_packing_box1')
         print self.state.get_entities_in_place_way('square_packing_box1', 'home_region')
         print self.state.get_entities_in_pick_way('rectangular_packing_box1')
         print self.state.get_entities_in_place_way('rectangular_packing_box1', 'home_region')
         import pdb;pdb.set_trace()
-        """
         return best_action
 
     def is_obj_currently_in_goal_region(self, obj):
@@ -90,7 +85,7 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
                                        and self.not_in_way_of_anything(obj_name)
         non_goal_not_in_way = not self.state.is_goal_entity(obj_name) and self.not_in_way_of_anything(obj_name)
 
-        return goal_achieved_and_not_in_way and non_goal_not_in_way
+        return goal_achieved_and_not_in_way or non_goal_not_in_way
 
 
 
