@@ -31,6 +31,7 @@ from operator_utils.grasp_utils import solveTwoArmIKs, compute_two_arm_grasp
 
 from trajectory_representation.operator import Operator
 from trajectory_representation.pick_and_place_state import PaPState
+from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
 from trajectory_representation.trajectory import Trajectory
 
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_place_object, get_body_xytheta, grab_obj, release_obj
@@ -798,16 +799,16 @@ def get_problem(mover):
 
 	pr = cProfile.Profile()
 	pr.enable()
-	state = PaPState(mover, goal)
+	state = ShortestPathPaPState(mover, goal)
 	pr.disable()
 	pstats.Stats(pr).sort_stats('tottime').print_stats()
 	pstats.Stats(pr).sort_stats('cumtime').print_stats()
 
 	set_obj_xytheta(get_body_xytheta(mover.objects[0]), mover.objects[0])
-	action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': mover.objects[0].GetName(), 'two_arm_place_region': mover.regions['loading_region']})
+	action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': mover.objects[0].GetName(), 'two_arm_place_region': 'loading_region'})
 	pr = cProfile.Profile()
 	pr.enable()
-	nextstate = PaPState(mover, goal, state, action)
+	nextstate = ShortestPathPaPState(mover, goal, state, action)
 	pr.disable()
 	pstats.Stats(pr).sort_stats('tottime').print_stats()
 	pstats.Stats(pr).sort_stats('cumtime').print_stats()
@@ -944,10 +945,10 @@ def get_problem(mover):
 			#return -place_model.sess.run(eval_place_model, {pnodes: [nodes], pedges: [edges], paction_params: [action_params]}) + (2 if state.edges[(o,'home_region')][1] else 0) - sum(state.edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
 		elif action.type == 'two_arm_pick_two_arm_place':
 			o = action.discrete_parameters['two_arm_place_object']
-			r = action.discrete_parameters['two_arm_place_region'].name
+			r = action.discrete_parameters['two_arm_place_region']
 			nodes, edges, actions, _ = extract_individual_example(state, action)
 			nodes = nodes[...,6:]
-			return -pap_model.predict_with_raw_input_format(nodes[None,...], edges[None,...], actions[None,...]) #+ (2 if state.binary_edges[(o,'home_region')][1] else 0) - sum(state.binary_edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
+			return -pap_model.predict_with_raw_input_format(nodes[None,...], edges[None,...], actions[None,...])# + (2 if state.binary_edges[(o,'home_region')][1] else 0) - sum(state.binary_edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
 		else:
 			assert False
 
@@ -1051,7 +1052,7 @@ def get_problem(mover):
 	for o in obj_names:
 		#action = Operator('two_arm_pick', {'object': o})
 		for r in ('home_region', 'loading_region'):
-			action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': mover.regions[r]})
+			action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
 			action_queue.put((heuristic(state, action), float('nan'), action, initnode))
 	iter = 0
 	while True:
@@ -1180,7 +1181,7 @@ def get_problem(mover):
 
 				set_robot_config(pick_action['base_pose'], mover.robot)
 				grab_obj(obj)
-				newstate = PaPState(mover, goal, state, action)
+				newstate = ShortestPathPaPState(mover, goal, state, action)
 				newstate.make_pklable()
 				release_obj()
 				pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
@@ -1190,7 +1191,7 @@ def get_problem(mover):
 				success = True
 
 				for r in ('home_region', 'loading_region'):
-					newaction = Operator('two_arm_place', {'object': o, 'region': mover.regions[r]})
+					newaction = Operator('two_arm_place', {'object': o, 'region': r})
 					action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth - 0., float('nan'), newaction, newnode))
 
 				break
@@ -1263,7 +1264,7 @@ def get_problem(mover):
 
 				set_robot_config(place_action['base_pose'], mover.robot)
 				set_obj_xytheta(place_action['object_pose'], obj)
-				newstate = PaPState(mover, goal, node.state, action)
+				newstate = ShortestPathPaPState(mover, goal, node.state, action)
 				newstate.make_pklable()
 				place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
 				action.set_continuous_parameters(place_action)
@@ -1272,7 +1273,7 @@ def get_problem(mover):
 
 				if all(mover.regions['home_region'].contains_point(get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in obj_names[:num_objects]):
 					print("found successful plan: {}".format(num_objects))
-					trajectory = Trajectory()
+					trajectory = Trajectory(mover.seed, mover.seed)
 					plan = list(newnode.backtrack())[::-1]
 					trajectory.states = [nd.state for nd in plan]
 					trajectory.actions = [nd.action for nd in plan[1:]]
@@ -1297,6 +1298,7 @@ def get_problem(mover):
 			old_q = get_body_xytheta(mover.robot)
 			old_p = get_body_xytheta(obj)
 
+			success = False
 			for _ in range(10):
 				pick_action = None
 				mover.enable_objects_in_region('entire_region')
@@ -1341,17 +1343,22 @@ def get_problem(mover):
 				#newstate = PaPState(mover, goal, state, action)
 				#newstate.make_pklable()
 				#release_obj()
-				#pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
+				pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
 				#action.set_continuous_parameters(pick_action)
 				#newnode = Node(node, action, newstate)
 
-				#success = True
+				success = True
 
 				#for r in ('home_region', 'loading_region'):
 				#	newaction = Operator('two_arm_place', {'object': o, 'region': mover.regions[r]})
 				#	action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth - 0., float('nan'), newaction, newnode))
 
-			r = action.discrete_parameters['two_arm_place_region'].name
+				break
+
+			if not success:
+				continue
+
+			r = action.discrete_parameters['two_arm_place_region']
 			o = action.discrete_parameters['two_arm_place_object']
 			obj = mover.env.GetKinBody(o)
 
@@ -1418,16 +1425,16 @@ def get_problem(mover):
 
 				set_robot_config(place_action['base_pose'], mover.robot)
 				set_obj_xytheta(place_action['object_pose'], obj)
-				newstate = PaPState(mover, goal, node.state, action)
+				newstate = ShortestPathPaPState(mover, goal, node.state, action)
 				newstate.make_pklable()
 				place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
-				action.set_continuous_parameters(place_action)
+				action.set_continuous_parameters((pick_action, place_action))
 				newnode = Node(node, action, newstate)
 
 
 				if all(mover.regions['home_region'].contains_point(get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in obj_names[:num_objects]):
 					print("found successful plan: {}".format(num_objects))
-					trajectory = Trajectory()
+					trajectory = Trajectory(mover.seed, mover.seed)
 					plan = list(newnode.backtrack())[::-1]
 					trajectory.states = [nd.state for nd in plan]
 					trajectory.actions = [nd.action for nd in plan[1:]]
@@ -1441,8 +1448,8 @@ def get_problem(mover):
 
 				for o in obj_names:
 					for r in ('home_region', 'loading_region'):
-						newaction = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': mover.regions[r]})
-						action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
+						newaction = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
+						action_queue.put((heuristic(newstate, newaction) - 0. * newnode.depth, float('nan'), newaction, newnode))
 
 				break
 
@@ -1717,7 +1724,7 @@ def generate_training_data_single(seed, examples):
 		plan_length = len(trajectory.actions) if success else 0
 
 		if not success:
-			trajectory = Trajectory()
+			trajectory = Trajectory(mover.seed, mover.seed)
 
 		trajectory.metrics = {
 			'num_objects': config.num_objects,
@@ -1771,6 +1778,37 @@ def generate_training_data_single(seed, examples):
 				placeq = action.continuous_parameters['base_pose']
 				placep = action.continuous_parameters['object_pose']
 				placet = action.continuous_parameters['path']
+				obj = mover.env.GetKinBody(o)
+				if len(placet) > 0:
+					for q1, q2 in zip(placet[:-1], placet[1:]):
+						handles.append(draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+				set_robot_config(placeq, mover.robot)
+				if config.visualize_sim:
+					raw_input('Continue?')
+				set_obj_xytheta(placep, obj)
+				if config.visualize_sim:
+					raw_input('Continue?')
+			elif action.type == 'two_arm_pick_two_arm_place':
+				o = action.discrete_parameters['two_arm_place_object']
+				pick_params, place_params = action.continuous_parameters
+				pickq = pick_params['base_pose']
+				pickt = pick_params['path']
+				obj = mover.env.GetKinBody(o)
+				if len(pickt) > 0:
+					for q1, q2 in zip(pickt[:-1], pickt[1:]):
+						handles.append(draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+				set_robot_config(pickq, mover.robot)
+				if config.visualize_sim:
+					raw_input('Continue?')
+				set_obj_xytheta([1000,1000,0], obj)
+				if config.visualize_sim:
+					raw_input('Continue?')
+
+				o = action.discrete_parameters['two_arm_place_object']
+				r = action.discrete_parameters['two_arm_place_region']
+				placeq = place_params['base_pose']
+				placep = place_params['object_pose']
+				placet = place_params['path']
 				obj = mover.env.GetKinBody(o)
 				if len(placet) > 0:
 					for q1, q2 in zip(placet[:-1], placet[1:]):

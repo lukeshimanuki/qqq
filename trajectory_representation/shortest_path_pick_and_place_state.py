@@ -28,11 +28,11 @@ class ShortestPathPaPState(PaPState):
         self.parent_ternary_predicates = {}
         self.parent_binary_predicates = {}
         if parent_state is not None:
-            moved_obj_type = type(parent_action.discrete_parameters['object'])
+            moved_obj_type = type(parent_action.discrete_parameters['two_arm_place_object'])
             if moved_obj_type == str or moved_obj_type == unicode:
-                moved_obj = parent_action.discrete_parameters['object']
+                moved_obj = parent_action.discrete_parameters['two_arm_place_object']
             else:
-                moved_obj = parent_action.discrete_parameters['object'].GetName()
+                moved_obj = parent_action.discrete_parameters['two_arm_place_object'].GetName()
             self.initialize_parent_predicates(moved_obj, parent_state, parent_action)
         else:
             moved_obj = None
@@ -111,7 +111,7 @@ class ShortestPathPaPState(PaPState):
                 break
         self.problem_env.enable_objects_in_region('entire_region')
 
-        assert len(motion_plan_goals) > 0
+        #assert len(motion_plan_goals) > 0 # if we can't find a pick pose then the object should be treated as unreachable
         operator_skeleton.continuous_parameters['q_goal'] = motion_plan_goals  # to make it consistent with Dpl
         return operator_skeleton
 
