@@ -147,9 +147,11 @@ def extract_file(filename, desired_operator_type='two_arm_pick'):
 
 # filename is a directory
 def load_data(dirname, desired_operator_type='two_arm_pick'):
-    cachefile = "{}.{}.pkl".format(dirname, desired_operator_type)
+    cachefile = "{}{}.pkl".format(dirname, desired_operator_type)
+    import pdb;pdb.set_trace()
     if os.path.isfile(cachefile):
         print "Loading the cached file:", cachefile
+        import pdb;pdb.set_trace()
         return pickle.load(open(cachefile, 'rb'))
 
     print "Caching file..."
