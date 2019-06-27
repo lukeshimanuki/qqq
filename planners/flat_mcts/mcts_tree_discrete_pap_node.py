@@ -37,15 +37,19 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
             self.Q[a] = self.q_function.predict(self.state, a)[0]
             self.learned_q[a] = self.q_function.predict(self.state, a)[0]
             # self.learnedQ[a] = self.mixedQ[a]
-        """
-            print a.discrete_parameters, self.learned_q[a]
-            entity_names.append(a.discrete_parameters['two_arm_place_object'])
+            obj_name = a.discrete_parameters['object']
+            region_name = a.discrete_parameters['region']
+            print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f"\
+                % (obj_name, region_name, self.state.is_entity_reachable(obj_name),
+                   obj_name in self.state.goal_entities, self.learned_q[a])
+            entity_names.append(obj_name)
             entity_values.append(self.learned_q[a])
         self.visualize_values_in_two_arm_domains(entity_values, entity_names)
         print self.state.get_entities_in_pick_way('square_packing_box1')
         print self.state.get_entities_in_place_way('square_packing_box1', 'home_region')
+        print self.state.get_entities_in_pick_way('rectangular_packing_box1')
+        print self.state.get_entities_in_place_way('rectangular_packing_box1', 'home_region')
         import pdb; pdb.set_trace()
-        """
 
     def update_node_statistics(self, action, sum_rewards, reward):
         DiscreteTreeNode.update_node_statistics(self, action, sum_rewards, reward)

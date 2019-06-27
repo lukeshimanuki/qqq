@@ -67,7 +67,7 @@ def train(config):
     seed = config.seed
 
     nodes, edges, actions, costs = data_traj.load_data(
-        './test_results/hpn_results_on_mover_domain/1/trajectory_data//',
+        '../tamp-qlearning/test_results/hpn_results_on_mover_domain/1/trajectory_data//',
         desired_operator_type=config.operator)
     num_training = min(config.num_train, len(nodes))
     num_test = min(config.num_test, len(nodes))
@@ -99,7 +99,7 @@ def train(config):
 
 
 def write_test_results_in_csv(top0, top1, top2, seed, num_training, loss_fcn):
-    with open('./learn/top_k_results/' + loss_fcn + 'seed_'+str(seed)+'.csv', 'a') as csvfile:
+    with open('./learn/top_k_results/' + loss_fcn + '_seed_'+str(seed)+'.csv', 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow([num_training, top0, top1, top2])
 

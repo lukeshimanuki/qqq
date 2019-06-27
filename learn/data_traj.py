@@ -48,22 +48,25 @@ def make_one_hot_encoded_edge(edge):
     return one_hot_encoded
 
 
-def get_edges(state, entity_names):
+def get_edges(state, region_nodes, entity_names):
     # Desired output shape: n_e x n_e x n_r x n_edge
 
     regions = ['home_region', 'loading_region']
-    n_edge_features = 16
+    n_edge_features = 44
     n_regions = len(regions)
     n_entities = len(entity_names)
     edges = np.zeros((n_entities, n_entities, n_regions, n_edge_features))
     for aidx, a in enumerate(entity_names):
         for bidx, b in enumerate(entity_names):
-            binary_edge1 = make_one_hot_encoded_edge(state.binary_edges[(a, b)])
-            binary_edge2 = make_one_hot_encoded_edge(state.binary_edges[(b, a)])
+            ab_binary_edge = make_one_hot_encoded_edge(state.binary_edges[(a, b)])
+            ba_binary_edge = make_one_hot_encoded_edge(state.binary_edges[(b, a)])
             for ridx, r in enumerate(regions):
+                ar_binary_edge = make_one_hot_encoded_edge(state.binary_edges[(a, r)]) # do we need this?
+                br_binary_edge = make_one_hot_encoded_edge(state.binary_edges[(b, r)])
                 ternary_edge1 = make_one_hot_encoded_edge(state.ternary_edges[(a, b, r)])
                 ternary_edge2 = make_one_hot_encoded_edge(state.ternary_edges[(b, a, r)])
-                edge_feature = np.hstack([binary_edge1, binary_edge2, ternary_edge1, ternary_edge2])
+                edge_feature = np.hstack([region_nodes[r], ar_binary_edge, br_binary_edge, ab_binary_edge,
+                                          ba_binary_edge, ternary_edge1, ternary_edge2])
                 edges[aidx, bidx, ridx, :] = edge_feature
     return edges
 
@@ -101,8 +104,16 @@ def get_actions(op_skeleton, entity_names):
 def extract_individual_example(state, op_instance, remaining_steps=0):
     entity_names = list(state.nodes.keys())[::-1]
 
-    nodes = np.array([make_one_hot_encoded_node(state.nodes[name]) for name in entity_names])
-    edges = get_edges(state, entity_names)
+    nodes = []
+    region_nodes = {}
+    for name in entity_names:
+        onehot = make_one_hot_encoded_node(state.nodes[name])
+        nodes.append(onehot)
+        if name.find('region') != -1 and name.find('entire') ==-1:
+            region_nodes[name] = onehot
+    nodes = np.vstack(nodes)
+
+    edges = get_edges(state, region_nodes, entity_names)
     actions = get_actions(op_instance, entity_names)
 
     costs = remaining_steps

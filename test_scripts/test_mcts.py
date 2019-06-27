@@ -49,7 +49,7 @@ def load_learned_q_functions(parameters, entities):
     parameters.mse_weight = 1.0
     parameters.loss = 'largemargin'
     m = PaPGNN(num_entities, dim_nodes, dim_edges, parameters, entities)
-    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_1_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_1700_loss_largemargin.hdf5'
+    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_1_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_2000_loss_largemargin.hdf5'
     m.load_weights()
     return m
 
@@ -124,6 +124,7 @@ def main():
             environment = Mover(parameters.problem_idx)
 
         goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
+        goal_object_names = ['rectangular_packing_box1']
         set_color(obj, [1,0,0])
         goal_region_name = [environment.regions['home_region'].name]
         goal_entities = goal_object_names + goal_region_name
