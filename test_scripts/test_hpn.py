@@ -10,6 +10,13 @@ import pickle
 import numpy as np
 import random
 import time
+import socket
+
+hostname = socket.gethostname()
+if hostname == 'dell-XPS-15-9560' or hostname == 'phaedra' or hostname == 'shakey' or hostname == 'lab':
+    ROOTDIR = './'
+else:
+    ROOTDIR = '/data/public/rw/pass.port/tamp_q_results/'
 
 
 def make_and_get_save_dir(parameters):
@@ -119,7 +126,8 @@ def main():
     np.random.seed(parameters.problem_idx)
     random.seed(parameters.problem_idx)
     environment = Mover(parameters.problem_idx)
-    goal_object_names = np.random.permutation([obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]).tolist()
+    goal_object_names = np.random.permutation(
+        [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]).tolist()
     goal_entities = goal_object_names + ['home_region']
 
     # for randomized algorithms
@@ -136,8 +144,8 @@ def main():
     if parameters.v:
         environment.env.SetViewer('qtcoin')
 
-    #from manipulation.bodies.bodies import set_color
-    #set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
+    # from manipulation.bodies.bodies import set_color
+    # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
 
     stime = time.time()
     goal_object_names = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
@@ -174,7 +182,8 @@ def main():
             idx %= len(goal_object_names)
 
         print 'plan saved'
-    save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities, total_time_taken)
+    save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities,
+              total_time_taken)
 
 
 if __name__ == '__main__':
