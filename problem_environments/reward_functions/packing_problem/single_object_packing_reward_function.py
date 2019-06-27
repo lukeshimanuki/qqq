@@ -15,31 +15,21 @@ class ObjectPackingRewardFunction(RewardFunction):
         if not is_op_feasible:
             return self.infeasible_reward
         else:
+            obj = operator_instance.discrete_parameters['object']
+            if isinstance(obj, str) or isinstance(obj, unicode):
+                obj = self.problem_env.env.GetKinBody(obj)
+            prev_region = self.problem_env.get_region_containing(obj)
             operator_instance.execute()
-            """
-            if operator_instance.type == 'two_arm_pick':
-                two_arm_pick_object(operator_instance.discrete_parameters['object'], operator_instance.continuous_parameters)
-            elif operator_instance.type == 'two_arm_place':
-                object_held = self.problem_env.robot.GetGrabbed()[0]
-                two_arm_place_object(operator_instance.continuous_parameters)
-            elif operator_instance.type == 'one_arm_pick':
-                one_arm_pick_object(operator_instance.discrete_parameters['object'],
-                                    operator_instance.continuous_parameters)
-            elif operator_instance.type == 'one_arm_place':
-                one_arm_place_object(operator_instance.continuous_parameters)
-            elif operator_instance.type == 'two_arm_pick_two_arm_place':
-                operator_instance.execute()
-            else:
-                raise NotImplementedError
-            """
-            return self.is_one_of_entities_in_goal_region(operator_instance.discrete_parameters['object']) * 1
+            return self.is_one_of_entities_in_goal_region(obj, prev_region) * 1
 
-    def is_one_of_entities_in_goal_region(self, entity):
+    def is_one_of_entities_in_goal_region(self, entity, prev_region=None):
         is_goal_entity = entity in self.goal_objects
         if is_goal_entity and self.goal_region.contains(entity.ComputeAABB()):
-            return True
-        else:
-            return False
+            if prev_region is not None and prev_region != self.goal_region:
+                return True
+            elif prev_region is None:
+                return True
+        return False
 
     def apply_operator_skeleton_and_get_reward(self, operator_instance):
         return 0

@@ -3,7 +3,8 @@ import openravepy
 from manipulation.regions import AARegion
 import pickle
 import numpy as np
-from data_traj import make_one_hot_encoded_edge, make_one_hot_encoded_node, get_edges, get_actions
+from data_traj import make_one_hot_encoded_edge, make_one_hot_encoded_node, extract_example
+from data_traj import extract_individual_example as make_predictable_form
 from gnn import GNN
 
 
@@ -278,9 +279,7 @@ class PaPGNN(GNN):
         return loss_model
 
     def make_raw_format(self, state, op_skeleton):
-        nodes = np.array([make_one_hot_encoded_node(state.nodes[name]) for name in self.entity_names])
-        edges = get_edges(state, self.entity_names)
-        action = get_actions(op_skeleton, self.entity_names)
+        nodes, edges, action, _ = make_predictable_form(state, op_skeleton)
         nodes = nodes[None, :]
         edges = edges[None, :]
         action = action[None, :]

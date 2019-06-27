@@ -139,7 +139,7 @@ class ShortestPathPaPState(PaPState):
             assert path is not None
             self.cached_pick_paths[obj] = path
             op_instance.low_level_motion = path
-            op_instance.continuous_parameters['q_goal'] = self.cached_pick_paths[obj][-1]
+            #op_instance.continuous_parameters['q_goal'] = self.cached_pick_paths[obj][-1] # I set it to a particular one - why? So that I can use setcachedplace
 
     def set_cached_place_paths(self, parent_state, moved_obj):
         motion_planner = BaseMotionPlanner(self.problem_env, 'prm')

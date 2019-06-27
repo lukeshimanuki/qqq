@@ -7,7 +7,7 @@ from mover_library.utils import visualize_path, set_color, viewer
 
 class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
     def __init__(self, state, ucb_parameter, depth, state_saver, is_operator_skeleton_node, is_init_node, learned_q,
-                 actions):
+                 actions, is_goal_reached=False):
         DiscreteTreeNode.__init__(self, state, ucb_parameter, depth, state_saver, is_operator_skeleton_node,
                                   is_init_node, actions)
         self.learned_q = learned_q
@@ -15,7 +15,7 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
 
         is_infeasible_state = state is None
         self.learned_q = {}
-        if not is_infeasible_state:
+        if not is_infeasible_state and not is_goal_reached:
             self.initialize_mixed_q_values()
         self.mix_weight = 0.99
 
@@ -59,6 +59,16 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
         # why does this get called before initializing mixed q values
         # todo why does it ever have key error here?
         # it performs ucb_over_actions in an infeasible state?
-        q_vals = [self.Q[a] for a in self.A]
+        q_vals = []
+        for a in self.A:
+            obj_name = a.discrete_parameters['object']
+            region_name = a.discrete_parameters['region']
+            print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f" \
+                  % (obj_name, region_name, self.state.is_entity_reachable(obj_name),
+                     obj_name in self.state.goal_entities, self.Q[a])
+            q_vals.append(self.Q[a])
+        import pdb;pdb.set_trace()
+
+        #q_vals = [self.Q[a] for a in self.A]
         best_action = self.get_action_with_highest_ucb_value(self.A, q_vals)  # but your Nsa are all zero?
         return best_action

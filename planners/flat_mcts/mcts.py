@@ -166,7 +166,8 @@ class MCTS:
                 # where is the parent_node?
                 node = PaPDiscreteTreeNodeWithLearnedQ(state, self.ucb_parameter, depth, state_saver,
                                                        is_operator_skeleton_node,
-                                                       is_init_node, self.learned_q_function, applicable_op_skeletons)
+                                                       is_init_node, self.learned_q_function, applicable_op_skeletons,
+                                                       is_goal_reached=self.environment.is_goal_reached())
             else:
                 node = DiscreteTreeNode(state, self.ucb_parameter, depth, state_saver, is_operator_skeleton_node,
                                         is_init_node, applicable_op_skeletons)
@@ -377,9 +378,11 @@ class MCTS:
             # it should never get here
             import pdb;pdb.set_trace()
 
+        #import pdb;pdb.set_trace()
         action = self.choose_action(curr_node)
         reward = self.apply_action(curr_node, action)
         print "Reward is", reward
+        #import pdb;pdb.set_trace()
 
         if not curr_node.is_action_tried(action):
             next_node = self.create_node(action, depth + 1, reward, curr_node)
