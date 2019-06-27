@@ -99,6 +99,11 @@ class TreeNode:
                 best_value = ucb_value
         return best_action
 
+    def compute_ucb_values(self, feasible_actions, feasible_q_values):
+        ucb_values = {action: self.compute_ucb_value(value, action)
+                      for action, value in zip(feasible_actions, feasible_q_values)}
+        return ucb_values
+
     def is_action_tried(self, action):
         return action in self.children
         #return action in self.Q.keys()

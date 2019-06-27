@@ -97,7 +97,7 @@ class Mover(ProblemEnvironment):
         return objs_in_region
 
     def get_region_containing(self, obj):
-        if type(obj) == str:
+        if type(obj) == str or type(obj) == unicode:
             obj = self.env.GetKinBody(obj)
 
         if self.regions['home_region'].contains(obj.ComputeAABB()):

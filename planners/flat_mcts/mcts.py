@@ -376,13 +376,11 @@ class MCTS:
         if curr_node.state is None:
             # is it none because it was infeasible before?
             # it should never get here
-            import pdb;pdb.set_trace()
+            sys.exit(-1)
 
-        #import pdb;pdb.set_trace()
         action = self.choose_action(curr_node)
         reward = self.apply_action(curr_node, action)
         print "Reward is", reward
-        #import pdb;pdb.set_trace()
 
         if not curr_node.is_action_tried(action):
             next_node = self.create_node(action, depth + 1, reward, curr_node)
@@ -396,7 +394,7 @@ class MCTS:
             # this (s,a) is a dead-end
             print "Infeasible action"
             # todo use the average of Q values here, instead of termination
-            sum_rewards = curr_node.parent.learned_q[curr_node.parent_action]
+            sum_rewards = reward + curr_node.parent.learned_q[curr_node.parent_action]
         else:
             sum_rewards = reward + self.discount_rate * self.simulate(next_node, node_to_search_from, depth + 1,
                                                                       new_traj)

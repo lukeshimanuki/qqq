@@ -604,6 +604,12 @@ def set_obj_xyztheta(xyztheta, obj):
     set_obj_xytheta(np.hstack([xyztheta[0:2], xyztheta[-1]]), obj)
 
 
+def get_body_with_name(obj_name):
+    env = openravepy.RaveGetEnvironment(1)
+    return env.GetKinBody(obj_name)
+
+
+
 class CustomStateSaver:
     def __init__(self, env):
         objects_in_env = env.GetBodies()

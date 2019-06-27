@@ -3,6 +3,7 @@ import numpy as np
 import openravepy
 from manipulation.bodies.bodies import set_color
 from mover_library.utils import visualize_path, set_color, viewer
+from mover_library import utils
 
 
 class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
@@ -31,25 +32,9 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
             set_color(entity, [0, (entity_value - min_val) / (max_val - min_val), 0])
 
     def initialize_mixed_q_values(self):
-        entity_values = []
-        entity_names = []
         for a in self.A:
             self.Q[a] = self.q_function.predict(self.state, a)[0]
             self.learned_q[a] = self.q_function.predict(self.state, a)[0]
-            # self.learnedQ[a] = self.mixedQ[a]
-            obj_name = a.discrete_parameters['object']
-            region_name = a.discrete_parameters['region']
-            print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f"\
-                % (obj_name, region_name, self.state.is_entity_reachable(obj_name),
-                   obj_name in self.state.goal_entities, self.learned_q[a])
-            entity_names.append(obj_name)
-            entity_values.append(self.learned_q[a])
-        self.visualize_values_in_two_arm_domains(entity_values, entity_names)
-        print self.state.get_entities_in_pick_way('square_packing_box1')
-        print self.state.get_entities_in_place_way('square_packing_box1', 'home_region')
-        print self.state.get_entities_in_pick_way('rectangular_packing_box1')
-        print self.state.get_entities_in_place_way('rectangular_packing_box1', 'home_region')
-        import pdb; pdb.set_trace()
 
     def update_node_statistics(self, action, sum_rewards, reward):
         DiscreteTreeNode.update_node_statistics(self, action, sum_rewards, reward)
@@ -61,14 +46,52 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
         # it performs ucb_over_actions in an infeasible state?
         q_vals = []
         for a in self.A:
+            q_vals.append(self.Q[a])
+            """
             obj_name = a.discrete_parameters['object']
             region_name = a.discrete_parameters['region']
-            print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f" \
+            print "%30s %30s Reachable? %d IsGoal? %d Q? %.5f UCB? %.5f" \
                   % (obj_name, region_name, self.state.is_entity_reachable(obj_name),
-                     obj_name in self.state.goal_entities, self.Q[a])
-            q_vals.append(self.Q[a])
-        import pdb;pdb.set_trace()
+                     obj_name in self.state.goal_entities, self.Q[a], self.compute_ucb_value(self.Q[a], a))
+            """
 
-        #q_vals = [self.Q[a] for a in self.A]
         best_action = self.get_action_with_highest_ucb_value(self.A, q_vals)  # but your Nsa are all zero?
+        while self.is_action_redundant(best_action):
+            self.N[best_action] += 1
+            best_action = self.get_action_with_highest_ucb_value(self.A, q_vals)  # but your Nsa are all zero?
+            print 'Redundant action detected'
+            #import pdb;pdb.set_trace()
+        """
+        print "Chosen action", best_action.discrete_parameters['object'], best_action.discrete_parameters['region']
+        print self.state.get_entities_in_pick_way('square_packing_box1')
+        print self.state.get_entities_in_place_way('square_packing_box1', 'home_region')
+        print self.state.get_entities_in_pick_way('rectangular_packing_box1')
+        print self.state.get_entities_in_place_way('rectangular_packing_box1', 'home_region')
+        import pdb;pdb.set_trace()
+        """
         return best_action
+
+    def is_obj_currently_in_goal_region(self, obj):
+        curr_obj_region = self.state.problem_env.get_region_containing(obj)
+        return curr_obj_region.name in self.state.goal_entities
+
+    def not_in_way_of_anything(self, obj_name):
+        return len(self.state.get_entities_occluded_by(obj_name)) == 0
+
+    def is_in_goal_region(self, obj_name):
+        goal_region = [o for o in self.state.goal_entities if o.find('region') != -1][0]
+        curr_in = self.state.problem_env.get_region_containing(obj_name)
+        return curr_in.name == goal_region
+
+    def is_action_redundant(self, a):
+        obj_name = a.discrete_parameters['object']
+
+        goal_achieved_and_not_in_way = self.state.is_goal_entity(obj_name) and self.is_in_goal_region(obj_name) \
+                                       and self.not_in_way_of_anything(obj_name)
+        non_goal_not_in_way = not self.state.is_goal_entity(obj_name) and self.not_in_way_of_anything(obj_name)
+
+        return goal_achieved_and_not_in_way and non_goal_not_in_way
+
+
+
+

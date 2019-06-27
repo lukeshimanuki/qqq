@@ -121,6 +121,12 @@ class PaPState(State):
     def is_entity_reachable(self, entity):
         return self.nodes[entity][-2]
 
+    def get_entities_occluded_by(self, entity):
+        return self.pick_entities_occluded_by(entity) + self.place_entities_occluded_by(entity)
+
+    def is_goal_entity(self, entity):
+        return entity in self.goal_entities
+
     def pick_entities_occluded_by(self, entity):
         inway = []
         entity_names = self.problem_env.object_names + self.problem_env.region_names
@@ -136,7 +142,7 @@ class PaPState(State):
                 continue
             for obj_name in self.problem_env.object_names:
                 if self.ternary_edges[(obj_name, entity, region_name)][0]:
-                    inway.append(obj_name, region_name)
+                    inway.append((obj_name, region_name))
         return inway
 
     def get_entities_in_place_way(self, entity, region):

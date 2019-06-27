@@ -138,6 +138,8 @@ def main():
     if parameters.v:
         environment.env.SetViewer('qtcoin')
 
+    """
+    # Verifying greedy planner's plan
     plan = pickle.load(open('traj_pidx_0_1.pkl', 'r'))
     actions = plan.actions
     for a in actions:
@@ -152,6 +154,7 @@ def main():
         a.continuous_parameters['place'] = place
 
     import pdb;pdb.set_trace()
+    """
 
     if parameters.use_learned_q:
         learned_q_functions = load_learned_q_functions(parameters, environment.entity_names)
