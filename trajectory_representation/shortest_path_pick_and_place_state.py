@@ -43,6 +43,22 @@ class ShortestPathPaPState(PaPState):
         self.pick_used = {
             object.GetName(): self.get_pick_poses(object, moved_obj, parent_state) for object in problem_env.objects
         }
+        if self.use_prm:
+            # hold an object
+            self.holding_collides = None
+            self.current_holding_collides = None
+            saver = utils.CustomStateSaver(self.problem_env.env)
+            self.pick_used.values()[0].execute()
+            if parent_state is None:
+                self.holding_collides, self.current_holding_collides = self.update_collisions_at_prm_vertices(None)
+            else:
+                self.holding_collides, self.current_holding_collides \
+                    = self.update_collisions_at_prm_vertices(parent_state.holding_collides)
+            saver.Restore()
+        else:
+            self.holding_collides = None
+            self.holding_current_collides = None
+
         self.place_used = {}
         self.cached_pick_paths = {}
         self.cached_place_paths = {}

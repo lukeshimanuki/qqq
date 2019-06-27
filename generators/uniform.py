@@ -78,7 +78,7 @@ class PaPUniformGenerator(UniformGenerator):
         self.feasible_pick_params = {}
 
     def sample_next_point(self, operator_skeleton, n_iter, n_parameters_to_try_motion_planning=1,
-                          cached_collisions=None, dont_check_motion_existence=False):
+                          cached_collisions=None, cached_holding_collisions=None, dont_check_motion_existence=False):
         # Not yet motion-planning-feasible
         target_obj = operator_skeleton.discrete_parameters['object']
         if target_obj in self.feasible_pick_params:
@@ -95,11 +95,13 @@ class PaPUniformGenerator(UniformGenerator):
         else:
             chosen_op_param = self.get_pap_param_with_feasible_motion_plan(operator_skeleton,
                                                                            feasible_op_parameters,
-                                                                           cached_collisions)
+                                                                           cached_collisions,
+                                                                           cached_holding_collisions)
 
         return chosen_op_param
 
-    def get_pap_param_with_feasible_motion_plan(self, operator_skeleton, feasible_op_parameters, cached_collisions):
+    def get_pap_param_with_feasible_motion_plan(self, operator_skeleton, feasible_op_parameters,
+                                                cached_collisions, cached_holding_collisions):
         # getting pick motion - I can still use the cached collisions from state computation
         pick_op_params = [op['pick'] for op in feasible_op_parameters]
         chosen_pick_param = self.get_op_param_with_feasible_motion_plan(pick_op_params, cached_collisions)
@@ -118,8 +120,7 @@ class PaPUniformGenerator(UniformGenerator):
         saver = utils.CustomStateSaver(self.problem_env.env)
         utils.two_arm_pick_object(operator_skeleton.discrete_parameters['object'], chosen_pick_param)
         place_op_params = [op['place'] for op in feasible_op_parameters]
-        place_cached_collisions = None # we never cached collisions with obj in hand
-        chosen_place_param = self.get_op_param_with_feasible_motion_plan(place_op_params, place_cached_collisions)
+        chosen_place_param = self.get_op_param_with_feasible_motion_plan(place_op_params, cached_holding_collisions)
         saver.Restore()
         if not chosen_place_param['is_feasible']:
             return {'is_feasible': False}

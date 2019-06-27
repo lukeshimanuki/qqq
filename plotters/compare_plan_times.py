@@ -3,7 +3,28 @@ import os
 import numpy as np
 
 
+def get_plan_times(test_dir, test_files, t_limit):
+    successes = []
+    time_taken = []
+    for filename in test_files:
+        stat = pickle.load(open(test_dir + filename, 'r'))
+        time_taken.append(stat['time_taken'])
+        if stat['time_taken'] < t_limit:
+            successes.append(stat['found_solution'])
+        else:
+            successes.append(False)
+
+    CI95 = 1.96 * np.std(time_taken) / np.sqrt(len(time_taken))
+    print "Time taken %.3f +- %.3f" % (np.mean(time_taken), CI95)
+    print "Success rate %.3f" % np.mean(successes)
+    import pdb;pdb.set_trace()
+
+
 def main():
+    test_dir = './test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/2/test_purpose/'
+    test_files = os.listdir(test_dir)
+    get_plan_times(test_dir, test_files, 1000)
+    """
     hpn_test_dir = './test_results/hpn_results_on_mover_domain/1/test_purpose/'
     mcts_test_dir = './test_results/mcts_results_on_mover_domain/widening_5/uct_1.0/learned_q_test/pap_mover/1/'
 
@@ -59,9 +80,7 @@ def main():
     print 'hpn-mcts', np.mean(hpn_time_taken-mcts_time_taken), np.std(hpn_time_taken-mcts_time_taken) / np.sqrt(len(hpn_time_taken)) * 1.96
     print 'hpn', np.mean(n_hpn_success)
     print 'mcts', np.mean(n_mcts_success)
-
-
-
+    """
 
 if __name__ == '__main__':
     main()

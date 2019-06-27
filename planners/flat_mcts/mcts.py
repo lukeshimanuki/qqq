@@ -430,9 +430,10 @@ class MCTS:
                                                                    no_motion_plan=True)
         else:
             current_collides = node.state.current_collides if node.state is not None else None
-            #current_collides = None
+            current_holding_collides = node.state.current_holding_collides if node.state is not None else None
             feasible_param = node.sampling_agent.sample_next_point(node.operator_skeleton,
                                                                    self.n_feasibility_checks,
                                                                    self.n_motion_plan_trials,
-                                                                   current_collides)
+                                                                   current_collides,
+                                                                   current_holding_collides)
         return feasible_param

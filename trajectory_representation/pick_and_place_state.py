@@ -1,19 +1,11 @@
 from trajectory_representation.state import State
-from trajectory_representation.operator import Operator
-from generators.uniform import UniformGenerator
 from mover_library.utils import CustomStateSaver, get_body_xytheta, set_robot_config, set_obj_xytheta
 
-from predicates.is_reachable import IsReachable
-from predicates.is_holding_goal_entity import IsHoldingGoalEntity
-from predicates.place_in_way import PlaceInWay
-from predicates.pick_in_way import PickInWay
-from predicates.in_region import InRegion
-
-from planners.subplanners.motion_planner import BaseMotionPlanner
-
-import copy
 from mover_library.utils import visualize_path, two_arm_pick_object
 from manipulation.bodies.bodies import set_color
+import pickle
+
+prm_vertices = prm_edges = None
 
 
 class PaPState(State):
@@ -33,7 +25,10 @@ class PaPState(State):
         # cached info
         self.use_prm = problem_env.name.find('two_arm') != -1
         if self.use_prm:
-            self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state)
+            if parent_state is None:
+                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(None)
+            else:
+                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state.collides)
         else:
             self.collides = None
             self.current_collides = None
@@ -54,6 +49,43 @@ class PaPState(State):
         self.ternary_edges = None
         self.binary_edges = None
         self.nodes = None
+
+    def update_collisions_at_prm_vertices(self, parent_collides):
+        global prm_vertices
+        global prm_edges
+
+        if prm_vertices is None or prm_edges is None:
+            prm_vertices, prm_edges = pickle.load(open('./prm.pkl', 'rb'))
+
+        def in_collision(q, obj):
+            set_robot_config(q, self.problem_env.robot)
+            col = self.problem_env.env.CheckCollision(self.problem_env.robot, obj)
+            return col
+
+        obj_name_to_pose = {
+            obj.GetName(): tuple(get_body_xytheta(obj)[0].round(6))
+            for obj in self.problem_env.objects
+        }
+
+        collides = {}
+        old_q = get_body_xytheta(self.problem_env.robot)
+        for obj in self.problem_env.objects:
+            obj_name_pose_tuple = (obj.GetName(), obj_name_to_pose[obj.GetName()])
+            collisions_with_obj_did_not_change = parent_collides is not None and \
+                                                 obj_name_pose_tuple in parent_collides
+            if collisions_with_obj_did_not_change:
+                collides[obj_name_pose_tuple] = parent_collides[obj_name_pose_tuple]
+            else:
+                prm_vertices_in_collision_with_obj = {i for i, q in enumerate(prm_vertices) if in_collision(q, obj)}
+                collides[obj_name_pose_tuple] = prm_vertices_in_collision_with_obj
+        set_robot_config(old_q, self.problem_env.robot)
+
+        current_collides = {
+            obj.GetName(): collides[(obj.GetName(), obj_name_to_pose[obj.GetName()])]
+            for obj in self.problem_env.objects
+        }
+
+        return collides, current_collides
 
     def get_nodes(self):
         nodes = {}
@@ -134,7 +166,8 @@ class PaPState(State):
                 for tmp in objs_in_way:
                     set_color(self.problem_env.env.GetKinBody(tmp), [0, 0, 0])
                 visualize_path(val)
-                import pdb;pdb.set_trace()
+                import pdb;
+                pdb.set_trace()
 
                 for tmp in objs_in_way:
                     set_color(self.problem_env.env.GetKinBody(tmp), [0, 1, 0])
@@ -170,4 +203,3 @@ class PaPState(State):
         self.is_holding_goal_entity.problem_env = problem_env
         if self.parent_state is not None:
             self.parent_state.make_plannable(problem_env)
-

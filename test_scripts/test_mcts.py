@@ -6,6 +6,7 @@ from problem_environments.reward_functions.packing_problem.single_object_packing
 from planners.flat_mcts.mcts import MCTS
 from planners.subplanners.motion_planner import OperatorBaseMotionPlanner, ArmBaseMotionPlanner
 from learn.pap_gnn import PaPGNN
+from manipulation.bodies.bodies import set_color
 
 import numpy as np
 import random
@@ -48,7 +49,7 @@ def load_learned_q_functions(parameters, entities):
     parameters.mse_weight = 1.0
     parameters.loss = 'largemargin'
     m = PaPGNN(num_entities, dim_nodes, dim_edges, parameters, entities)
-    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_0_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_3903_loss_largemargin.hdf5'
+    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_1_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_1700_loss_largemargin.hdf5'
     m.load_weights()
     return m
 
@@ -123,6 +124,7 @@ def main():
             environment = Mover(parameters.problem_idx)
 
         goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
+        set_color(obj, [1,0,0])
         goal_region_name = [environment.regions['home_region'].name]
         goal_entities = goal_object_names + goal_region_name
         motion_planner = OperatorBaseMotionPlanner(environment, 'prm')

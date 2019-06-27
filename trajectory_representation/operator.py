@@ -32,7 +32,14 @@ class Operator:
                 obj_to_pick = self.discrete_parameters['object']
             else:
                 obj_to_pick = env.GetKinBody(self.discrete_parameters['object'])
-            two_arm_pick_object(obj_to_pick, self.continuous_parameters)
+            if 'q_goal' in self.continuous_parameters and type(self.continuous_parameters['q_goal']) == list and\
+                    len(self.continuous_parameters['q_goal']) > 1:
+                try:
+                    two_arm_pick_object(obj_to_pick, {'q_goal': self.continuous_parameters['q_goal'][0]})
+                except:
+                    import pdb;pdb.set_trace()
+            else:
+                two_arm_pick_object(obj_to_pick, self.continuous_parameters)
         elif self.type == 'two_arm_place':
             two_arm_place_object(self.continuous_parameters)
         elif self.type == 'two_arm_pick_two_arm_place':
