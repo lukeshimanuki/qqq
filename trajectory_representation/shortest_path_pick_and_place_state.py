@@ -153,24 +153,24 @@ class ShortestPathPaPState(PaPState):
                 cached_path_is_shortest_path = parent_state is not None and \
                                                not (obj, region_name) in parent_state.reachable_regions_while_holding
 
-                if parent_state_has_cached_path_for_obj and cached_path_is_shortest_path:
-                    path = parent_state.cached_place_paths[(obj, region_name)]
+                saver = CustomStateSaver(self.problem_env.env)
+                pick_used = self.pick_used[obj]
+                pick_used.execute()
+                if region.contains(self.problem_env.env.GetKinBody(obj).ComputeAABB()):
+                    path = [get_body_xytheta(self.problem_env.robot).squeeze()]
+                    self.reachable_regions_while_holding.append((obj, region_name))
                 else:
-                    saver = CustomStateSaver(self.problem_env.env)
-                    pick_used = self.pick_used[obj]
-                    pick_used.execute()
-                    if region.contains(self.problem_env.env.GetKinBody(obj).ComputeAABB()):
-                        path = [get_body_xytheta(self.problem_env.robot).squeeze()]
+                    path, status = motion_planner.get_motion_plan(region,
+                                                                  cached_collisions=self.collides)
+                    if status == 'HasSolution':
                         self.reachable_regions_while_holding.append((obj, region_name))
                     else:
-                        path, status = motion_planner.get_motion_plan(region,
-                                                                      cached_collisions=self.collides)
-                        if status == 'HasSolution':
-                            self.reachable_regions_while_holding.append((obj, region_name))
+                        if parent_state_has_cached_path_for_obj and cached_path_is_shortest_path:
+                            path = parent_state.cached_place_paths[(obj, region_name)]
                         else:
                             path, _ = motion_planner.get_motion_plan(region, cached_collisions={})
-                    saver.Restore()
-                assert path is not None
+                saver.Restore()
+                #assert path is not None
                 self.cached_place_paths[(obj, region_name)] = path
 
     def get_binary_edges(self):
@@ -241,7 +241,12 @@ class ShortestPathPaPState(PaPState):
             else:
                 assert a.find('region') != -1
                 cached_path = None
-            return [self.place_in_way(a, b, r, cached_path=cached_path)]
+            if key in self.reachable_regions_while_holding:
+                # if reachable then nothing is in the way
+                is_b_in_way_of_reaching_r_while_holding_a = False
+            else:
+                is_b_in_way_of_reaching_r_while_holding_a = self.place_in_way(a, b, r, cached_path=cached_path)
+            return [is_b_in_way_of_reaching_r_while_holding_a]
 
     def get_binary_edge_features(self, a, b):
         is_place_in_b_reachable_while_holding_a = (a, b) in self.reachable_regions_while_holding

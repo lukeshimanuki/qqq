@@ -32,6 +32,7 @@ from operator_utils.grasp_utils import solveTwoArmIKs, compute_two_arm_grasp
 from trajectory_representation.operator import Operator
 from trajectory_representation.pick_and_place_state import PaPState
 from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
+from trajectory_representation.minimum_constraint_pick_and_place_state import MinimiumConstraintPaPState
 from trajectory_representation.trajectory import Trajectory
 
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_place_object, get_body_xytheta, grab_obj, release_obj
@@ -797,21 +798,21 @@ def get_problem(mover):
 	num_objects = config.num_objects
 	goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:num_objects]]
 
-	pr = cProfile.Profile()
-	pr.enable()
+	#pr = cProfile.Profile()
+	#pr.enable()
 	state = ShortestPathPaPState(mover, goal)
-	pr.disable()
-	pstats.Stats(pr).sort_stats('tottime').print_stats()
-	pstats.Stats(pr).sort_stats('cumtime').print_stats()
+	#pr.disable()
+	#pstats.Stats(pr).sort_stats('tottime').print_stats()
+	#pstats.Stats(pr).sort_stats('cumtime').print_stats()
 
-	set_obj_xytheta(get_body_xytheta(mover.objects[0]), mover.objects[0])
-	action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': mover.objects[0].GetName(), 'two_arm_place_region': 'loading_region'})
-	pr = cProfile.Profile()
-	pr.enable()
-	nextstate = ShortestPathPaPState(mover, goal, state, action)
-	pr.disable()
-	pstats.Stats(pr).sort_stats('tottime').print_stats()
-	pstats.Stats(pr).sort_stats('cumtime').print_stats()
+	#set_obj_xytheta(get_body_xytheta(mover.objects[0]), mover.objects[0])
+	#action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': mover.objects[0].GetName(), 'two_arm_place_region': 'loading_region'})
+	#pr = cProfile.Profile()
+	#pr.enable()
+	#nextstate = ShortestPathPaPState(mover, goal, state, action)
+	#pr.disable()
+	#pstats.Stats(pr).sort_stats('tottime').print_stats()
+	#pstats.Stats(pr).sort_stats('cumtime').print_stats()
 
 	state.make_pklable()
 
@@ -872,23 +873,23 @@ def get_problem(mover):
 	)
 	pap_mconfig = mconfig_type(
 		operator = 'two_arm_pick_two_arm_place',
-		n_msg_passing = 0,
+		n_msg_passing = 1,
 		n_layers = 2,
 		num_fc_layers = 2,
 		n_hidden = 32,
 		no_goal_nodes = False,
 
-		top_k = 3,
+		top_k = 1,
 		optimizer = 'adam',
 		lr = 1e-4,
 		use_mse = True,
 
 		batch_size='32',
-		seed=0,
-		num_train=2561,
+		seed=config.train_seed,
+		num_train=5000,
 		val_portion=.1,
-		num_test=600,
-		mse_weight=.2,
+		num_test=1882,
+		mse_weight=1.0,
 		diff_weight_msg_passing=False,
 		same_vertex_model=False,
 		weight_initializer='glorot_uniform',
@@ -948,7 +949,14 @@ def get_problem(mover):
 			r = action.discrete_parameters['two_arm_place_region']
 			nodes, edges, actions, _ = extract_individual_example(state, action)
 			nodes = nodes[...,6:]
-			return -pap_model.predict_with_raw_input_format(nodes[None,...], edges[None,...], actions[None,...])# + (2 if state.binary_edges[(o,'home_region')][1] else 0) - sum(state.binary_edges[(i,'home_region')][1] for i in state.nodes if i != o) - (4 if r == 'home_region' else 0)
+
+			object_is_goal = state.nodes[o][8]
+			region_is_goal = state.nodes[r][8]
+			number_in_goal = sum(state.binary_edges[(i,r)][0] for i in state.nodes for r in mover.regions if i != o and state.nodes[r][8]) + int(region_is_goal)
+			redundant = state.binary_edges[(o,r)][0]
+			helps_goal = object_is_goal and region_is_goal and not redundant
+			unhelpful = object_is_goal and not region_is_goal
+			return -pap_model.predict_with_raw_input_format(nodes[None,...], edges[None,...], actions[None,...]) + 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
 		else:
 			assert False
 
@@ -1054,6 +1062,11 @@ def get_problem(mover):
 		for r in ('home_region', 'loading_region'):
 			action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
 			action_queue.put((heuristic(state, action), float('nan'), action, initnode))
+	#print('\n'.join(str(v) for v in sorted([
+	#	(heuristic(state, Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})), o,r)
+	#	for o in obj_names
+	#	for r in ('home_region', 'loading_region')
+	#])))
 	iter = 0
 	while True:
 		iter += 1
@@ -1073,8 +1086,15 @@ def get_problem(mover):
 		_, _, action, node = action_queue.get()
 		state = node.state
 
+		#interest = 'square_packing_box1'
+		#iregion = 'home_region'
+		#print(state.nodes[interest][9])
+		#print(state.binary_edges[(interest, iregion)][2])
+		#print([state.binary_edges[(entity.GetName(), interest)][1] for entity in mover.objects])
+		#print([state.ternary_edges[(interest, entity.GetName(), iregion)][0] for entity in mover.objects])
+
 		print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
-		print("{}: {}".format(action.type, action.discrete_parameters.values()))
+		print("{}".format(action.discrete_parameters.values()))
 
 		def collide(i, ignore=set(), target='robot', holding=None):
 			q = prm_vertices[i]
@@ -1192,7 +1212,7 @@ def get_problem(mover):
 
 				for r in ('home_region', 'loading_region'):
 					newaction = Operator('two_arm_place', {'object': o, 'region': r})
-					action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth - 0., float('nan'), newaction, newnode))
+					action_queue.put((heuristic(newstate, newaction) - 0. * newnode.depth - 0., float('nan'), newaction, newnode))
 
 				break
 
@@ -1447,9 +1467,11 @@ def get_problem(mover):
 					return trajectory, iter
 
 				for o in obj_names:
+					if o == action.discrete_parameters['two_arm_place_object']:
+						continue
 					for r in ('home_region', 'loading_region'):
 						newaction = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
-						action_queue.put((heuristic(newstate, newaction) - 0. * newnode.depth, float('nan'), newaction, newnode))
+						action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
 
 				break
 
@@ -1892,6 +1914,7 @@ def generate_training_data(num_seeds, num_cores):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Greedy planner')
 	parser.add_argument('-seed', type=int, default=0)
+	parser.add_argument('-train_seed', type=int, default=0)
 	parser.add_argument('-num_objects', type=int, default=1)
 	parser.add_argument('-visualize_plan', type=bool, default=False)
 	parser.add_argument('-visualize_sim', type=bool, default=False)

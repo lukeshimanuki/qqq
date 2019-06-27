@@ -18,7 +18,7 @@ from manipulation.bodies.bodies import set_color
 
 class MinimiumConstraintPaPState(State):
     def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None, paps_used_in_data=None,
-                 use_shortest_path=True):
+                 use_shortest_path=False):
         # todo rewrite this later
         self.state_saver = CustomStateSaver(problem_env.env)
         self.problem_env = problem_env
@@ -44,11 +44,11 @@ class MinimiumConstraintPaPState(State):
         self.parent_binary_predicates = {}
         if parent_state is not None and paps_used_in_data is None:
             assert parent_action is not None
-            moved_obj_type = type(parent_action.discrete_parameters['object'])
+            moved_obj_type = type(parent_action.discrete_parameters['two_arm_place_object'])
             if moved_obj_type == str or moved_obj_type == unicode:
-                moved_obj = parent_action.discrete_parameters['object']
+                moved_obj = parent_action.discrete_parameters['two_arm_place_object']
             else:
-                moved_obj = parent_action.discrete_parameters['object'].GetName()
+                moved_obj = parent_action.discrete_parameters['two_arm_place_object'].GetName()
 
             self.parent_ternary_predicates = {
                 (a, b, r): v
@@ -96,8 +96,13 @@ class MinimiumConstraintPaPState(State):
             self.set_cached_pick_paths(parent_state, moved_obj)
             self.set_cached_place_paths(parent_state, moved_obj)
         else:
-            self.pick_used = paps_used_in_data[0]
-            self.place_used = paps_used_in_data[1]
+            self.cached_place_paths = {}
+            if paps_used_in_data is None:
+                self.pick_used = {}
+                self.place_used = {}
+            else:
+                self.pick_used = paps_used_in_data[0]
+                self.place_used = paps_used_in_data[1]
 
         self.mc_pick_path = {}
         self.mc_place_path = {}
@@ -303,7 +308,7 @@ class MinimiumConstraintPaPState(State):
             if key in self.cached_place_paths:
                 cached_path = self.cached_place_paths[key]
             else:
-                assert a.find('region') != -1
+                #assert a.find('region') != -1
                 cached_path = None
             return [self.place_in_way(a, b, r, cached_path=cached_path)]
 
