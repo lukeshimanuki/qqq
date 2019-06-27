@@ -20,7 +20,7 @@ else:
 
 
 def make_and_get_save_dir(parameters):
-    save_dir = './test_results/hpn_results_on_mover_domain/'
+    save_dir = ROOTDIR+'test_results/hpn_results_on_mover_domain/'
     save_dir += str(parameters.n_objs_pack) + '/test_purpose/'
 
     if not os.path.isdir(save_dir):
