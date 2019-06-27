@@ -18,4 +18,5 @@ mover_library/*.pyc
 tmp_tree.pkl
 logs/*
 test_results/mcts_results_on_mover_domain/widening_5/uct_1.0/trajectory_data.two_arm_pick_one_hot.pkl
+test_results/hpn_results_on_mover_domain/1/trajectory_data/.two_arm_pick_two_arm_place.pkl
 cached_states
