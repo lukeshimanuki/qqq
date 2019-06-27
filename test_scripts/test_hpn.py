@@ -1,0 +1,181 @@
+from problem_environments.mover_env import Mover
+from planners.resolve_spatial_constraints import ResolveSpatialConstraints
+from planners.planner_without_reachability import PlannerWithoutReachability
+from mover_library import utils
+
+import os
+import sys
+import argparse
+import pickle
+import numpy as np
+import random
+import time
+
+
+def make_and_get_save_dir(parameters):
+    save_dir = './test_results/hpn_results_on_mover_domain/'
+    save_dir += str(parameters.n_objs_pack) + '/test_purpose/'
+
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+
+    return save_dir
+
+
+def quit_if_already_tested(file_path, force_test):
+    if os.path.isfile(file_path):
+        print "Already done"
+        if not force_test:
+            sys.exit(-1)
+
+
+def parse_parameters():
+    parser = argparse.ArgumentParser(description='MCTS parameters')
+
+    # mcts parameters
+    parser.add_argument('-uct', type=float, default=1.0)
+    parser.add_argument('-w', type=float, default=5)
+    parser.add_argument('-sampling_strategy', type=str, default='unif')
+    parser.add_argument('-problem_idx', type=int, default=0)
+    parser.add_argument('-domain', type=str, default='mover')
+    parser.add_argument('-planner', type=str, default='mcts')
+    parser.add_argument('-v', action='store_true', default=False)
+    parser.add_argument('-debug', action='store_true', default=False)
+    parser.add_argument('-f', action='store_true', default=False)
+    parser.add_argument('-mcts_iter', type=int, default=1000)
+    parser.add_argument('-n_feasibility_checks', type=int, default=500)
+    parser.add_argument('-use_learned_q', action='store_true', default=True)
+    parser.add_argument('-n_switch', type=int, default=5)
+    parser.add_argument('-use_ucb', action='store_true', default=False)
+    parser.add_argument('-pw', action='store_true', default=False)
+    parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
+    parser.add_argument('-n_motion_plan_trials', type=int, default=10)
+    parser.add_argument('-n_objs_pack', type=int, default=1)
+    parser.add_argument('-seed', type=int, default=0)
+    parser.add_argument('-time_limit', type=int, default=1000)
+    parameters = parser.parse_args()
+    return parameters
+
+
+def find_plan_for_obj(obj_name, environment, stime, time_limit):
+    rsc = ResolveSpatialConstraints(problem_env=environment,
+                                    goal_object_name=obj_name,
+                                    goal_region_name='home_region',
+                                    misc_region_name='loading_region')
+    plan_found = False
+    plan = None
+    status = 'NoSolution'
+    while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < time_limit:
+        plan, status = rsc.search(obj_name,
+                                  parent_swept_volumes=None,
+                                  obstacles_to_remove=[],
+                                  objects_moved_before=[],
+                                  plan=[],
+                                  stime=stime,
+                                  time_limit=time_limit)
+        plan_found = status == 'HasSolution'
+        if plan_found:
+            print "Solution found"
+        else:
+            print "Restarting..."
+
+    if plan_found:
+        return plan, rsc.get_num_nodes(), status
+    else:
+        return [], rsc.get_num_nodes(), status
+
+
+def execute_plan(plan):
+    for p in plan:
+        p.execute()
+
+
+def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_path, goal_entities, time_taken):
+    [p.make_pklable() for p in total_plan]
+    pickle.dump({"plan": total_plan,
+                 'n_nodes': total_n_nodes,
+                 'n_remaining_objs': n_remaining_objs,
+                 'goal_entities': goal_entities,
+                 'time_taken': time_taken,
+                 'found_solution': found_solution},
+                open(file_path, 'wb'))
+
+
+def find_plan_without_reachability(problem_env, goal_object_names):
+    planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
+    goal_obj_order_plan = planner.search()
+    goal_obj_order_plan = [o.GetName() for o in goal_obj_order_plan]
+    return goal_obj_order_plan
+
+
+def main():
+    parameters = parse_parameters()
+
+    save_dir = make_and_get_save_dir(parameters)
+    file_path = save_dir + '/seed_' + str(parameters.seed) + '_pidx_' + str(parameters.problem_idx) + '.pkl'
+    quit_if_already_tested(file_path, parameters.f)
+
+    # for creating problem
+    np.random.seed(parameters.problem_idx)
+    random.seed(parameters.problem_idx)
+    environment = Mover(parameters.problem_idx)
+    goal_object_names = np.random.permutation([obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]).tolist()
+    goal_entities = goal_object_names + ['home_region']
+
+    # for randomized algorithms
+    np.random.seed(parameters.seed)
+    random.seed(parameters.seed)
+
+    """
+    for obj_name in environment.object_names:
+        if obj_name not in goal_object_names:
+            obj = environment.env.GetKinBody(obj_name)
+            environment.env.Remove(obj)
+    """
+
+    if parameters.v:
+        environment.env.SetViewer('qtcoin')
+
+    #from manipulation.bodies.bodies import set_color
+    #set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
+
+    stime = time.time()
+    goal_object_names = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+    total_n_nodes = 0
+    total_plan = []
+    idx = 0
+    total_time_taken = 0
+    found_solution = False
+    time_limit = parameters.time_limit
+    while total_n_nodes < 1000 and total_time_taken < time_limit:
+        goal_obj_name = goal_object_names[idx]
+        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, environment, stime, time_limit)
+        total_n_nodes += n_nodes
+        total_time_taken = time.time() - stime
+        print goal_obj_name, goal_object_names, total_n_nodes
+        print "Time taken: %.2f" % total_time_taken
+        if status == 'HasSolution':
+            execute_plan(plan)
+            environment.initial_robot_base_pose = utils.get_body_xytheta(environment.robot)
+            total_plan += plan
+            save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities,
+                      total_time_taken)
+            idx += 1
+        else:
+            # Note that HPN does not have any recourse if this happens. We re-plan at the higher level.
+            goal_object_names = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+            total_plan = []
+            idx = 0
+
+        if idx == len(goal_object_names):
+            found_solution = True
+            break
+        else:
+            idx %= len(goal_object_names)
+
+        print 'plan saved'
+    save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities, total_time_taken)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,20 @@
+from trajectory_representation.predicates.predicate import BinaryPredicate
+
+
+class InRegion(BinaryPredicate):
+    def __init__(self, problem_env):
+        BinaryPredicate.__init__(self, problem_env)
+
+    def __call__(self, a, b):
+
+        is_a_region = a in self.problem_env.regions
+        if is_a_region:
+            return False
+
+        is_b_region = b in self.problem_env.regions
+        if is_b_region:
+            b = self.problem_env.regions[b]
+            is_a_in_b = b.contains(self.problem_env.env.GetKinBody(a).ComputeAABB())
+            return is_a_in_b
+        else:
+            return False

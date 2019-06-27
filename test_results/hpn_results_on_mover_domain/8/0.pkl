@@ -1,0 +1,11 @@
+(dp0
+S'n_nodes'
+p1
+I8
+sS'n_remaining_objs'
+p2
+I1
+sS'plan'
+p3
+(lp4
+s.
