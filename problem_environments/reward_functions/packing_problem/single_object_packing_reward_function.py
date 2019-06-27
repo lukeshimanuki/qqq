@@ -21,18 +21,26 @@ class ObjectPackingRewardFunction(RewardFunction):
                 obj = self.problem_env.env.GetKinBody(obj)
             prev_region = self.problem_env.get_region_containing(obj)
             operator_instance.execute()
-            return self.is_one_of_entities_in_goal_region(obj, prev_region) * 1
+
+            if self.cleared_obstacle_to_goal():
+                return 1 + self.is_one_of_entities_in_goal_region(obj, prev_region)
+            else:
+                return 0 + self.is_one_of_entities_in_goal_region(obj, prev_region)
+
+    def cleared_obstacle_to_goal(self):
+        #todo write this
+        pass
 
     def is_one_of_entities_in_goal_region(self, entity, prev_region=None):
         is_goal_entity = entity in self.goal_objects
         if is_goal_entity and self.goal_region.contains(entity.ComputeAABB()):
             if (entity, self.goal_region) in self.achieved:
-                return False
+                return 0
             else:
                 self.achieved.append((entity, self.goal_region))
-                return True
+                return 10
 
-        return False
+        return 0
 
     def apply_operator_skeleton_and_get_reward(self, operator_instance):
         return 0
