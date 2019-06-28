@@ -21,7 +21,6 @@ def worker_p(config):
 
 
 def worker_wrapper_multi_input(multi_args):
-    # time.sleep(1)
     return worker_p(multi_args)
 
 
