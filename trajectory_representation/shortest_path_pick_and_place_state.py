@@ -31,7 +31,6 @@ class ShortestPathPaPState(PaPState):
             self.initialize_parent_predicates(moved_obj, parent_state, parent_action)
         else:
             moved_obj = None
-
         problem_env.enable_objects_in_region('entire_region')
         self.reachable_entities = []
         self.reachable_regions_while_holding = []
@@ -39,6 +38,11 @@ class ShortestPathPaPState(PaPState):
             object.GetName(): self.get_pick_poses(object, moved_obj, parent_state) for object in problem_env.objects
         }
         if self.use_prm:
+            if parent_state is None:
+                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(None)
+            else:
+                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state.collides)
+
             # hold an object and check collisions
             self.holding_collides = None
             self.current_holding_collides = None

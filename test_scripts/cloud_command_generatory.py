@@ -2,7 +2,7 @@ num_train = 5000
 n_objs_pack = 3
 time_limit = 300 * n_objs_pack
 planning_seed = [0, 1, 2]
-train_seed = [0, 1, 2]
+train_seed = [1, 2]
 pidxs = [[0, 50], [50, 100]]
 loss = 'largemargin'
 
