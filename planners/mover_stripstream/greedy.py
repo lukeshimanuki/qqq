@@ -687,6 +687,8 @@ def read_pddl(filename):
 
 def get_problem(mover):
 
+	tt = time.time()
+
 	directory = os.path.dirname(os.path.abspath(__file__))
 	#domain_pddl = read(os.path.join(directory, 'domain.pddl'))
 	#stream_pddl = read(os.path.join(directory, 'stream.pddl'))
@@ -1069,9 +1071,12 @@ def get_problem(mover):
 	#])))
 	iter = 0
 	while True:
+		if time.time() - tt > config.timelimit:
+			return None, iter
+
 		iter += 1
 
-		if iter > 300:
+		if iter > 3000:
 			print('failed to find plan: iteration limit')
 			return None, iter
 
@@ -1999,6 +2004,7 @@ if __name__ == '__main__':
 	parser.add_argument('-seed', type=int, default=0)
 	parser.add_argument('-train_seed', type=int, default=0)
 	parser.add_argument('-num_objects', type=int, default=1)
+	parser.add_argument('-timelimit', type=float, default=600)
 	parser.add_argument('-visualize_plan', action='store_true', default=False)
 	parser.add_argument('-visualize_sim', action='store_true', default=False)
 	parser.add_argument('-dontsimulate', action='store_true', default=False)
