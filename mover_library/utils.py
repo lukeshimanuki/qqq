@@ -289,6 +289,8 @@ def clean_pose_data(pose_data):
         return pose_data
     else:
         return np.array([])[None, :]
+
+
 def compute_occ_vec(key_configs, robot, env):
     occ_vec = []
     with robot:
@@ -355,6 +357,13 @@ def release_obj():
     obj = robot.GetGrabbed()[0]
     robot.Release(obj)
 
+def convert_to_kin_body(obj):
+    env = openravepy.RaveGetEnvironment(1)
+    if isinstance(obj, openravepy.KinBody):
+        obj = obj
+    else:
+        obj = env.GetKinBody(obj)
+    return obj
 
 def one_arm_pick_object(obj, pick_action):
     assert len(openravepy.RaveGetEnvironments()) == 1
@@ -433,6 +442,7 @@ def two_arm_pick_object(obj, pick_action):
         set_config(robot, g_config[0], leftarm_manip.GetArmIndices())
         set_config(robot, g_config[1], rightarm_torso_manip.GetArmIndices())
     grab_obj(obj)
+
 
 def viewer():
     env = openravepy.RaveGetEnvironment(1)
@@ -607,7 +617,6 @@ def set_obj_xyztheta(xyztheta, obj):
 def get_body_with_name(obj_name):
     env = openravepy.RaveGetEnvironment(1)
     return env.GetKinBody(obj_name)
-
 
 
 class CustomStateSaver:

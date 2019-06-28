@@ -22,16 +22,7 @@ class PaPState(State):
             for obj in problem_env.objects
         }
 
-        # cached info
         self.use_prm = problem_env.name.find('two_arm') != -1
-        if self.use_prm:
-            if parent_state is None:
-                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(None)
-            else:
-                self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state.collides)
-        else:
-            self.collides = None
-            self.current_collides = None
 
         if paps_used_in_data is not None:
             self.pick_used = paps_used_in_data[0]

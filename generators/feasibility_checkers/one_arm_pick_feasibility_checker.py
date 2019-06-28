@@ -27,17 +27,23 @@ class OneArmPickFeasibilityChecker(PickFeasibilityChecker):
                            'g_config': None, 'action_parameters': pick_parameters}
             return pick_action, "NoSolution"
 
-    def compute_grasp_config(self, obj, pick_base_pose, grasp_params):
+    def compute_grasp_config(self, obj, pick_base_pose, grasp_params, from_place=False):
         set_robot_config(pick_base_pose, self.robot)
-        inside_region = self.problem_env.regions['home_region'].contains(self.robot.ComputeAABB()) or \
-                        self.problem_env.regions['loading_region'].contains(self.robot.ComputeAABB())
-        no_collision = not self.env.CheckCollision(self.robot)
-        if (not inside_region) or (not no_collision):
-            return None
+
+        if not from_place:
+            inside_region = self.problem_env.regions['home_region'].contains(self.robot.ComputeAABB()) or \
+                            self.problem_env.regions['loading_region'].contains(self.robot.ComputeAABB())
+            no_collision = not self.env.CheckCollision(self.robot)
+            if (not inside_region) or (not no_collision):
+                return None
         open_gripper()
-        grasps = compute_one_arm_grasp(depth_portion=grasp_params[2], height_portion=grasp_params[1],
-                                       theta=grasp_params[0], obj=obj, robot=self.robot)
+        grasps = compute_one_arm_grasp(depth_portion=grasp_params[2],
+                                       height_portion=grasp_params[1],
+                                       theta=grasp_params[0],
+                                       obj=obj,
+                                       robot=self.robot)
         grasp_config, grasp = solveIKs(self.env, self.robot, grasps)
+
         return grasp_config
 
     def is_grasp_config_feasible(self, obj, pick_base_pose, grasp_params, grasp_config):

@@ -10,7 +10,7 @@ class ObjectPackingRewardFunction(RewardFunction):
         self.goal_objects = [self.problem_env.env.GetKinBody(obj_name) for obj_name in goal_objects]
         self.goal_region = self.problem_env.regions[goal_region]
         self.achieved = []
-        #set_color(self.goal_object, [1, 0, 0])
+        # set_color(self.goal_object, [1, 0, 0])
 
     def apply_operator_instance_and_get_reward(self, state, operator_instance, is_op_feasible):
         if not is_op_feasible:
@@ -25,8 +25,9 @@ class ObjectPackingRewardFunction(RewardFunction):
             return self.is_one_of_entities_in_goal_region(obj, prev_region)
 
     def n_cleared_obstacles_to_goal(self, state):
+        if state is None:
+            return 0
         if state.parent_state is not None:
-            import pdb;pdb.set_trace()
             objs_in_way = state.get_entities_in_way_to_goal_entities()
             parent_objs_in_way = state.parent_state.get_entities_in_way_to_goal_entities()
             if len(parent_objs_in_way) - len(objs_in_way) > 0:
@@ -51,4 +52,4 @@ class ObjectPackingRewardFunction(RewardFunction):
         return np.all([self.is_one_of_entities_in_goal_region(obj) for obj in self.goal_objects])
 
     def is_optimal_plan_found(self, best_traj_rwd):
-        return True # satisficing problem
+        return True  # satisficing problem

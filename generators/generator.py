@@ -38,6 +38,7 @@ class Generator:
             self.domain = get_place_domain(target_region)
             self.op_feasibility_checker = OneArmPlaceFeasibilityChecker(problem_env)
         elif operator_type == 'two_arm_pick_two_arm_place':
+            # used by MCTS
             pick_min = get_pick_domain()[0]
             pick_max = get_pick_domain()[1]
             place_min = get_place_domain(target_region)[0]
@@ -48,6 +49,9 @@ class Generator:
 
             self.domain = np.vstack([mins, maxes])
             self.op_feasibility_checker = TwoArmPaPFeasibilityChecker(problem_env)
+        elif operator_type == 'one_arm_pick_one_arm_place':
+            # used by MCTS
+            raise NotImplementedError
         else:
             raise ValueError
 

@@ -16,8 +16,8 @@ class ContinuousTreeNode(TreeNode):
 
     def add_actions(self, action):
         new_action = Operator(operator_type=self.operator_skeleton.type,
-                              discrete_parameters=self.operator_skeleton.discrete_parameters)
-        new_action.set_continuous_parameters(action)
+                              discrete_parameters=self.operator_skeleton.discrete_parameters,
+                              continuous_parameters=action)
         self.A.append(new_action)
         self.N[new_action] = 0
 

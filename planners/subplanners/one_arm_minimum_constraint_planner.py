@@ -14,7 +14,7 @@ class OneArmMinimumConstraintPlanner:
         param = generator.sample_next_point(self.operator_skeleton,
                                             n_iter=50,
                                             n_parameters_to_try_motion_planning=1,
-                                            no_motion_plan=True,
+                                            dont_check_motion_existence=True,
                                             cached_collisions=None)
         return param
 

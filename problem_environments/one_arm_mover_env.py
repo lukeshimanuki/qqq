@@ -37,23 +37,28 @@ class OneArmMover(Mover):
             if op_name.find('place') != -1:
                 if self.check_holding_object_precondition():
                     object_held = self.robot.GetGrabbed()[0]
+                    if parent_op.type.find('pick') != -1:
+                        grasp_params = parent_op.continuous_parameters['grasp_params']
+                    else:
+                        grasp_params = None
                     if self.applicable_op_constraint is None:
                         for region in self.regions.values():
                             if region.name.find('box') == -1:
                                 continue
                             assert parent_op is not None
+
                             op = Operator(operator_type=op_name,
                                           discrete_parameters={'region': region,
                                                                'object': object_held},
                                           continuous_parameters={
-                                              'grasp_params': parent_op.continuous_parameters['grasp_params']})
+                                              'grasp_params': grasp_params})
                             applicable_ops.append(op)
                     else:
                         op = Operator(operator_type=op_name,
                                       discrete_parameters={'region': self.applicable_op_constraint['region'],
                                                            'object': object_held},
                                       continuous_parameters={
-                                          'grasp_params': parent_op.continuous_parameters['grasp_params']})
+                                          'grasp_params': grasp_params})
 
                         applicable_ops.append(op)
             else:
@@ -69,3 +74,27 @@ class OneArmMover(Mover):
                         applicable_ops.append(op)
 
         return applicable_ops
+
+
+class PaPOneArmMoverEnv(OneArmMover):
+    def __init__(self, problem_idx):
+        OneArmMover.__init__(self, problem_idx)
+    """
+    def get_applicable_ops(self, parent_op=None):
+        # used by MCTS
+        applicable_ops = []
+        op_name = 'two_arm_pick_two_arm_place'
+
+        for region_name in self.region_names:
+            if region_name == 'entire_region':
+                continue
+            for obj_name in self.object_names:
+                op = Operator(operator_type=op_name,
+                              discrete_parameters={'object': obj_name,
+                                                   'region': region_name,
+                                                   'one_arm_place_object': obj_name,
+                                                   'one_arm_place_region': region_name})
+                applicable_ops.append(op)
+
+        return applicable_ops
+    """

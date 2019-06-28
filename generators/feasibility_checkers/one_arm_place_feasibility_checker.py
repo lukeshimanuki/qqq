@@ -2,10 +2,15 @@ from mover_library.samplers import *
 from mover_library.utils import set_robot_config, grab_obj, release_obj, set_config
 from generators.feasibility_checkers.place_feasibility_checker import PlaceFeasibilityChecker
 from generators.feasibility_checkers.one_arm_pick_feasibility_checker import OneArmPickFeasibilityChecker
+from mover_library import utils
+from mover_library.operator_utils.grasp_utils import compute_one_arm_grasp
 
 from manipulation.primitives.utils import mirror_arm_config
 from manipulation.constants import PARALLEL_LEFT_ARM, REST_LEFT_ARM, HOLDING_LEFT_ARM, FOLDED_LEFT_ARM, \
     FAR_HOLDING_LEFT_ARM, LOWER_TOP_HOLDING_LEFT_ARM, REGION_Z_OFFSET
+
+from manipulation.bodies.robot import get_active_arm_indices, get_manipulator
+from openravepy import openravepy_int
 
 
 class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibilityChecker):
@@ -40,6 +45,8 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         obj_region = operator_skeleton.discrete_parameters['region']
         if type(obj_region) == str:
             obj_region = self.problem_env.regions[obj_region]
+
+        # todo sample base poses near the object
         new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
 
         target_robot_region = self.problem_env.regions['entire_region']
@@ -55,7 +62,12 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             before.Restore()
             return action, 'NoSolution'
 
-        grasp_config = OneArmPickFeasibilityChecker.compute_grasp_config(self, obj, new_base_pose, grasp_params)
+        grasp_config = OneArmPickFeasibilityChecker.compute_grasp_config(self, obj, new_base_pose, grasp_params,
+                                                                         from_place=True)
+
+        self.problem_env.enable_objects_in_region('entire_region')
+        [o.Enable(True) for o in self.problem_env.boxes]
+
         if grasp_config is None:
             action = {'operator_name': 'one_arm_place', 'base_pose': None, 'object_pose': None,
                       'q_goal': None,

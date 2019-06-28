@@ -1,5 +1,5 @@
 from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters
-
+from mover_library import utils
 
 class PickFeasibilityChecker(object):
     def __init__(self, problem_env):
@@ -26,13 +26,15 @@ class PickFeasibilityChecker(object):
             return pick_action, "NoSolution"
 
     def compute_feasible_grasp_config(self, obj, pick_base_pose, grasp_params):
-        with self.robot:
-            grasp_config = self.compute_grasp_config(obj, pick_base_pose, grasp_params)
-            if grasp_config is not None:
-                if self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config):
-                    return grasp_config
-            else:
-                return None
+        saver = utils.CustomStateSaver(self.problem_env.env)
+        grasp_config = self.compute_grasp_config(obj, pick_base_pose, grasp_params)
+        if grasp_config is not None:
+            if self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config):
+                saver.Restore()
+                return grasp_config
+        else:
+            saver.Restore()
+            return None
 
     def is_grasp_config_feasible(self, obj, pick_base_pose, grasp_params, grasp_config):
         raise NotImplementedError

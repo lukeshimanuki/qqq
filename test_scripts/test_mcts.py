@@ -1,6 +1,6 @@
 from problem_environments.mover_env import Mover, PaPMoverEnv
 
-from problem_environments.one_arm_mover_env import OneArmMover
+from problem_environments.one_arm_mover_env import OneArmMover, PaPOneArmMoverEnv
 from problem_environments.reward_functions.packing_problem.single_object_packing_reward_function \
     import ObjectPackingRewardFunction
 from planners.flat_mcts.mcts import MCTS
@@ -92,7 +92,7 @@ def parse_parameters():
     parser.add_argument('-mcts_iter', type=int, default=1000)
     parser.add_argument('-n_feasibility_checks', type=int, default=200)
     parser.add_argument('-dont_use_learned_q', action='store_false', default=True)
-    parser.add_argument('-use_learned_q', action='store_true', default=True)
+    parser.add_argument('-use_learned_q', action='store_true', default=False)
     parser.add_argument('-n_switch', type=int, default=5)
     parser.add_argument('-use_ucb', action='store_true', default=False)
     parser.add_argument('-pw', action='store_true', default=False)
@@ -112,9 +112,7 @@ def main():
 
     save_dir = make_and_get_save_dir(parameters)
     if parameters.domain.find('one_arm') != -1:
-        environment = OneArmMover(parameters.problem_idx)
-        # following illustrates the situation where the entity occuluding the goal entity has the second highest value
-        # goal_entities = ['r_obst0', environment.regions['rectangular_packing_box1_region'].name] # seed=0
+        environment = PaPOneArmMoverEnv(parameters.problem_idx)
         goal_entities = ['r_obst0', environment.regions['rectangular_packing_box1_region'].name]
         motion_planner = ArmBaseMotionPlanner(environment, 'rrt')
         reward_function = ObjectPackingRewardFunction(environment,

@@ -10,6 +10,7 @@ from mcts_tree import MCTSTree
 from generators.uniform import UniformGenerator, PaPUniformGenerator
 from trajectory_representation.state import State, StateForPrediction
 from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
+from trajectory_representation.one_arm_pap_state import OneArmPaPState
 
 ## openrave helper libraries
 from mover_library.utils import *
@@ -121,10 +122,19 @@ class MCTS:
                     else:
                         parent_state = parent_node.state
                     # where is the parent state?
-                    state = ShortestPathPaPState(self.environment,
-                                                 parent_state=parent_state,
-                                                 parent_action=parent_action,
-                                                 goal_entities=self.goal_entities)
+                    if self.environment.name.find('one_arm') != -1:
+                        state = None
+                        """
+                        state = OneArmPaPState(self.environment,
+                                               parent_state=parent_state,
+                                               parent_action=parent_action,
+                                               goal_entities=self.goal_entities)
+                        """
+                    else:
+                        state = ShortestPathPaPState(self.environment,
+                                                     parent_state=parent_state,
+                                                     parent_action=parent_action,
+                                                     goal_entities=self.goal_entities)
             else:
                 state = parent_node.state
         else:
@@ -255,12 +265,10 @@ class MCTS:
             self.environment.reset_to_init_state(node_to_search_from)
 
             new_traj = []
-            import pdb;pdb.set_trace()
             stime = time.time()
             self.simulate(node_to_search_from, node_to_search_from, depth, new_traj)
             time_to_search += time.time() - stime
             new_trajs.append(new_traj)
-            import pdb;pdb.set_trace()
 
             is_time_to_switch_node = iteration % 10 == 0
             # I have to have a feasible action to switch if this is an instance node
@@ -305,9 +313,9 @@ class MCTS:
             print "Skeleton node"
 
             if curr_node.state is None:
-                import pdb; pdb.set_trace()
-
-            action = curr_node.perform_ucb_over_actions(self.learned_q_function)
+                action = curr_node.perform_ucb_over_actions()
+            else:
+                action = curr_node.perform_ucb_over_actions(self.learned_q_function)
         else:
             print 'Instance node'
             if curr_node.sampling_agent is None:  # this happens if the tree has been pickled
@@ -352,14 +360,15 @@ class MCTS:
             print "At depth ", depth
             print "Is it time to pick?", self.environment.is_pick_time()
 
-        if curr_node.state is None:
+        #if curr_node.state is None:
             # is it none because it was infeasible before?
             # it should never get here
-            sys.exit(-1)
+        #    sys.exit(-1)
 
         action = self.choose_action(curr_node)
         reward = self.apply_action(curr_node, action)
         print "Reward is", reward
+        import pdb;pdb.set_trace()
 
         if not curr_node.is_action_tried(action):
             next_node = self.create_node(action, depth + 1, reward, curr_node)
@@ -373,7 +382,10 @@ class MCTS:
             # this (s,a) is a dead-end
             print "Infeasible action"
             # todo use the average of Q values here, instead of termination
-            sum_rewards = -1 + curr_node.parent.learned_q[curr_node.parent_action]
+            if self.use_learned_q:
+                sum_rewards = -1 + curr_node.parent.learned_q[curr_node.parent_action]
+            else:
+                sum_rewards = reward
         else:
             sum_rewards = reward + self.discount_rate * self.simulate(next_node, node_to_search_from, depth + 1,
                                                                       new_traj)
@@ -395,10 +407,10 @@ class MCTS:
 
     def apply_action(self, node, action):
         if node.is_operator_skeleton_node:
-            print "Applying skeleton", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
+            #print "Applying skeleton", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
             reward = self.environment.apply_operator_skeleton(node.state, action)
         else:
-            print "Applying instance", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
+            #print "Applying instance", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
             reward = self.environment.apply_operator_instance(node.state, action, self.check_reachability)
         return reward
 
@@ -407,7 +419,7 @@ class MCTS:
             feasible_param = node.sampling_agent.sample_next_point(node.operator_skeleton,
                                                                    self.n_feasibility_checks,
                                                                    n_parameters_to_try_motion_planning=1,
-                                                                   no_motion_plan=True)
+                                                                   dont_check_motion_existence=True)
         else:
             current_collides = node.state.current_collides if node.state is not None else None
             current_holding_collides = node.state.current_holding_collides if node.state is not None else None

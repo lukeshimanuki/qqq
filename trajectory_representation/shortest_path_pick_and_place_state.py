@@ -1,9 +1,7 @@
-from trajectory_representation.state import State
 from trajectory_representation.operator import Operator
 from generators.uniform import UniformGenerator
 from mover_library.utils import CustomStateSaver, get_body_xytheta, set_robot_config, set_obj_xytheta
 
-from predicates.is_reachable import IsReachable
 from predicates.is_holding_goal_entity import IsHoldingGoalEntity
 from predicates.place_in_way import PlaceInWay
 from predicates.pick_in_way import PickInWay
@@ -12,12 +10,8 @@ from predicates.in_region import InRegion
 from planners.subplanners.motion_planner import BaseMotionPlanner
 from mover_library import utils
 
-import copy
-from mover_library.utils import visualize_path, two_arm_pick_object
-from manipulation.bodies.bodies import set_color
 
 from pick_and_place_state import PaPState
-import numpy as np
 
 
 class ShortestPathPaPState(PaPState):
