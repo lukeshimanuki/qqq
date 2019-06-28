@@ -45,17 +45,21 @@ class ResolveSpatialConstraints:
 
         self.problem_env.disable_objects_in_region('entire_region')
         target_object.Enable(True)
+        # instead of doing this, get a bunch of qgoals
+
         generator = UniformGenerator(operator_skeleton, self.problem_env, None)
         print "Generating goals for ", target_object
-        param = generator.sample_next_point(operator_skeleton,
-                                            n_iter=1000,
-                                            n_parameters_to_try_motion_planning=n_pick_configs,
-                                            dont_check_motion_existence=True,
-                                            cached_collisions=self.collides)
-        import pdb;pdb.set_trace()
+        potential_motion_plan_goals = []
+        n_iters = range(10, 500, 10)
+        for n_iter_to_try in n_iters:
+            op_cont_params, _ = generator.sample_feasible_op_parameters(operator_skeleton,
+                                                                        n_iter=n_iter_to_try,
+                                                                        n_parameters_to_try_motion_planning=n_pick_configs)
+            potential_motion_plan_goals = [op['q_goal'] for op in op_cont_params if op['q_goal'] is not None]
+            if len(potential_motion_plan_goals) > 2:
+                break
         print "Done"
         self.problem_env.enable_objects_in_region('entire_region')
-        potential_motion_plan_goals = [op['q_goal'] for op in op_cont_params if op['q_goal'] is not None]
         is_op_skel_infeasible = len(potential_motion_plan_goals) == 0
         if is_op_skel_infeasible:
             return None
@@ -194,6 +198,7 @@ class ResolveSpatialConstraints:
         stime = time.time()
         _, _, pick_operator_instance_for_curr_object = self.get_pick_from_initial_config(object_to_move) # this contains mc-path from initial config to the target obj
         print 'Time pick', time.time()-stime
+        import pdb;pdb.set_trace()
 
         if pick_operator_instance_for_curr_object is None:
             saver.Restore()
