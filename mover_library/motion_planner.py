@@ -5,6 +5,7 @@ from random import randint
 import pickle
 import Queue
 import openravepy
+import time
 
 from mover_library.utils import visualize_path, se2_distance, are_base_confs_close_enough
 
@@ -336,12 +337,13 @@ def find_prm_path(start, goal_fns, heuristic, is_collision):
     queue = Queue.PriorityQueue()
     for s in start:
         queue.put((heuristic(s), 0, np.random.rand(), s, [s]))
+
     while not queue.empty():
         _, dist, _, vertex, path = queue.get()
 
         for next in prm_edges[vertex] - visited:
             visited.add(next)
-            if is_collision(next):
+            if is_collision(next): # I think this can be lazily checked?
                 continue
             for i, goal_fn in enumerate(goal_fns):
                 if results[i] is None and goal_fn(next):
@@ -359,7 +361,7 @@ def init_prm():
         prm_vertices, prm_edges = pickle.load(open('./prm.pkl', 'rb'))
 
 
-def prm_connect(q1, q2, distance, sample, extend, collision_checker, iterations):
+def prm_connect(q1, q2, collision_checker):
     global prm_vertices
     global prm_edges
 
@@ -433,10 +435,9 @@ def prm_connect(q1, q2, distance, sample, extend, collision_checker, iterations)
     start = set()
     for idx, q in enumerate(prm_vertices):
         q_close_enough_to_q1 = are_base_confs_close_enough(q, q1, xy_threshold=0.8, th_threshold=50.)
-        q_not_in_collision = not is_collision(idx)
-        if q_close_enough_to_q1 and q_not_in_collision:
-            start.add(idx)
-
+        if q_close_enough_to_q1:
+            if not is_collision(idx):
+                start.add(idx)
     path = find_prm_path(start, [is_connected_to_goal], heuristic, is_collision)[0]
     if path is not None:
         path = [q1] + [prm_vertices[i] for i in path]

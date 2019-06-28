@@ -43,7 +43,7 @@ def parse_parameters():
     parser.add_argument('-uct', type=float, default=1.0)
     parser.add_argument('-w', type=float, default=5)
     parser.add_argument('-sampling_strategy', type=str, default='unif')
-    parser.add_argument('-problem_idx', type=int, default=0)
+    parser.add_argument('-pidx', type=int, default=0)
     parser.add_argument('-domain', type=str, default='mover')
     parser.add_argument('-planner', type=str, default='mcts')
     parser.add_argument('-v', action='store_true', default=False)
@@ -58,7 +58,7 @@ def parse_parameters():
     parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
     parser.add_argument('-n_motion_plan_trials', type=int, default=10)
     parser.add_argument('-n_objs_pack', type=int, default=1)
-    parser.add_argument('-seed', type=int, default=0)
+    parser.add_argument('-planning_seed', type=int, default=0)
     parser.add_argument('-time_limit', type=int, default=1000)
     parameters = parser.parse_args()
     return parameters
@@ -119,20 +119,22 @@ def main():
     parameters = parse_parameters()
 
     save_dir = make_and_get_save_dir(parameters)
-    file_path = save_dir + '/seed_' + str(parameters.seed) + '_pidx_' + str(parameters.problem_idx) + '.pkl'
+    file_path = save_dir + '/seed_' + str(parameters.planning_seed) + '_pidx_' + str(parameters.pidx) + '.pkl'
     quit_if_already_tested(file_path, parameters.f)
 
     # for creating problem
-    np.random.seed(parameters.problem_idx)
-    random.seed(parameters.problem_idx)
-    environment = Mover(parameters.problem_idx)
+    np.random.seed(parameters.pidx)
+    random.seed(parameters.pidx)
+    environment = Mover(parameters.pidx)
+
+
     goal_object_names = np.random.permutation(
         [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]).tolist()
     goal_entities = goal_object_names + ['home_region']
 
     # for randomized algorithms
-    np.random.seed(parameters.seed)
-    random.seed(parameters.seed)
+    np.random.seed(parameters.planning_seed)
+    random.seed(parameters.planning_seed)
 
     """
     for obj_name in environment.object_names:

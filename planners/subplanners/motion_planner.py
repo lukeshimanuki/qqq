@@ -2,7 +2,7 @@ from openravepy import DOFAffine
 from mover_library.motion_planner import collision_fn, base_extend_fn, base_sample_fn, base_distance_fn, \
     rrt_connect, prm_connect, rrt_region, arm_base_sample_fn, arm_base_distance_fn, \
     arm_base_extend_fn
-
+import time
 
 class MotionPlanner:
     def __init__(self, problem_env):
@@ -45,19 +45,23 @@ class BaseMotionPlanner(MotionPlanner):
         if n_iterations is None:
             n_iterations = [20, 50, 100, 500, 1000]
 
-        #print "Base motion planning..."
+        path = None
+        status = 'NoSolution'
         if self.algorithm == 'rrt':
             planning_algorithm = rrt_connect
             assert cached_collisions is None
+            if not isinstance(goal, list):
+                goal = [goal]
+            for n_iter in n_iterations:
+                print n_iter
+                for g in goal:
+                    path = planning_algorithm(q_init, g, d_fn, s_fn, e_fn, c_fn, iterations=n_iter)
+                    if path is not None:
+                        return path, 'HasSolution'
         else:
             planning_algorithm = prm_connect
-
-        path = None
-        status = 'NoSolution'
-        for n_iter in n_iterations:
-            path = planning_algorithm(q_init, goal, d_fn, s_fn, e_fn, c_fn, iterations=n_iter)
+            path = planning_algorithm(q_init, goal, c_fn)
             if path is not None:
-                # path = smooth_path(path, e_fn, c_fn)
                 status = "HasSolution"
 
         return path, status

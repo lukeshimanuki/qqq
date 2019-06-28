@@ -27,28 +27,6 @@ class MinimumConstraintGoalSampler:
                                             cached_collisions=None)
         return param
 
-    def approximate_minimal_collision_path(self, naive_path, naive_path_collisions):
-        enabled_objects = {obj.GetName() for obj in self.problem_env.objects}
-        enabled_objects -= {obj.GetName() for obj in naive_path_collisions}
-
-        [o.Enable(False) for o in naive_path_collisions]
-        minimal_objects_in_way = []
-        minimal_collision_path = naive_path
-        for obj in naive_path_collisions:
-            obj.Enable(True)
-            [o.Enable(False) for o in minimal_objects_in_way]
-            enabled_objects.add(obj.GetName())
-            enabled_objects -= {obj.GetName() for obj in minimal_objects_in_way}
-            param = self.sample_pick_config()
-            # re implement this part
-            is_param_feasible = param['is_feasible'] #param['motion'] is not None
-            if not is_param_feasible:
-                minimal_objects_in_way.append(obj)
-            else:
-                minimal_collision_path = param['motion']
-        self.problem_env.enable_objects_in_region('entire_region')
-        return minimal_collision_path
-
     def get_motion_plan(self):
         self.problem_env.enable_objects_in_region('entire_region')
         idx = 0
@@ -57,12 +35,10 @@ class MinimumConstraintGoalSampler:
                 param = self.sample_place_config()
             else:
                 param = self.sample_pick_config()
-            #if param['motion'] is not None:
             if param['is_feasible']:
                 break
             self.problem_env.objects[idx].Enable(False)
         self.problem_env.enable_objects_in_region('entire_region')
-        #if param['motion'] is not None:
         if param['is_feasible']:
             return param['motion'], "HasSolution"
         else:

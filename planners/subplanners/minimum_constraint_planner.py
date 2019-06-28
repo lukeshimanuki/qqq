@@ -1,6 +1,7 @@
 from planners.subplanners.motion_planner import BaseMotionPlanner, OperatorBaseMotionPlanner, ArmBaseMotionPlanner
 from mover_library.utils import two_arm_place_object, grab_obj, visualize_path, set_robot_config, \
     release_obj, grab_obj, fold_arms, CustomStateSaver
+import time
 
 
 class MinimumConstraintPlanner(BaseMotionPlanner, ArmBaseMotionPlanner):
@@ -44,13 +45,16 @@ class MinimumConstraintPlanner(BaseMotionPlanner, ArmBaseMotionPlanner):
         if self.problem_env.name.find('one_arm') != -1:
             path, status = ArmBaseMotionPlanner.get_motion_plan(self, goal_configuration)
         else:
+            stime = time.time()
             path, status = BaseMotionPlanner.get_motion_plan(self, goal_configuration)
+            print "Motion plan time", time.time()-stime
         self.problem_env.enable_objects_in_region('entire_region')
         return path
 
     def get_motion_plan(self, goal_configuration, region_name='entire_region', n_iterations=None,
                         cached_collisions=None):
         path_ignoring_obstacles = self.compute_path_ignoring_obstacles(goal_configuration)
+        #return path_ignoring_obstacles, "HasSolution"
 
         naive_path_collisions = self.problem_env.get_objs_in_collision(path_ignoring_obstacles, 'entire_region')
         assert not (self.target_object in naive_path_collisions)
