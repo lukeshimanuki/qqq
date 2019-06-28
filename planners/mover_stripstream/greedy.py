@@ -687,6 +687,8 @@ def read_pddl(filename):
 
 def get_problem(mover):
 
+	tt = time.time()
+
 	directory = os.path.dirname(os.path.abspath(__file__))
 	#domain_pddl = read(os.path.join(directory, 'domain.pddl'))
 	#stream_pddl = read(os.path.join(directory, 'stream.pddl'))
@@ -1069,9 +1071,12 @@ def get_problem(mover):
 	#])))
 	iter = 0
 	while True:
+		if time.time() - tt > config.timelimit:
+			return None, iter
+
 		iter += 1
 
-		if iter > 300:
+		if iter > 3000:
 			print('failed to find plan: iteration limit')
 			return None, iter
 
@@ -1763,6 +1768,8 @@ def generate_training_data_single(seed, examples):
 	np.random.seed(seed)
 	random.seed(seed)
 	mover = Mover(seed)
+	np.random.seed(config.planner_seed)
+	random.seed(config.planner_seed)
 	mover.set_motion_planner(BaseMotionPlanner(mover, 'prm'))
 	mover.seed = seed
 	"""
@@ -1998,7 +2005,9 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Greedy planner')
 	parser.add_argument('-seed', type=int, default=0)
 	parser.add_argument('-train_seed', type=int, default=0)
+	parser.add_argument('-planner_seed', type=int, default=0)
 	parser.add_argument('-num_objects', type=int, default=1)
+	parser.add_argument('-timelimit', type=float, default=600)
 	parser.add_argument('-visualize_plan', action='store_true', default=False)
 	parser.add_argument('-visualize_sim', action='store_true', default=False)
 	parser.add_argument('-dontsimulate', action='store_true', default=False)
