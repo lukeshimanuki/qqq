@@ -260,11 +260,13 @@ class ResolveSpatialConstraints:
 
         # enumerate through all object orderings
         print "Obstacles to remove", obstacles_to_remove
+        """
         cbefore = []
         for oidx, o in enumerate(obstacles_to_remove):
             cbefore.append(get_color(o))
             set_color(o, [0, 0, float(oidx) / len(obstacles_to_remove)])
         [set_color(o, c) for c, o in zip(cbefore, obstacles_to_remove)]
+        """
 
         for new_obj_to_move in obstacles_to_remove:
             set_color(object_to_move, color_before)

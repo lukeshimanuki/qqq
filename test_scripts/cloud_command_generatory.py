@@ -1,9 +1,10 @@
 num_train = 5000
-n_objs_pack = 3
+n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = [0, 1, 2]
-train_seed = [1, 2]
+train_seed = [1, 2, 3, 4, 5]
 pidxs = [[0, 50], [50, 100]]
+pidxs = [[0, 100]]
 loss = 'largemargin'
 
 command = "cd /root/qqq ; git pull;  python test_scripts/threaded_test_greedy.py"
