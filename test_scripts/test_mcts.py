@@ -52,7 +52,7 @@ def load_learned_q_functions(parameters, entities):
     parameters.loss = 'largemargin'
 
     m = PaPGNN(num_entities, dim_nodes, dim_edges, parameters, entities)
-    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_0_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_1700_loss_largemargin.hdf5'
+    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_0_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_5000_loss_largemargin.hdf5'
     m.load_weights()
     return m
 
@@ -81,8 +81,8 @@ def parse_parameters():
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-mse_weight', type=float, default=1.0)
 
-    parser.add_argument('-uct', type=float, default=1.0)
-    parser.add_argument('-w', type=float, default=5)
+    parser.add_argument('-uct', type=float, default=0.1)
+    parser.add_argument('-w', type=float, default=3)
     parser.add_argument('-sampling_strategy', type=str, default='unif')
     parser.add_argument('-problem_idx', type=int, default=0)
     parser.add_argument('-domain', type=str, default='pap_mover')
@@ -90,7 +90,7 @@ def parse_parameters():
     parser.add_argument('-v', action='store_true', default=False)
     parser.add_argument('-debug', action='store_true', default=False)
     parser.add_argument('-mcts_iter', type=int, default=1000)
-    parser.add_argument('-n_feasibility_checks', type=int, default=100)
+    parser.add_argument('-n_feasibility_checks', type=int, default=200)
     parser.add_argument('-dont_use_learned_q', action='store_false', default=True)
     parser.add_argument('-use_learned_q', action='store_true', default=True)
     parser.add_argument('-n_switch', type=int, default=5)

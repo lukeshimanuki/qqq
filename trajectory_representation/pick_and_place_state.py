@@ -108,6 +108,19 @@ class PaPState(State):
     def get_binary_edge_features(self, a, b):
         raise NotImplementedError
 
+    def get_entities_in_way_to_goal_entities(self):
+        goal_objs = [g for g in self.goal_entities if g.find('region') == -1]
+        goal_region = [g for g in self.goal_entities if g.find('region') != -1][0]
+        objs_in_way = []
+        for obj in goal_objs:
+            objs_in_way += self.get_entities_in_pick_way(obj)
+            objs_in_way += self.get_entities_in_place_way(obj, goal_region)
+
+        objs_in_way = set(objs_in_way)
+        objs_in_way = list(objs_in_way)
+        return objs_in_way
+
+
     def update_cached_data_after_binary(self):
         self.mc_pick_path = self.pick_in_way.mc_path_to_entity
         self.reachable_entities = self.pick_in_way.reachable_entities

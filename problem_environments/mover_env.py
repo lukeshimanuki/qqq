@@ -236,13 +236,13 @@ class Mover(ProblemEnvironment):
             print "Parameter values infeasible"
             return False
 
-    def apply_operator_skeleton(self, operator_skeleton):
-        reward = self.reward_function.apply_operator_skeleton_and_get_reward(operator_skeleton)
+    def apply_operator_skeleton(self, state, operator_skeleton):
+        reward = self.reward_function.apply_operator_skeleton_and_get_reward(state, operator_skeleton)
         return reward
 
-    def apply_operator_instance(self, operator_instance, check_reachability=True):
+    def apply_operator_instance(self, state, operator_instance, check_reachability=True):
         is_op_instance_feasible = self.check_parameter_feasibility_precondition(operator_instance)
-        reward = self.reward_function.apply_operator_instance_and_get_reward(operator_instance, is_op_instance_feasible)
+        reward = self.reward_function.apply_operator_instance_and_get_reward(state, operator_instance, is_op_instance_feasible)
         return reward
 
     @staticmethod

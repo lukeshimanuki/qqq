@@ -2,7 +2,7 @@ import numpy as np
 
 
 def upper_confidence_bound(n, n_sa):
-    return 2 * np.sqrt(n+1) / float(n_sa + 1)
+    return np.sqrt(2 * np.log(n+1) / float(n_sa + 1))
 
 
 class TreeNode:

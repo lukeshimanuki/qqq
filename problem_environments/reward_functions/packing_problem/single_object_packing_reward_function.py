@@ -12,7 +12,7 @@ class ObjectPackingRewardFunction(RewardFunction):
         self.achieved = []
         #set_color(self.goal_object, [1, 0, 0])
 
-    def apply_operator_instance_and_get_reward(self, operator_instance, is_op_feasible):
+    def apply_operator_instance_and_get_reward(self, state, operator_instance, is_op_feasible):
         if not is_op_feasible:
             return self.infeasible_reward
         else:
@@ -22,14 +22,19 @@ class ObjectPackingRewardFunction(RewardFunction):
             prev_region = self.problem_env.get_region_containing(obj)
             operator_instance.execute()
 
-            if self.cleared_obstacle_to_goal():
-                return 1 + self.is_one_of_entities_in_goal_region(obj, prev_region)
-            else:
-                return 0 + self.is_one_of_entities_in_goal_region(obj, prev_region)
+            return self.is_one_of_entities_in_goal_region(obj, prev_region)
 
-    def cleared_obstacle_to_goal(self):
-        #todo write this
-        pass
+    def n_cleared_obstacles_to_goal(self, state):
+        if state.parent_state is not None:
+            import pdb;pdb.set_trace()
+            objs_in_way = state.get_entities_in_way_to_goal_entities()
+            parent_objs_in_way = state.parent_state.get_entities_in_way_to_goal_entities()
+            if len(parent_objs_in_way) - len(objs_in_way) > 0:
+                return len(parent_objs_in_way) - len(objs_in_way)
+        return 0
+
+    def apply_operator_skeleton_and_get_reward(self, state, operator_instance):
+        return self.n_cleared_obstacles_to_goal(state)
 
     def is_one_of_entities_in_goal_region(self, entity, prev_region=None):
         is_goal_entity = entity in self.goal_objects
@@ -40,9 +45,6 @@ class ObjectPackingRewardFunction(RewardFunction):
                 self.achieved.append((entity, self.goal_region))
                 return 10
 
-        return 0
-
-    def apply_operator_skeleton_and_get_reward(self, operator_instance):
         return 0
 
     def is_goal_reached(self):

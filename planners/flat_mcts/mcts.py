@@ -125,29 +125,6 @@ class MCTS:
                                                  parent_state=parent_state,
                                                  parent_action=parent_action,
                                                  goal_entities=self.goal_entities)
-
-                """
-                fstate = './cached_states/n_objs_pack_%d_%s_pidx_%d_node_idx_%d_state.pkl' % (
-                    len(self.goal_entities) - 1,
-                    self.environment.name,
-                    self.environment.problem_idx,
-                    len(self.tree.nodes))
-                previously_stored_state_file_exists = os.path.isfile(fstate)
-                if previously_stored_state_file_exists:
-                    print "Loading the cached state file", fstate
-                    state = pickle.load(open(fstate, 'r'))
-                else:
-                    if self.environment.is_goal_reached():
-                        state = parent_node.state
-                    elif parent_node is not None:
-                        state = PaPState(self.environment, parent_state=parent_node.state, parent_action=parent_action,
-                                         goal_entities=self.goal_entities)
-                    else:
-                        state = PaPState(self.environment, goal_entities=self.goal_entities)
-                    state.make_pklable()  # removing openrave files to pkl
-                    pickle.dump(state, open(fstate, 'wb'))
-                    state.make_plannable(self.environment)
-                """
             else:
                 state = parent_node.state
         else:
@@ -278,10 +255,12 @@ class MCTS:
             self.environment.reset_to_init_state(node_to_search_from)
 
             new_traj = []
+            import pdb;pdb.set_trace()
             stime = time.time()
             self.simulate(node_to_search_from, node_to_search_from, depth, new_traj)
             time_to_search += time.time() - stime
             new_trajs.append(new_traj)
+            import pdb;pdb.set_trace()
 
             is_time_to_switch_node = iteration % 10 == 0
             # I have to have a feasible action to switch if this is an instance node
@@ -394,7 +373,7 @@ class MCTS:
             # this (s,a) is a dead-end
             print "Infeasible action"
             # todo use the average of Q values here, instead of termination
-            sum_rewards = reward + curr_node.parent.learned_q[curr_node.parent_action]
+            sum_rewards = -1 + curr_node.parent.learned_q[curr_node.parent_action]
         else:
             sum_rewards = reward + self.discount_rate * self.simulate(next_node, node_to_search_from, depth + 1,
                                                                       new_traj)
@@ -417,10 +396,10 @@ class MCTS:
     def apply_action(self, node, action):
         if node.is_operator_skeleton_node:
             print "Applying skeleton", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
-            reward = self.environment.apply_operator_skeleton(action)
+            reward = self.environment.apply_operator_skeleton(node.state, action)
         else:
             print "Applying instance", action.type, action.discrete_parameters['object'], action.discrete_parameters['region']
-            reward = self.environment.apply_operator_instance(action, self.check_reachability)
+            reward = self.environment.apply_operator_instance(node.state, action, self.check_reachability)
         return reward
 
     def sample_continuous_parameters(self, node):

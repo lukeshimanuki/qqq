@@ -19,6 +19,7 @@ from manipulation.bodies.bodies import set_color
 from pick_and_place_state import PaPState
 import numpy as np
 
+
 class ShortestPathPaPState(PaPState):
     def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None):
         PaPState.__init__(self, problem_env, goal_entities, parent_state=None, parent_action=None,
@@ -111,10 +112,9 @@ class ShortestPathPaPState(PaPState):
                 break
         self.problem_env.enable_objects_in_region('entire_region')
 
-        #assert len(motion_plan_goals) > 0 # if we can't find a pick pose then the object should be treated as unreachable
+        # assert len(motion_plan_goals) > 0 # if we can't find a pick pose then the object should be treated as unreachable
         operator_skeleton.continuous_parameters['q_goal'] = motion_plan_goals  # to make it consistent with Dpl
         return operator_skeleton
-
 
     def set_cached_pick_paths(self, parent_state, moved_obj):
         motion_planner = BaseMotionPlanner(self.problem_env, 'prm')
@@ -162,7 +162,7 @@ class ShortestPathPaPState(PaPState):
                         else:
                             path, _ = motion_planner.get_motion_plan(region, cached_collisions={})
                 saver.Restore()
-                #assert path is not None
+                # assert path is not None
                 self.cached_place_paths[(obj, region_name)] = path
 
     def get_binary_edges(self):

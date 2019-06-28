@@ -6,7 +6,7 @@ class AbstractProblemRewardFunction(RewardFunction):
     def __init__(self, problem_env):
         RewardFunction.__init__(self, problem_env)
 
-    def apply_operator_instance_and_get_reward(self, operator_instance, is_op_feasible):
+    def apply_operator_instance_and_get_reward(self, state, operator_instance, is_op_feasible):
         if not is_op_feasible:
             reward = self.infeasible_reward
         else:
