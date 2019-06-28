@@ -15,7 +15,7 @@ from pick_and_place_state import PaPState
 
 
 class ShortestPathPaPState(PaPState):
-    def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None):
+    def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None, planner='greedy'):
         PaPState.__init__(self, problem_env, goal_entities, parent_state=None, parent_action=None,
                           paps_used_in_data=None)
 
@@ -44,16 +44,17 @@ class ShortestPathPaPState(PaPState):
                 self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state.collides)
 
             # hold an object and check collisions
-            self.holding_collides = None
-            self.current_holding_collides = None
-            saver = utils.CustomStateSaver(self.problem_env.env)
-            self.pick_used.values()[0].execute()
-            if parent_state is None:
-                self.holding_collides, self.current_holding_collides = self.update_collisions_at_prm_vertices(None)
-            else:
-                self.holding_collides, self.current_holding_collides \
-                    = self.update_collisions_at_prm_vertices(parent_state.holding_collides)
-            saver.Restore()
+            if planner == 'mcts':
+                self.holding_collides = None
+                self.current_holding_collides = None
+                saver = utils.CustomStateSaver(self.problem_env.env)
+                self.pick_used.values()[0].execute()
+                if parent_state is None:
+                    self.holding_collides, self.current_holding_collides = self.update_collisions_at_prm_vertices(None)
+                else:
+                    self.holding_collides, self.current_holding_collides \
+                        = self.update_collisions_at_prm_vertices(parent_state.holding_collides)
+                saver.Restore()
         else:
             self.holding_collides = None
             self.holding_current_collides = None
