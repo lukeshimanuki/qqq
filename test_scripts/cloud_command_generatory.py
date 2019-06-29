@@ -1,11 +1,11 @@
 num_train = 5000
 n_objs_pack = 1
 time_limit = 300 * n_objs_pack
-planning_seed = range(10)
+planning_seed = range(5)
 train_seed = [1]
 #pidxs = [[20000, 20050], [20050, 20100]]
 pidxs = [[0, 50], [50, 100]]
-pidxs = [[0, 100]]
+#pidxs = [[0, 100]]
 
 loss = 'largemargin'
 algorithm = 'hpn'
@@ -19,7 +19,7 @@ for pseed in planning_seed:
         for pidx in pidxs:
             new_command = command + "-planner_seed %d -train_seed %d -pidxs %d %d" % (pseed, tseed, pidx[0], pidx[1])
             print new_command
-            #raw_input('continue?')
+            raw_input('continue?')
 
 
 

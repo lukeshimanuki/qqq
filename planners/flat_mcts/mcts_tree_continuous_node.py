@@ -12,7 +12,7 @@ class ContinuousTreeNode(TreeNode):
                  is_init_node):
         TreeNode.__init__(self, state, ucb_parameter, depth, state_saver, is_operator_skeleton_node, is_init_node)
         self.operator_skeleton = operator_skeleton
-        # todo initialize actions with the state evaluation
+        self.max_sum_rewards = {}
 
     def add_actions(self, action):
         new_action = Operator(operator_type=self.operator_skeleton.type,
@@ -34,7 +34,7 @@ class ContinuousTreeNode(TreeNode):
 
         if not use_ucb:
             new_action = self.A[-1]
-            is_new_action_infeasible = np.max(self.reward_history[new_action]) <= -2
+            is_new_action_infeasible = np.max(self.reward_history[new_action]) <= infeasible_rwd
             if is_new_action_infeasible:
                 return False
 
@@ -81,7 +81,6 @@ class ContinuousTreeNode(TreeNode):
         return best_action
 
     def update_node_statistics(self, action, sum_rewards, reward):
-        # todo intialize it to the parent's value
         self.Nvisited += 1
 
         is_action_never_tried = self.N[action] == 0
@@ -94,3 +93,4 @@ class ContinuousTreeNode(TreeNode):
             self.N[action] += 1
             if sum_rewards > self.Q[action]:
                 self.Q[action] = sum_rewards
+

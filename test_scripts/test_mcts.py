@@ -26,11 +26,11 @@ def make_and_get_save_dir(parameters):
         save_dir = './test_results/mcts_results_on_mover_domain/widening_' + str(parameters.w) \
                    + '/uct_' + str(parameters.uct) + '/' + str(parameters.domain) + '/n_objs_to_pack_' \
                    + str(parameters.n_objs_pack) + '/'
-    problem_idx = parameters.problem_idx
+    pidx = parameters.pidx
 
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
-    if os.path.isfile(save_dir + '/' + str(problem_idx) + '.pkl'):
+    if os.path.isfile(save_dir + '/' + str(pidx) + '.pkl'):
         print "Already done"
         if not parameters.f:
             sys.exit(-1)
@@ -48,7 +48,6 @@ def load_learned_q_functions(parameters, entities):
     parameters.n_layers = 2
     parameters.mse_weight = 1.0
     parameters.optimizer = 'adam'
-    parameters.seed = 'adam'
     parameters.loss = 'largemargin'
 
     m = PaPGNN(num_entities, dim_nodes, dim_edges, parameters, entities)
@@ -84,7 +83,7 @@ def parse_parameters():
     parser.add_argument('-uct', type=float, default=0.1)
     parser.add_argument('-w', type=float, default=3)
     parser.add_argument('-sampling_strategy', type=str, default='unif')
-    parser.add_argument('-problem_idx', type=int, default=0)
+    parser.add_argument('-pidx', type=int, default=0)
     parser.add_argument('-domain', type=str, default='pap_mover')
     parser.add_argument('-planner', type=str, default='mcts')
     parser.add_argument('-v', action='store_true', default=False)
@@ -99,20 +98,21 @@ def parse_parameters():
     parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
     parser.add_argument('-n_motion_plan_trials', type=int, default=10)
     parser.add_argument('-n_objs_pack', type=int, default=1)
-    parser.add_argument('-time_limit', type=int, default=1)
+    parser.add_argument('-timelimit', type=int, default=1)
     parser.add_argument('-f', action='store_true', default=False)
+    parser.add_argument('-planner_seed', type=int, default=0)
     parameters = parser.parse_args()
     return parameters
 
 
 def main():
     parameters = parse_parameters()
-    np.random.seed(parameters.problem_idx)
-    random.seed(parameters.problem_idx)
+    np.random.seed(parameters.pidx)
+    random.seed(parameters.pidx)
 
     save_dir = make_and_get_save_dir(parameters)
     if parameters.domain.find('one_arm') != -1:
-        environment = PaPOneArmMoverEnv(parameters.problem_idx)
+        environment = PaPOneArmMoverEnv(parameters.pidx)
         goal_entities = ['r_obst0', environment.regions['rectangular_packing_box1_region'].name]
         motion_planner = ArmBaseMotionPlanner(environment, 'rrt')
         reward_function = ObjectPackingRewardFunction(environment,
@@ -120,13 +120,12 @@ def main():
                                                       'rectangular_packing_box1_region')
     else:
         if parameters.domain.find('pap') != -1:
-            environment = PaPMoverEnv(parameters.problem_idx)
+            environment = PaPMoverEnv(parameters.pidx)
         else:
-            environment = Mover(parameters.problem_idx)
+            environment = Mover(parameters.pidx)
 
         goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
-        #goal_object_names = ['rectangular_packing_box1']
-        set_color(obj, [1,0,0])
+        set_color(obj, [1, 0, 0])
         goal_region_name = [environment.regions['home_region'].name]
         goal_entities = goal_object_names + goal_region_name
         motion_planner = OperatorBaseMotionPlanner(environment, 'prm')
@@ -139,28 +138,13 @@ def main():
     if parameters.v:
         environment.env.SetViewer('qtcoin')
 
-    """
-    # Verifying greedy planner's plan
-    plan = pickle.load(open('traj_pidx_0_1.pkl', 'r'))
-    actions = plan.actions
-    for a in actions:
-        pick = a.continuous_parameters[0]
-        place = a.continuous_parameters[1]
-        a.discrete_parameters['object'] = a.discrete_parameters['two_arm_place_object']
-        a.discrete_parameters['region'] = a.discrete_parameters['two_arm_place_region']
-        a.continuous_parameters={}
-        a.continuous_parameters['pick_path'] = [p.squeeze() for p in pick['path']]
-        a.continuous_parameters['place_path'] = [p.squeeze() for p in place['path']]
-        a.continuous_parameters['pick'] = pick
-        a.continuous_parameters['place'] = place
-
-    import pdb;pdb.set_trace()
-    """
-
     if parameters.use_learned_q:
         learned_q_functions = load_learned_q_functions(parameters, environment.entity_names)
     else:
         learned_q_functions = None
+
+    np.random.seed(parameters.planner_seed)
+    random.seed(parameters.planner_seed)
 
     planner = MCTS(parameters.w,
                    parameters.uct,
@@ -177,16 +161,17 @@ def main():
                    goal_entities=goal_entities)
 
     stime = time.time()
-    search_time_to_reward, plan = planner.search(max_time=parameters.time_limit)
+    search_time_to_reward, plan = planner.search(max_time=parameters.timelimit)
     print "Time taken: %.2f" % (time.time() - stime)
 
     # I also need to store the state, but later
     save_dir = make_and_get_save_dir(parameters)
-    filename = save_dir + str(parameters.problem_idx) + '.pkl'
+    filename = save_dir + str(parameters.pidx) + '.pkl'
 
+    import pdb;pdb.set_trace()
     pickle.dump({"search_time_to_reward": search_time_to_reward,
-                 "pidx": parameters.problem_idx,
-                 'n_nodes': len(planner.tree.get_instance_nodes())}, open(filename, 'wb'))
+                 "pidx": parameters.pidx,
+                 'n_nodes': len(planner.tree.get_discrete_nodes())}, open(filename, 'wb'))
 
 
 if __name__ == '__main__':

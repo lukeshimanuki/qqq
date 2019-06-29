@@ -63,6 +63,9 @@ class MCTSTree:
     def get_instance_nodes(self):
         return [n for n in self.nodes if not n.is_operator_skeleton_node]
 
+    def get_discrete_nodes(self):
+        return [n for n in self.nodes if n.is_operator_skeleton_node]
+
     def get_best_trajectory_sum_rewards_and_node(self, discount_factor):
         sumR_list = []
         leaf_nodes_for_curr_init_state = []
