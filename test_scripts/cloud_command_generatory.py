@@ -4,11 +4,11 @@ time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 train_seed = [1]
 pidxs = [[20000, 20050], [20050, 20100]]
-#pidxs = [[0, 50], [50, 100]]
+pidxs = [[0, 50], [50, 100]]
 #pidxs = [[0, 100]]
 
 loss = 'largemargin'
-algorithm = 'hpn'
+algorithm = 'mcts'
 
 command = "cd /root/qqq ; git pull;  python test_scripts/threaded_test_%s.py" % algorithm
 command += " -loss %s -num_train %d -n_objs_pack %d -time_limit %d " % (loss, num_train, n_objs_pack, time_limit)

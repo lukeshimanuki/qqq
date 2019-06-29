@@ -1,9 +1,6 @@
 import os
-import sys
 from multiprocessing.pool import ThreadPool  # dummy is nothing but multiprocessing but wrapper around threading
-import argparse
 from threaded_test_utils import get_configs
-import time
 
 
 def worker_p(config):

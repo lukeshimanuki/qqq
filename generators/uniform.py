@@ -87,7 +87,7 @@ class PaPUniformGenerator(UniformGenerator):
 
         status = "NoSolution"
         #stime = time.time()
-        for n_iter in range(10, 200, 10):
+        for n_iter in range(10, n_iter, 10):
             feasible_op_parameters, status = self.sample_feasible_op_parameters(operator_skeleton,
                                                                                 n_iter,
                                                                                 n_parameters_to_try_motion_planning)

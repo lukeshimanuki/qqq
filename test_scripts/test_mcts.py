@@ -15,21 +15,27 @@ import argparse
 import pickle
 import time
 import sys
+import socket
 
 
 def make_and_get_save_dir(parameters):
-    if parameters.use_learned_q:
-        save_dir = './test_results/mcts_results_on_mover_domain/widening_' + str(parameters.w) \
-                   + '/uct_' + str(parameters.uct) + '/learned_q_test/' + str(parameters.domain) + '/' \
-                   + str(parameters.n_objs_pack) + '/'
+    hostname = socket.gethostname()
+    if hostname == 'dell-XPS-15-9560' or hostname == 'phaedra' or hostname == 'shakey' or hostname == 'lab' or \
+            hostname == 'glaucus':
+        root_dir = './'
     else:
-        save_dir = './test_results/mcts_results_on_mover_domain/widening_' + str(parameters.w) \
-                   + '/uct_' + str(parameters.uct) + '/' + str(parameters.domain) + '/n_objs_to_pack_' \
-                   + str(parameters.n_objs_pack) + '/'
+        root_dir = '/data/public/rw/pass.port/tamp_q_results/'
+
+    save_dir = root_dir + '/test_results/mcts_results_on_mover_domain/' \
+               + 'n_objs_pack_' + str(parameters.n_objs_pack) + '/' \
+               + 'n_mp_params_' + str(parameters.n_motion_plan_trials) + '/' \
+               + 'widening_' + str(parameters.w) \
+               + '/uct_' + str(parameters.uct)
     pidx = parameters.pidx
 
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+
     if os.path.isfile(save_dir + '/' + str(pidx) + '.pkl'):
         print "Already done"
         if not parameters.f:
@@ -49,9 +55,13 @@ def load_learned_q_functions(parameters, entities):
     parameters.mse_weight = 1.0
     parameters.optimizer = 'adam'
     parameters.loss = 'largemargin'
+    parameters.seed = parameters.train_seed
 
     m = PaPGNN(num_entities, dim_nodes, dim_edges, parameters, entities)
-    m.weight_file_name = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_adam_seed_0_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_32_top_k_1_num_train_5000_loss_largemargin.hdf5'
+    m.weight_file_name \
+        = './learn/q-function-weights/Q_weight_n_msg_passing_1_mse_weight_1.0_optimizer_' \
+          'adam_seed_%d_lr_0.0001_operator_two_arm_pick_two_arm_place_n_layers_2_n_hidden_' \
+          '32_top_k_1_num_train_%d_loss_%s.hdf5' % (parameters.train_seed, parameters.num_train, parameters.loss)
     m.load_weights()
     return m
 
@@ -60,7 +70,7 @@ def parse_parameters():
     parser = argparse.ArgumentParser(description='MCTS parameters')
     parser.add_argument('-n_hidden', type=int, default=32)
     parser.add_argument('-n_layers', type=int, default=2)
-    parser.add_argument('-seed', type=int, default=0)
+    parser.add_argument('-train_seed', type=int, default=0)
     parser.add_argument('-lr', type=float, default=1e-4)
     parser.add_argument('-optimizer', type=str, default='adam')
     parser.add_argument('-batch_size', type=int, default=32)
@@ -106,10 +116,10 @@ def parse_parameters():
 
 def main():
     parameters = parse_parameters()
+    save_dir = make_and_get_save_dir(parameters)
+
     np.random.seed(parameters.pidx)
     random.seed(parameters.pidx)
-
-    save_dir = make_and_get_save_dir(parameters)
     if parameters.domain.find('one_arm') != -1:
         environment = PaPOneArmMoverEnv(parameters.pidx)
         goal_entities = ['r_obst0', environment.regions['rectangular_packing_box1_region'].name]
@@ -122,9 +132,7 @@ def main():
             environment = PaPMoverEnv(parameters.pidx)
         else:
             environment = Mover(parameters.pidx)
-
         goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
-        set_color(obj, [1, 0, 0])
         goal_region_name = [environment.regions['home_region'].name]
         goal_entities = goal_object_names + goal_region_name
         motion_planner = OperatorBaseMotionPlanner(environment, 'prm')
@@ -149,7 +157,7 @@ def main():
                    parameters.uct,
                    parameters.n_feasibility_checks,
                    environment,
-                   depth_limit=100,
+                   depth_limit=11,
                    discount_rate=1,
                    check_reachability=True,
                    use_progressive_widening=parameters.pw,
