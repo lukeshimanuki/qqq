@@ -2,7 +2,7 @@ from openravepy import DOFAffine
 from mover_library.motion_planner import collision_fn, base_extend_fn, base_sample_fn, base_distance_fn, \
     rrt_connect, prm_connect, rrt_region, arm_base_sample_fn, arm_base_distance_fn, \
     arm_base_extend_fn
-import time
+
 
 class MotionPlanner:
     def __init__(self, problem_env):

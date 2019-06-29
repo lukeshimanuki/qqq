@@ -1,6 +1,4 @@
-from planners.subplanners.motion_planner import BaseMotionPlanner, OperatorBaseMotionPlanner, ArmBaseMotionPlanner
-from mover_library.utils import two_arm_place_object, grab_obj, visualize_path, set_robot_config, \
-    release_obj, grab_obj, fold_arms, CustomStateSaver
+from planners.subplanners.motion_planner import BaseMotionPlanner, ArmBaseMotionPlanner
 import time
 
 
@@ -29,8 +27,10 @@ class MinimumConstraintPlanner(BaseMotionPlanner, ArmBaseMotionPlanner):
                 path, status = ArmBaseMotionPlanner.get_motion_plan(self, goal_configuration,
                                                                     cached_collisions=cached_collisions)
             else:
-                path, status = BaseMotionPlanner.get_motion_plan(self, goal_configuration,
-                                                                 cached_collisions=cached_collisions)
+                path, status = BaseMotionPlanner.get_motion_plan(self,
+                                                                 goal_configuration,
+                                                                 cached_collisions=cached_collisions,
+                                                                 n_iterations=[20, 50, 100])
             if status != 'HasSolution':
                 minimal_objects_in_way.append(obj)
             else:
@@ -54,7 +54,6 @@ class MinimumConstraintPlanner(BaseMotionPlanner, ArmBaseMotionPlanner):
     def get_motion_plan(self, goal_configuration, region_name='entire_region', n_iterations=None,
                         cached_collisions=None):
         path_ignoring_obstacles = self.compute_path_ignoring_obstacles(goal_configuration)
-        #return path_ignoring_obstacles, "HasSolution"
 
         naive_path_collisions = self.problem_env.get_objs_in_collision(path_ignoring_obstacles, 'entire_region')
         assert not (self.target_object in naive_path_collisions)
@@ -68,7 +67,7 @@ class MinimumConstraintPlanner(BaseMotionPlanner, ArmBaseMotionPlanner):
         self.problem_env.enable_objects_in_region('entire_region')
         return minimal_collision_path, "HasSolution"
 
-
+"""
 class OperatorMinimumConstraintPlanner(MinimumConstraintPlanner, OperatorBaseMotionPlanner):
     def __init__(self, problem_env, target_object, objects_moved_in_higher_level_plan, planning_algorithm,
                  parent_pick_op=None, is_last_object_to_clear=False):
@@ -148,3 +147,4 @@ class OperatorMinimumConstraintPlanner(MinimumConstraintPlanner, OperatorBaseMot
             status = "HasSolution"
 
         return minimal_collision_path, status
+"""

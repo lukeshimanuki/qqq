@@ -14,7 +14,7 @@ prm_vertices = prm_edges = None
 
 def get_number_of_confs_in_between(q1, q2, body):
     n = int(
-        np.max(np.abs(np.divide(body.SubtractActiveDOFValues(q1, q2), np.array([0.3, 0.3, 20 * np.pi / 180.0]))))) + 1
+        np.max(np.abs(np.divide(body.SubtractActiveDOFValues(q1, q2), np.array([0.4, 0.4, 50 * np.pi / 180.0]))))) + 1
     return n
 
 
