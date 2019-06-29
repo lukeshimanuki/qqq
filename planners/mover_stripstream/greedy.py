@@ -748,8 +748,8 @@ def get_problem(mover):
         else:
             assert False
 
-    num_objects = config.num_objects
-    goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:num_objects]]
+    n_objs_pack = config.n_objs_pack
+    goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
 
     state = ShortestPathPaPState(mover, goal)
 
@@ -1177,8 +1177,8 @@ def get_problem(mover):
 
                 if all(mover.regions['home_region'].contains_point(
                         get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
-                       obj_names[:num_objects]):
-                    print("found successful plan: {}".format(num_objects))
+                       obj_names[:n_objs_pack]):
+                    print("found successful plan: {}".format(n_objs_pack))
                     trajectory = Trajectory(mover.seed, mover.seed)
                     plan = list(newnode.backtrack())[::-1]
                     trajectory.states = [nd.state for nd in plan]
@@ -1399,8 +1399,8 @@ def get_problem(mover):
 
                 if all(mover.regions['home_region'].contains_point(
                         get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
-                       obj_names[:num_objects]):
-                    print("found successful plan: {}".format(num_objects))
+                       obj_names[:n_objs_pack]):
+                    print("found successful plan: {}".format(n_objs_pack))
                     trajectory = Trajectory(mover.seed, mover.seed)
                     plan = list(newnode.backtrack())[::-1]
                     trajectory.states = [nd.state for nd in plan]
@@ -1689,7 +1689,7 @@ def generate_training_data_single():
         root_dir = '/data/public/rw/pass.port/tamp_q_results/'
 
     solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                        + '/num_objects_' + str(config.num_objects) \
+                        + '/n_objs_pack_' + str(config.n_objs_pack) \
                         + '/test_purpose/' \
                         + '/num_train_' + str(config.num_train) + '/'
 
@@ -1720,7 +1720,7 @@ def generate_training_data_single():
             trajectory = Trajectory(mover.seed, mover.seed)
 
         trajectory.metrics = {
-            'num_objects': config.num_objects,
+            'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,
             'success': success,
             'plan_length': plan_length,
@@ -1730,7 +1730,7 @@ def generate_training_data_single():
             pickle.dump(trajectory, f)
 
     print("time: {}".format(','.join(str(trajectory.metrics[m]) for m in [
-        'num_objects',
+        'n_objs_pack',
         'tottime',
         'success',
         'plan_length',
@@ -1850,10 +1850,10 @@ def generate_training_data_single():
             else:
                 assert False
 
-        num_objects = config.num_objects
+        n_objs_pack = config.n_objs_pack
 
         if all(mover.regions['home_region'].contains_point(get_body_xytheta(o)[0].tolist()[:2] + [1]) for o in
-               mover.objects[:num_objects]):
+               mover.objects[:n_objs_pack]):
             print("successful plan length: {}".format(len(trajectory.actions)))
         else:
             print('failed to find plan')
@@ -1868,7 +1868,7 @@ if __name__ == '__main__':
     parser.add_argument('-pidx', type=int, default=0)
     parser.add_argument('-train_seed', type=int, default=0)
     parser.add_argument('-planner_seed', type=int, default=0)
-    parser.add_argument('-num_objects', type=int, default=1)
+    parser.add_argument('-n_objs_pack', type=int, default=1)
     parser.add_argument('-num_train', type=int, default=5000)
     parser.add_argument('-timelimit', type=float, default=600)
     parser.add_argument('-visualize_plan', action='store_true', default=False)

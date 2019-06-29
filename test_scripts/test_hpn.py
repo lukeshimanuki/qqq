@@ -37,34 +37,27 @@ def quit_if_already_tested(file_path, force_test):
 
 
 def parse_parameters():
-    parser = argparse.ArgumentParser(description='MCTS parameters')
+    parser = argparse.ArgumentParser(description='HPN parameters')
 
-    # mcts parameters
-    parser.add_argument('-uct', type=float, default=1.0)
-    parser.add_argument('-w', type=float, default=5)
-    parser.add_argument('-sampling_strategy', type=str, default='unif')
     parser.add_argument('-pidx', type=int, default=0)
-    parser.add_argument('-domain', type=str, default='mover')
-    parser.add_argument('-planner', type=str, default='mcts')
+    parser.add_argument('-planner_seed', type=int, default=0)
+    parser.add_argument('-timelimit', type=int, default=1000)
     parser.add_argument('-v', action='store_true', default=False)
-    parser.add_argument('-debug', action='store_true', default=False)
     parser.add_argument('-f', action='store_true', default=False)
-    parser.add_argument('-mcts_iter', type=int, default=1000)
     parser.add_argument('-n_feasibility_checks', type=int, default=500)
-    parser.add_argument('-use_learned_q', action='store_true', default=True)
-    parser.add_argument('-n_switch', type=int, default=5)
-    parser.add_argument('-use_ucb', action='store_true', default=False)
-    parser.add_argument('-pw', action='store_true', default=False)
     parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
     parser.add_argument('-n_motion_plan_trials', type=int, default=10)
     parser.add_argument('-n_objs_pack', type=int, default=1)
-    parser.add_argument('-planning_seed', type=int, default=0)
-    parser.add_argument('-time_limit', type=int, default=1000)
+
+    # dummy variables
+    parser.add_argument('-loss', type=str, default='asdf')
+    parser.add_argument('-train_seed', type=int, default=1000)
+    parser.add_argument('-num_train', type=int, default=1000)
     parameters = parser.parse_args()
     return parameters
 
 
-def find_plan_for_obj(obj_name, environment, stime, time_limit):
+def find_plan_for_obj(obj_name, environment, stime, timelimit):
     rsc = ResolveSpatialConstraints(problem_env=environment,
                                     goal_object_name=obj_name,
                                     goal_region_name='home_region',
@@ -72,14 +65,14 @@ def find_plan_for_obj(obj_name, environment, stime, time_limit):
     plan_found = False
     plan = None
     status = 'NoSolution'
-    while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < time_limit:
+    while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < timelimit:
         plan, status = rsc.search(obj_name,
                                   parent_swept_volumes=None,
                                   obstacles_to_remove=[],
                                   objects_moved_before=[],
                                   plan=[],
                                   stime=stime,
-                                  time_limit=time_limit)
+                                  timelimit=timelimit)
         plan_found = status == 'HasSolution'
         if plan_found:
             print "Solution found"
@@ -119,7 +112,7 @@ def main():
     parameters = parse_parameters()
 
     save_dir = make_and_get_save_dir(parameters)
-    file_path = save_dir + '/seed_' + str(parameters.planning_seed) + '_pidx_' + str(parameters.pidx) + '.pkl'
+    file_path = save_dir + '/seed_' + str(parameters.planner_seed) + '_pidx_' + str(parameters.pidx) + '.pkl'
     quit_if_already_tested(file_path, parameters.f)
 
     # for creating problem
@@ -133,8 +126,8 @@ def main():
     goal_entities = goal_object_names + ['home_region']
 
     # for randomized algorithms
-    np.random.seed(parameters.planning_seed)
-    random.seed(parameters.planning_seed)
+    np.random.seed(parameters.planner_seed)
+    random.seed(parameters.planner_seed)
 
     """
     for obj_name in environment.object_names:
@@ -156,10 +149,10 @@ def main():
     idx = 0
     total_time_taken = 0
     found_solution = False
-    time_limit = parameters.time_limit
-    while total_n_nodes < 1000 and total_time_taken < time_limit:
+    timelimit = parameters.timelimit
+    while total_n_nodes < 1000 and total_time_taken < timelimit:
         goal_obj_name = goal_object_names[idx]
-        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, environment, stime, time_limit)
+        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, environment, stime, timelimit)
         total_n_nodes += n_nodes
         total_time_taken = time.time() - stime
         print goal_obj_name, goal_object_names, total_n_nodes

@@ -25,7 +25,7 @@ def get_configs():
             'pidx': pidx,
             'planner_seed': parameters.planner_seed,
             'train_seed': parameters.train_seed,
-            'num_objects': parameters.n_objs_pack,
+            'n_objs_pack': parameters.n_objs_pack,
             'timelimit': parameters.time_limit,
             'loss': parameters.loss,
             'num_train': parameters.num_train
