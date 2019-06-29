@@ -79,3 +79,18 @@ class ContinuousTreeNode(TreeNode):
                     best_value = ucb_value
 
         return best_action
+
+    def update_node_statistics(self, action, sum_rewards, reward):
+        # todo intialize it to the parent's value
+        self.Nvisited += 1
+
+        is_action_never_tried = self.N[action] == 0
+        if is_action_never_tried:
+            self.reward_history[action] = [reward]
+            self.Q[action] = sum_rewards
+            self.N[action] += 1
+        else:
+            self.reward_history[action].append(reward)
+            self.N[action] += 1
+            if sum_rewards > self.Q[action]:
+                self.Q[action] = sum_rewards

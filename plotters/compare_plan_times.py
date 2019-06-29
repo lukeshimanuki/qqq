@@ -26,10 +26,12 @@ def get_plan_times(test_dir, test_files, t_limit):
         ftime_taken = get_time_taken(test_dir, stat)
         fsuccess = get_success(test_dir,stat)
 
+        """
         if filename.find('pidx_1_') !=-1 and test_dir.find('greedy') !=-1:
             print stat.metrics['num_nodes']
             print filename
             print ftime_taken
+        """
         time_taken.append(ftime_taken)
         if ftime_taken < t_limit:
             successes.append(fsuccess)
@@ -43,11 +45,13 @@ def get_plan_times(test_dir, test_files, t_limit):
 
 def main():
     n_objs = 1
-    test_dir = './test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_dir = '/home/beomjoon/Documents/github/qqq/test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
     get_plan_times(test_dir, test_files, 1000)
 
-    test_dir = 'test_results/greedy_results_on_mover_domain/num_objects_%d/test_purpose/num_train_5000/' % n_objs
+    test_dir = 'test_results/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/test_purpose/num_train_5000/' % n_objs
     test_files = os.listdir(test_dir)
     get_plan_times(test_dir, test_files, 1000)
 

@@ -155,7 +155,7 @@ class ResolveSpatialConstraints:
         return motion, status, pick_op
 
     def get_minimum_constraint_path_to(self, goal_config, target_obj):
-        motion_planner = MinimumConstraintPlanner(self.problem_env, target_obj, 'rrt')
+        motion_planner = MinimumConstraintPlanner(self.problem_env, target_obj, 'prm')
         print "Planning to goal config:", goal_config
         motion, status = motion_planner.get_motion_plan(goal_config)
         if motion is None:
@@ -166,7 +166,7 @@ class ResolveSpatialConstraints:
 
     def plan_pick_motion_for(self, object_to_move, pick_op_instance):
         pick_op = Operator(operator_type='two_arm_pick', discrete_parameters={'object': object_to_move})
-        motion_planner = MinimumConstraintPlanner(self.problem_env, object_to_move, 'rrt')
+        motion_planner = MinimumConstraintPlanner(self.problem_env, object_to_move, 'prm')
         motion, status = motion_planner.get_motion_plan(pick_op_instance.continuous_parameters['q_goal'])
         if motion is None:
             return None, "NoSolution", None
