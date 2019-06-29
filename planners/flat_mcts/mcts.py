@@ -27,7 +27,6 @@ if hostname == 'dell-XPS-15-9560':
 
 class MCTS:
     def __init__(self, widening_parameter, ucb_parameter, n_feasibility_checks, environment,
-                 n_parameters_to_test_each_sample_time,
                  depth_limit, discount_rate, check_reachability, use_progressive_widening, use_ucb,
                  learned_q_function, n_motion_plan_trials, goal_entities):
         self.widening_parameter = widening_parameter
@@ -35,7 +34,6 @@ class MCTS:
         self.time_limit = np.inf
         self.check_reachability = check_reachability
         self.discount_rate = discount_rate
-        self.n_parameters_to_test_each_sample_time = n_parameters_to_test_each_sample_time
         self.n_motion_plan_trials = n_motion_plan_trials
 
         self.environment = environment
@@ -324,8 +322,10 @@ class MCTS:
                                                   self.environment.reward_function.infeasible_reward,
                                                   self.use_progressive_widening,
                                                   self.use_ucb):
-                print "Sampling new action"
+                #print "Sampling new action"
+                #stime = time.time()
                 new_continuous_parameters = self.sample_continuous_parameters(curr_node)
+                #print "Total sampling time", time.time() - stime
                 curr_node.add_actions(new_continuous_parameters)
                 action = curr_node.A[-1]
             else:

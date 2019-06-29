@@ -95,8 +95,7 @@ def parse_parameters():
     parser.add_argument('-n_switch', type=int, default=5)
     parser.add_argument('-use_ucb', action='store_true', default=False)
     parser.add_argument('-pw', action='store_true', default=False)
-    parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
-    parser.add_argument('-n_motion_plan_trials', type=int, default=10)
+    parser.add_argument('-n_motion_plan_trials', type=int, default=3)
     parser.add_argument('-n_objs_pack', type=int, default=1)
     parser.add_argument('-timelimit', type=int, default=1)
     parser.add_argument('-f', action='store_true', default=False)
@@ -150,7 +149,6 @@ def main():
                    parameters.uct,
                    parameters.n_feasibility_checks,
                    environment,
-                   n_parameters_to_test_each_sample_time=parameters.n_parameters_to_test_each_sample_time,
                    depth_limit=100,
                    discount_rate=1,
                    check_reachability=True,
@@ -163,12 +161,12 @@ def main():
     stime = time.time()
     search_time_to_reward, plan = planner.search(max_time=parameters.timelimit)
     print "Time taken: %.2f" % (time.time() - stime)
+    print "Number of nodes explored", len(planner.tree.get_discrete_nodes())
 
     # I also need to store the state, but later
     save_dir = make_and_get_save_dir(parameters)
     filename = save_dir + str(parameters.pidx) + '.pkl'
 
-    import pdb;pdb.set_trace()
     pickle.dump({"search_time_to_reward": search_time_to_reward,
                  "pidx": parameters.pidx,
                  'n_nodes': len(planner.tree.get_discrete_nodes())}, open(filename, 'wb'))

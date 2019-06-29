@@ -16,13 +16,19 @@ class TwoArmPaPFeasibilityChecker(TwoArmPickFeasibilityChecker, TwoArmPlaceFeasi
     def check_place_feasible(self, pick_parameters, place_parameters, operator_skeleton):
         pick_op = Operator('two_arm_pick', operator_skeleton.discrete_parameters)
         pick_op.continuous_parameters = pick_parameters
-        saver = utils.CustomStateSaver(self.problem_env.env)
+
+        # todo remove the CustomStateSaver
+        #saver = utils.CustomStateSaver(self.problem_env.env)
+        original_config = utils.get_body_xytheta(self.problem_env.robot).squeeze()
         pick_op.execute()
         place_op = Operator('two_arm_place', operator_skeleton.discrete_parameters)
         place_cont_params, place_status = TwoArmPlaceFeasibilityChecker.check_feasibility(self,
                                                                                           place_op,
                                                                                           place_parameters)
-        saver.Restore()
+        utils.two_arm_place_object(pick_op.continuous_parameters)
+        utils.set_robot_config(original_config)
+
+        #saver.Restore()
         return place_cont_params, place_status
 
     def check_pick_feasible(self, pick_parameters, operator_skeleton):

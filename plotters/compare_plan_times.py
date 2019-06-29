@@ -46,8 +46,8 @@ def get_plan_times(test_dir, test_files, t_limit):
 def main():
     n_objs = 1
     test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
-    test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
-    test_dir = '/home/beomjoon/Documents/github/qqq/test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_dir = 'test_results/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    #test_dir = 'test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
     get_plan_times(test_dir, test_files, 1000)
 

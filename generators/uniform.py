@@ -1,5 +1,6 @@
 from generator import Generator
 import numpy as np
+import time
 
 from mover_library import utils
 
@@ -84,19 +85,27 @@ class PaPUniformGenerator(UniformGenerator):
         if target_obj in self.feasible_pick_params:
             self.op_feasibility_checker.feasible_pick = self.feasible_pick_params[target_obj]
 
-        feasible_op_parameters, status = self.sample_feasible_op_parameters(operator_skeleton,
-                                                                            n_iter,
-                                                                            n_parameters_to_try_motion_planning)
+        status = "NoSolution"
+        #stime = time.time()
+        for n_iter in range(10, 200, 10):
+            feasible_op_parameters, status = self.sample_feasible_op_parameters(operator_skeleton,
+                                                                                n_iter,
+                                                                                n_parameters_to_try_motion_planning)
+            if status =='HasSolution':
+                break
+        #print 'Sampling time', time.time()-stime
         if status == "NoSolution":
             return {'is_feasible': False}
 
         if dont_check_motion_existence:
             chosen_op_param = self.choose_one_of_params(feasible_op_parameters, status)
         else:
+            #stime = time.time()
             chosen_op_param = self.get_pap_param_with_feasible_motion_plan(operator_skeleton,
                                                                            feasible_op_parameters,
                                                                            cached_collisions,
                                                                            cached_holding_collisions)
+            #print 'MP time', time.time()-stime
 
         return chosen_op_param
 
@@ -114,14 +123,16 @@ class PaPUniformGenerator(UniformGenerator):
         else:
             self.feasible_pick_params[target_obj] = [chosen_pick_param]
 
-        self.feasible_pick_params[target_obj].append(pick_op_params)
+        #self.feasible_pick_params[target_obj].append(pick_op_params)
 
         # getting place motion
-        saver = utils.CustomStateSaver(self.problem_env.env)
+        original_config = utils.get_body_xytheta(self.problem_env.robot).squeeze()
         utils.two_arm_pick_object(operator_skeleton.discrete_parameters['object'], chosen_pick_param)
         place_op_params = [op['place'] for op in feasible_op_parameters]
         chosen_place_param = self.get_op_param_with_feasible_motion_plan(place_op_params, cached_holding_collisions)
-        saver.Restore()
+        utils.two_arm_place_object(chosen_pick_param)
+        utils.set_robot_config(original_config)
+
         if not chosen_place_param['is_feasible']:
             return {'is_feasible': False}
 
