@@ -5,6 +5,8 @@ planning_seed = range(10)
 train_seed = [1]
 #pidxs = [[20000, 20050], [20050, 20100]]
 pidxs = [[0, 50], [50, 100]]
+pidxs = [[0, 100]]
+
 loss = 'largemargin'
 algorithm = 'hpn'
 
