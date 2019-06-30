@@ -19,6 +19,7 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
         if not is_infeasible_state and not is_goal_reached:
             self.initialize_mixed_q_values()
         self.mix_weight = 0.99
+        self.max_sum_rewards = {}
 
     def visualize_values_in_two_arm_domains(self, entity_values, entity_names):
         is_place_node = entity_names[0].find('region') != -1
@@ -36,22 +37,20 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
             self.Q[a] = self.q_function.predict(self.state, a)[0]
             self.learned_q[a] = self.q_function.predict(self.state, a)[0]
 
-    def update_node_statistics_retired(self, action, sum_rewards, reward):
-        DiscreteTreeNode.update_node_statistics(self, action, sum_rewards, reward)
-        # self.update_mixed_q_value(action)
-
     def update_node_statistics(self, action, sum_rewards, reward):
-
         is_action_never_tried = self.N[action] == 0
         if is_action_never_tried:
+            self.max_sum_rewards[action] = sum_rewards
             self.reward_history[action] = [reward]
         else:
+            if sum_rewards > self.max_sum_rewards[action]:
+                self.max_sum_rewards[action] = sum_rewards
             self.reward_history[action].append(reward)
 
         self.Nvisited += 1
         self.N[action] += 1
         temperature_on_action = np.power(0.99, self.N[action])
-        self.Q[action] = temperature_on_action * self.Q[action] + (1 - temperature_on_action) * sum_rewards
+        self.Q[action] = temperature_on_action*self.Q[action] + (1 - temperature_on_action)*self.max_sum_rewards[action]
 
     def perform_ucb_over_actions(self, learned_q_functions=None):
         # why does this get called before initializing mixed q values
@@ -72,7 +71,6 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
             ucb_values = self.compute_ucb_values(self.A, q_vals)
             ucb_actions = ucb_values.keys()
             ucb_values = ucb_values.values()
-            import pdb;pdb.set_trace()
             best_action = np.array(ucb_actions)[np.argsort(ucb_values)][idx]
             idx -= -1
             print 'Redundant action detected'
@@ -82,7 +80,6 @@ class PaPDiscreteTreeNodeWithLearnedQ(DiscreteTreeNode):
         print self.state.get_entities_in_place_way('square_packing_box1', 'home_region')
         print self.state.get_entities_in_pick_way('rectangular_packing_box1')
         print self.state.get_entities_in_place_way('rectangular_packing_box1', 'home_region')
-        import pdb;pdb.set_trace()
         return best_action
 
     def is_obj_currently_in_goal_region(self, obj):

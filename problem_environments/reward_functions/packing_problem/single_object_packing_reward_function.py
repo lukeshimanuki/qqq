@@ -10,6 +10,7 @@ class ObjectPackingRewardFunction(RewardFunction):
         self.goal_objects = [self.problem_env.env.GetKinBody(obj_name) for obj_name in goal_objects]
         self.goal_region = self.problem_env.regions[goal_region]
         self.achieved = []
+        self.infeasible_reward = -1
         # set_color(self.goal_object, [1, 0, 0])
 
     def apply_operator_instance_and_get_reward(self, state, operator_instance, is_op_feasible):
@@ -19,10 +20,8 @@ class ObjectPackingRewardFunction(RewardFunction):
             obj = operator_instance.discrete_parameters['object']
             if isinstance(obj, str) or isinstance(obj, unicode):
                 obj = self.problem_env.env.GetKinBody(obj)
-            prev_region = self.problem_env.get_region_containing(obj)
             operator_instance.execute()
-
-            return self.is_one_of_entities_in_goal_region(obj, prev_region)
+            return self.get_reward_of_curr_scene(obj)
 
     def n_cleared_obstacles_to_goal(self, state):
         if state is None:
@@ -37,7 +36,7 @@ class ObjectPackingRewardFunction(RewardFunction):
     def apply_operator_skeleton_and_get_reward(self, state, operator_instance):
         return self.n_cleared_obstacles_to_goal(state)
 
-    def is_one_of_entities_in_goal_region(self, entity, prev_region=None):
+    def get_reward_of_curr_scene(self, entity):
         is_goal_entity = entity in self.goal_objects
         if is_goal_entity and self.goal_region.contains(entity.ComputeAABB()):
             if (entity, self.goal_region) in self.achieved:
@@ -49,7 +48,11 @@ class ObjectPackingRewardFunction(RewardFunction):
         return 0
 
     def is_goal_reached(self):
-        return np.all([self.is_one_of_entities_in_goal_region(obj) for obj in self.goal_objects])
+        for obj in self.goal_objects:
+            if not (obj, self.goal_region) in self.achieved:
+                return False
+        return True
+        #return np.all([self.is_one_of_entities_in_goal_region(obj) for obj in self.goal_objects])
 
     def is_optimal_plan_found(self, best_traj_rwd):
         return True  # satisficing problem

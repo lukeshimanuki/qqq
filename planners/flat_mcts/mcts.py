@@ -3,17 +3,16 @@ import socket
 import pickle
 
 from mcts_tree_continuous_node import ContinuousTreeNode
-from mcts_tree_discrete_node import DiscreteTreeNode, DiscreteTreeNodeWithLearnedQ
+from mcts_tree_discrete_node import DiscreteTreeNode
 from mcts_tree_discrete_pap_node import PaPDiscreteTreeNodeWithLearnedQ
 from mcts_tree import MCTSTree
 # from mcts_utils import make_action_hashable, is_action_hashable
 from generators.uniform import UniformGenerator, PaPUniformGenerator
-from trajectory_representation.state import State, StateForPrediction
 from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
-from trajectory_representation.one_arm_pap_state import OneArmPaPState
 
 ## openrave helper libraries
-from mover_library.utils import *
+from mover_library import utils
+import numpy as np
 
 import time
 import os
@@ -28,7 +27,6 @@ if hostname == 'dell-XPS-15-9560':
 
 class MCTS:
     def __init__(self, widening_parameter, ucb_parameter, n_feasibility_checks, environment,
-                 n_parameters_to_test_each_sample_time,
                  depth_limit, discount_rate, check_reachability, use_progressive_widening, use_ucb,
                  learned_q_function, n_motion_plan_trials, goal_entities):
         self.widening_parameter = widening_parameter
@@ -36,7 +34,6 @@ class MCTS:
         self.time_limit = np.inf
         self.check_reachability = check_reachability
         self.discount_rate = discount_rate
-        self.n_parameters_to_test_each_sample_time = n_parameters_to_test_each_sample_time
         self.n_motion_plan_trials = n_motion_plan_trials
 
         self.environment = environment
@@ -109,7 +106,7 @@ class MCTS:
 
     def get_current_state(self, parent_node, parent_action, reward):
         is_operator_skeleton_node = (parent_node is None) or (not parent_node.is_operator_skeleton_node)
-        is_parent_action_infeasible = reward == -2
+        is_parent_action_infeasible = reward == self.environment.reward_function.infeasible_reward
         if self.use_learned_q:
             if is_parent_action_infeasible:
                 state = None
@@ -142,7 +139,7 @@ class MCTS:
         return state
 
     def create_node(self, parent_action, depth, reward, parent_node, is_init_node=False):
-        state_saver = CustomStateSaver(self.environment.env)
+        state_saver = utils.CustomStateSaver(self.environment.env)
 
         is_operator_skeleton_node = (parent_node is None) or (not parent_node.is_operator_skeleton_node)
         state = self.get_current_state(parent_node, parent_action, reward)
@@ -277,7 +274,8 @@ class MCTS:
                     node_to_search_from = node_to_search_from.get_child_with_max_value()
                 else:
                     max_child = node_to_search_from.get_child_with_max_value()
-                    if np.max(node_to_search_from.reward_history[max_child.parent_action]) != -2:
+                    if np.max(node_to_search_from.reward_history[max_child.parent_action]) !=\
+                            self.environment.reward_function.infeasible_reward:
                         node_to_search_from = node_to_search_from.get_child_with_max_value()
 
             # self.log_current_tree_to_dot_file(iteration_for_tree_logging+iteration, node_to_search_from)
@@ -324,8 +322,10 @@ class MCTS:
                                                   self.environment.reward_function.infeasible_reward,
                                                   self.use_progressive_widening,
                                                   self.use_ucb):
-                print "Sampling new action"
+                #print "Sampling new action"
+                #stime = time.time()
                 new_continuous_parameters = self.sample_continuous_parameters(curr_node)
+                #print "Total sampling time", time.time() - stime
                 curr_node.add_actions(new_continuous_parameters)
                 action = curr_node.A[-1]
             else:
@@ -368,7 +368,6 @@ class MCTS:
         action = self.choose_action(curr_node)
         reward = self.apply_action(curr_node, action)
         print "Reward is", reward
-        import pdb;pdb.set_trace()
 
         if not curr_node.is_action_tried(action):
             next_node = self.create_node(action, depth + 1, reward, curr_node)
@@ -383,7 +382,8 @@ class MCTS:
             print "Infeasible action"
             # todo use the average of Q values here, instead of termination
             if self.use_learned_q:
-                sum_rewards = -1 + curr_node.parent.learned_q[curr_node.parent_action]
+                sum_rewards = reward + curr_node.parent.learned_q[curr_node.parent_action]
+                print sum_rewards
             else:
                 sum_rewards = reward
         else:
@@ -422,7 +422,7 @@ class MCTS:
                                                                    dont_check_motion_existence=True)
         else:
             current_collides = node.state.current_collides if node.state is not None else None
-            current_holding_collides = node.state.current_holding_collides if node.state is not None else None
+            current_holding_collides = None #node.state.current_holding_collides if node.state is not None else None
             feasible_param = node.sampling_agent.sample_next_point(node.operator_skeleton,
                                                                    self.n_feasibility_checks,
                                                                    self.n_motion_plan_trials,

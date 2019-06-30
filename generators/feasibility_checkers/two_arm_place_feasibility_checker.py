@@ -24,15 +24,18 @@ class TwoArmPlaceFeasibilityChecker:
         original_trans = self.robot.GetTransform()
         original_obj_trans = obj.GetTransform()
 
-        target_robot_region = self.problem_env.regions['entire_region']
+        target_robot_region1 = self.problem_env.regions['home_region']
+        target_robot_region2 = self.problem_env.regions['loading_region']
         target_obj_region = obj_region  # for fetching, you want to move it around
 
         robot_xytheta = self.compute_robot_base_pose_given_object_pose(obj, self.robot, obj_pose, T_r_wrt_o)
         set_robot_config(robot_xytheta, self.robot)
 
         # why do I disable objects in region? Most likely this is for minimum constraint computation
+        target_region_contains = target_robot_region1.contains(self.robot.ComputeAABB()) or \
+                                 target_robot_region2.contains(self.robot.ComputeAABB())
         is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
-                                  (not target_robot_region.contains(self.robot.ComputeAABB()))
+                                  (not target_region_contains)
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
 

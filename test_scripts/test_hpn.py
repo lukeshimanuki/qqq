@@ -1,6 +1,8 @@
 from problem_environments.mover_env import Mover
 from planners.resolve_spatial_constraints import ResolveSpatialConstraints
 from planners.planner_without_reachability import PlannerWithoutReachability
+from problem_environments.one_arm_mover_env import OneArmMover
+
 from mover_library import utils
 
 import os
@@ -20,7 +22,7 @@ else:
 
 
 def make_and_get_save_dir(parameters):
-    save_dir = ROOTDIR+'test_results/faster_hpn_results_on_mover_domain/'
+    save_dir = ROOTDIR+'test_results/prm_mcr_hpn_results_on_mover_domain/'
     save_dir += str(parameters.n_objs_pack) + '/test_purpose/'
 
     if not os.path.isdir(save_dir):
@@ -48,6 +50,7 @@ def parse_parameters():
     parser.add_argument('-n_parameters_to_test_each_sample_time', type=int, default=10)
     parser.add_argument('-n_motion_plan_trials', type=int, default=10)
     parser.add_argument('-n_objs_pack', type=int, default=1)
+    parser.add_argument('-domain', type=str, default='two_arm_mover')
 
     # dummy variables
     parser.add_argument('-loss', type=str, default='asdf')
@@ -102,9 +105,14 @@ def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_
 
 
 def find_plan_without_reachability(problem_env, goal_object_names):
-    planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
+    if problem_env.name.find('one_arm_mover') != -1:
+        planner = PlannerWithoutReachability(problem_env, goal_object_names,
+                                             goal_region='rectangular_packing_box1_region')
+    else:
+        planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
     goal_obj_order_plan = planner.search()
     goal_obj_order_plan = [o.GetName() for o in goal_obj_order_plan]
+    import pdb;pdb.set_trace()
     return goal_obj_order_plan
 
 
@@ -118,23 +126,17 @@ def main():
     # for creating problem
     np.random.seed(parameters.pidx)
     random.seed(parameters.pidx)
-    environment = Mover(parameters.pidx)
+    if parameters.domain.find('two_arm') != -1:
+        environment = Mover(parameters.pidx)
+    else:
+        environment = OneArmMover(parameters.pidx)
 
-
-    goal_object_names = np.random.permutation(
-        [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]).tolist()
+    goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
     goal_entities = goal_object_names + ['home_region']
 
     # for randomized algorithms
     np.random.seed(parameters.planner_seed)
     random.seed(parameters.planner_seed)
-
-    """
-    for obj_name in environment.object_names:
-        if obj_name not in goal_object_names:
-            obj = environment.env.GetKinBody(obj_name)
-            environment.env.Remove(obj)
-    """
 
     if parameters.v:
         environment.env.SetViewer('qtcoin')

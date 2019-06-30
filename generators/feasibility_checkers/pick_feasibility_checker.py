@@ -26,15 +26,12 @@ class PickFeasibilityChecker(object):
             return pick_action, "NoSolution"
 
     def compute_feasible_grasp_config(self, obj, pick_base_pose, grasp_params):
-        #saver = utils.CustomStateSaver(self.problem_env.env)
         with self.robot:
             grasp_config = self.compute_grasp_config(obj, pick_base_pose, grasp_params)
             if grasp_config is not None:
                 if self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config):
-                    #saver.Restore()
                     return grasp_config
             else:
-                #saver.Restore()
                 return None
 
     def is_grasp_config_feasible(self, obj, pick_base_pose, grasp_params, grasp_config):
