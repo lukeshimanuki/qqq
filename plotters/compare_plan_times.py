@@ -8,6 +8,8 @@ def get_time_taken(test_dir, stat):
         return stat['time_taken']
     elif test_dir.find('greedy') != -1:
         return stat.metrics['tottime']
+    elif test_dir.find('mcts') != -1:
+        return stat['search_time_to_reward'][-1][0]
 
 
 def get_success(test_dir, stat):
@@ -15,6 +17,8 @@ def get_success(test_dir, stat):
         return stat['found_solution']
     elif test_dir.find('greedy') != -1:
         return stat.metrics['success']
+    elif test_dir.find('mcts') != -1:
+        return stat['search_time_to_reward'][-1][-1]
 
 
 def get_plan_times(test_dir, test_files, t_limit):
@@ -43,7 +47,11 @@ def get_plan_times(test_dir, test_files, t_limit):
 
 def main():
     n_objs = 1
-    test_dir = './test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_dir = 'test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    test_files = os.listdir(test_dir)
+    get_plan_times(test_dir, test_files, 1000)
+
+    test_dir = 'test_results/cloud_results/mcts_results_on_mover_domain/n_objs_pack_1/n_mp_params_3/widening_3/'
     test_files = os.listdir(test_dir)
     get_plan_times(test_dir, test_files, 1000)
 
