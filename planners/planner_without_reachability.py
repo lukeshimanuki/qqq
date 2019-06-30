@@ -14,14 +14,14 @@ class PlannerWithoutReachability:
         self.goal_objects = [problem_env.env.GetKinBody(o) for o in goal_object_names]
         self.goal_region = self.problem_env.regions[goal_region]
 
-    def sample_cont_params(self, operator_skeleton):
+    def sample_cont_params(self, operator_skeleton, n_iter):
         target_object = operator_skeleton.discrete_parameters['object']
         self.problem_env.disable_objects_in_region('entire_region')
         generator = UniformGenerator(operator_skeleton, self.problem_env, None)
         target_object.Enable(True)
         print "Generating goals for ", target_object
         param = generator.sample_next_point(operator_skeleton,
-                                            n_iter=1000,
+                                            n_iter=n_iter,
                                             n_parameters_to_try_motion_planning=1,
                                             dont_check_motion_existence=True)
         self.problem_env.enable_objects_in_region('entire_region')
@@ -36,7 +36,7 @@ class PlannerWithoutReachability:
             pick_op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': curr_obj})
         else:
             pick_op = Operator(operator_type='two_arm_pick', discrete_parameters={'object': curr_obj})
-        params = self.sample_cont_params(pick_op)
+        params = self.sample_cont_params(pick_op, n_iter=500)
         if not params['is_feasible']:
             return None
 
@@ -51,7 +51,11 @@ class PlannerWithoutReachability:
         else:
             place_op = Operator(operator_type='two_arm_place', discrete_parameters={'object': curr_obj,
                                                                                     'region': self.goal_region})
-        params = self.sample_cont_params(place_op)
+        # it must be because sampling a feasible pick can be done by trying as many as possible,
+        # but placements cannot be made feasible  by sampling more
+        # also, it takes longer to check feasibility on place?
+        # I just have to check the IK solution once
+        params = self.sample_cont_params(place_op, n_iter=500)
         if not params['is_feasible']:
             return None
 
@@ -68,7 +72,6 @@ class PlannerWithoutReachability:
         plan = []
         goal_obj_move_plan = []
 
-
         while True:
             curr_obj = self.goal_objects[idx]
 
@@ -77,7 +80,7 @@ class PlannerWithoutReachability:
             curr_obj.Enable(True)
             pick = self.find_pick(curr_obj)
             if pick is None:
-                plan = []
+                plan = []  # reset the whole thing?
                 goal_obj_move_plan = []
                 idx += 1
                 idx = idx % len(self.goal_objects)

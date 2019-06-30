@@ -19,7 +19,6 @@ class OneArmMover(Mover):
         self.name = 'one_arm_mover'
 
     def compute_box_region(self, box):
-        self.env.SetViewer('qtcoin')
         box_region = AARegion.create_on_body(box)
         box_region.color = (1., 1., 0., 0.25)
         box_region.draw(self.env)
@@ -79,6 +78,7 @@ class OneArmMover(Mover):
 class PaPOneArmMoverEnv(OneArmMover):
     def __init__(self, problem_idx):
         OneArmMover.__init__(self, problem_idx)
+
     """
     def get_applicable_ops(self, parent_op=None):
         # used by MCTS

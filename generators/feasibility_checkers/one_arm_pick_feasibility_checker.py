@@ -4,6 +4,7 @@ from manipulation.bodies.bodies import set_config
 from generators.feasibility_checkers.pick_feasibility_checker import PickFeasibilityChecker
 from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, set_active_config
 import numpy as np
+import time
 
 
 class OneArmPickFeasibilityChecker(PickFeasibilityChecker):
@@ -31,28 +32,36 @@ class OneArmPickFeasibilityChecker(PickFeasibilityChecker):
         set_robot_config(pick_base_pose, self.robot)
 
         if not from_place:
+            # checks the base feasibility
             inside_region = self.problem_env.regions['home_region'].contains(self.robot.ComputeAABB()) or \
                             self.problem_env.regions['loading_region'].contains(self.robot.ComputeAABB())
+            stime=time.time()
             no_collision = not self.env.CheckCollision(self.robot)
+            print "Collision time", time.time()-stime
             if (not inside_region) or (not no_collision):
                 return None
+
+        stime = time.time()
         open_gripper()
         grasps = compute_one_arm_grasp(depth_portion=grasp_params[2],
                                        height_portion=grasp_params[1],
                                        theta=grasp_params[0],
                                        obj=obj,
                                        robot=self.robot)
+        print 'grasp_computation', time.time()-stime
         grasp_config, grasp = solveIKs(self.env, self.robot, grasps)
+        print 'Succeed?', grasp_config is not None
+        print 'IK computation', time.time()-stime
 
         return grasp_config
 
     def is_grasp_config_feasible(self, obj, pick_base_pose, grasp_params, grasp_config):
+        # checks the feasibility of the pick configuration
         rightarm_torso_manip = self.robot.GetManipulator('rightarm_torso')
         set_config(self.robot, grasp_config, rightarm_torso_manip.GetArmIndices())
-        no_collision = not self.env.CheckCollision(self.robot)
         inside_region = self.problem_env.regions['home_region'].contains(self.robot.ComputeAABB()) or \
                         self.problem_env.regions['loading_region'].contains(self.robot.ComputeAABB())
-        if no_collision and inside_region:
+        if inside_region:
             return True
         else:
             return False

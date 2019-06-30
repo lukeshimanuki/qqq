@@ -1,6 +1,7 @@
 from problem_environments.mover_env import Mover
 from planners.resolve_spatial_constraints import ResolveSpatialConstraints
 from planners.planner_without_reachability import PlannerWithoutReachability
+from planners.one_arm_planner_without_reachability import OneArmPlannerWithoutReachability
 from problem_environments.one_arm_mover_env import OneArmMover
 
 from mover_library import utils
@@ -22,7 +23,7 @@ else:
 
 
 def make_and_get_save_dir(parameters):
-    save_dir = ROOTDIR+'test_results/prm_mcr_hpn_results_on_mover_domain/'
+    save_dir = ROOTDIR + 'test_results/prm_mcr_hpn_results_on_mover_domain/'
     save_dir += str(parameters.n_objs_pack) + '/test_purpose/'
 
     if not os.path.isdir(save_dir):
@@ -106,13 +107,14 @@ def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_
 
 def find_plan_without_reachability(problem_env, goal_object_names):
     if problem_env.name.find('one_arm_mover') != -1:
-        planner = PlannerWithoutReachability(problem_env, goal_object_names,
-                                             goal_region='rectangular_packing_box1_region')
+        planner = OneArmPlannerWithoutReachability(problem_env, goal_object_names,
+                                                   goal_region='rectangular_packing_box1_region')
     else:
         planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
     goal_obj_order_plan = planner.search()
     goal_obj_order_plan = [o.GetName() for o in goal_obj_order_plan]
-    import pdb;pdb.set_trace()
+    import pdb;
+    pdb.set_trace()
     return goal_obj_order_plan
 
 
@@ -132,6 +134,7 @@ def main():
         environment = OneArmMover(parameters.pidx)
 
     goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
+    goal_object_names[0], goal_object_names[1] = goal_object_names[1], goal_object_names[0]
     goal_entities = goal_object_names + ['home_region']
 
     # for randomized algorithms

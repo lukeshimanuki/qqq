@@ -1,12 +1,12 @@
 num_train = 5000
 n_objs_pack = 8
 time_limit = 300 * n_objs_pack
-planning_seed = range(4)
-pidxs = [[20000, 20100]]
+planning_seed = range(4,5)
+pidxs = [[20000, 20050], [20050, 20100]]
 #pidxs = [[0, 50], [50, 100]]
 
 loss = 'largemargin'
-algorithm = 'hpn'
+algorithm = 'greedy'
 
 if algorithm != 'hpn':
     train_seed = [0, 1, 2, 3, 4]

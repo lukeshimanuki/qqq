@@ -3,6 +3,7 @@ import numpy as np
 import time
 
 from mover_library import utils
+import cProfile
 
 
 class UniformGenerator(Generator):
@@ -12,11 +13,15 @@ class UniformGenerator(Generator):
     def sample_feasible_op_parameters(self, operator_skeleton, n_iter, n_parameters_to_try_motion_planning):
         assert n_iter > 0
         feasible_op_parameters = []
-        for _ in range(n_iter):
+        for i in range(n_iter):
+            print operator_skeleton.type, i
             op_parameters = self.sample_from_uniform()
+            stime = time.time()
             op_parameters, status = self.op_feasibility_checker.check_feasibility(operator_skeleton,
                                                                                   op_parameters,
                                                                                   self.swept_volume_constraint)
+            print "Total time", time.time() - stime
+
             if status == 'HasSolution':
                 feasible_op_parameters.append(op_parameters)
                 if len(feasible_op_parameters) >= n_parameters_to_try_motion_planning:

@@ -2,27 +2,12 @@ from mover_library.samplers import *
 from mover_library.utils import set_robot_config, grab_obj, release_obj, set_config
 from generators.feasibility_checkers.place_feasibility_checker import PlaceFeasibilityChecker
 from generators.feasibility_checkers.one_arm_pick_feasibility_checker import OneArmPickFeasibilityChecker
-from mover_library import utils
-from mover_library.operator_utils.grasp_utils import compute_one_arm_grasp
-
-from manipulation.primitives.utils import mirror_arm_config
-from manipulation.constants import PARALLEL_LEFT_ARM, REST_LEFT_ARM, HOLDING_LEFT_ARM, FOLDED_LEFT_ARM, \
-    FAR_HOLDING_LEFT_ARM, LOWER_TOP_HOLDING_LEFT_ARM, REGION_Z_OFFSET
-
-from manipulation.bodies.robot import get_active_arm_indices, get_manipulator
-from openravepy import openravepy_int
+from mover_library.operator_utils.grasp_utils import compute_one_arm_grasp, solveIKs
 
 
 class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibilityChecker):
     def __init__(self, problem_env):
         PlaceFeasibilityChecker.__init__(self, problem_env)
-        """
-        self.problem_env = problem_env
-        self.env = problem_env.env
-        self.robot = self.env.GetRobots()[0]
-        self.robot_region = self.problem_env.regions['entire_region']
-        self.objects_to_check_collision = []
-        """
 
     def place_object_and_robot_at_new_pose(self, obj, obj_pose, obj_region):
         T_r_wrt_o = np.dot(np.linalg.inv(obj.GetTransform()), self.robot.GetTransform())
@@ -36,21 +21,32 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         set_point(obj, np.hstack([obj_pose[0:2], obj_region.z]))
         return new_base_pose
 
+    def solve_ik_from_grasp_params(self, obj, grasp_params):
+        open_gripper()
+        grasps = compute_one_arm_grasp(depth_portion=grasp_params[2],
+                                       height_portion=grasp_params[1],
+                                       theta=grasp_params[0],
+                                       obj=obj,
+                                       robot=self.robot)
+        grasp_config, grasp = solveIKs(self.env, self.robot, grasps)
+        return grasp_config
+
     def check_feasibility(self, operator_skeleton, place_parameters, swept_volume_to_avoid=None):
         obj = self.robot.GetGrabbed()[0]
+        obj_original_pose = obj.GetTransform()
         obj_pose = place_parameters
-        before = CustomStateSaver(self.problem_env.env)
+
+        robot_original_xytheta = get_body_xytheta(self.robot)
+        robot_original_config = self.robot.GetDOFValues()
         grasp_params = operator_skeleton.continuous_parameters['grasp_params']
 
         obj_region = operator_skeleton.discrete_parameters['region']
         if type(obj_region) == str:
             obj_region = self.problem_env.regions[obj_region]
-
-        # todo sample base poses near the object
         new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
-
         target_robot_region = self.problem_env.regions['entire_region']
         target_obj_region = obj_region
+
         is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
                                   (not target_robot_region.contains(self.robot.ComputeAABB()))
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
@@ -59,11 +55,13 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         if is_base_pose_infeasible or is_object_pose_infeasible:
             action = {'operator_name': 'one_arm_place', 'q_goal': None, 'base_pose': None, 'object_pose': None,
                       'action_parameters': place_parameters, 'grasp_params': grasp_params}
-            before.Restore()
-            return action, 'NoSolution'
+            set_robot_config(robot_original_xytheta)
+            self.robot.SetDOFValues(robot_original_config)
+            obj.SetTransform(obj_original_pose)
+            grab_obj(obj)
+            return action, 'InfeasibleBase'
 
-        grasp_config = OneArmPickFeasibilityChecker.compute_grasp_config(self, obj, new_base_pose, grasp_params,
-                                                                         from_place=True)
+        grasp_config = self.solve_ik_from_grasp_params(obj, grasp_params)
 
         self.problem_env.enable_objects_in_region('entire_region')
         [o.Enable(True) for o in self.problem_env.boxes]
@@ -72,13 +70,19 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             action = {'operator_name': 'one_arm_place', 'base_pose': None, 'object_pose': None,
                       'q_goal': None,
                       'action_parameters': place_parameters, 'g_config': grasp_config, 'grasp_params': grasp_params}
-            before.Restore()
-            return action, 'NoSolution'
+            set_robot_config(robot_original_xytheta)
+            self.robot.SetDOFValues(robot_original_config)
+            obj.SetTransform(obj_original_pose)
+            grab_obj(obj)
+            return action, 'InfeasibleIK'
         else:
-            before.Restore()
             grasp_config = grasp_config.squeeze()
             new_base_pose = new_base_pose.squeeze()
             action = {'operator_name': 'one_arm_place', 'q_goal': np.hstack([grasp_config, new_base_pose]),
                       'base_pose': new_base_pose, 'object_pose': place_parameters,
                       'action_parameters': place_parameters, 'g_config': grasp_config, 'grasp_params': grasp_params}
+            set_robot_config(robot_original_xytheta)
+            self.robot.SetDOFValues(robot_original_config)
+            obj.SetTransform(obj_original_pose)
+            grab_obj(obj)
             return action, 'HasSolution'

@@ -11,8 +11,8 @@ class Operator:
     def __init__(self, operator_type, discrete_parameters, continuous_parameters=None):
         self.type = operator_type
         assert type(discrete_parameters) is dict, "Discrete parameters of an operator must be a dictionary"
-        if self.type == 'one_arm_place':
-            assert continuous_parameters is not None, "One arm place must have a grasp used to pick the object"
+        #if self.type == 'one_arm_place':
+        #    assert continuous_parameters is not None, "One arm place must have a grasp used to pick the object"
         self.discrete_parameters = discrete_parameters
         if continuous_parameters is None:
             self.continuous_parameters = {'is_feasible': False}
@@ -49,10 +49,14 @@ class Operator:
             one_arm_pick_object(obj_to_pick, self.continuous_parameters)
         elif self.type == 'one_arm_place':
             one_arm_place_object(self.continuous_parameters)
+        elif self.type == 'one_arm_pick_one_arm_place':
+            obj_to_pick = utils.convert_to_kin_body(self.discrete_parameters['object'])
+            one_arm_pick_object(obj_to_pick, self.continuous_parameters['pick'])
+            one_arm_place_object(self.continuous_parameters['place'])
         else:
             raise NotImplementedError
 
-    def execute_pick(self): # todo better way?
+    def execute_pick(self):
         assert self.type == 'two_arm_pick_two_arm_place'
         env = openravepy.RaveGetEnvironments()[0]
         if isinstance(self.discrete_parameters['object'], openravepy.KinBody):

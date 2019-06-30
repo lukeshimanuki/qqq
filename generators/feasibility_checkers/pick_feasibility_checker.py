@@ -1,5 +1,6 @@
 from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters
-from mover_library import utils
+import time
+
 
 class PickFeasibilityChecker(object):
     def __init__(self, problem_env):
@@ -29,7 +30,10 @@ class PickFeasibilityChecker(object):
         with self.robot:
             grasp_config = self.compute_grasp_config(obj, pick_base_pose, grasp_params)
             if grasp_config is not None:
-                if self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config):
+                stime = time.time()
+                grasp_is_feasible = self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config)
+                print "is_grasp_config_feasible", time.time() - stime
+                if grasp_is_feasible:
                     return grasp_config
             else:
                 return None
