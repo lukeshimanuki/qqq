@@ -1,8 +1,10 @@
 from problem_environments.mover_env import Mover
 from planners.resolve_spatial_constraints import ResolveSpatialConstraints
+from planners.one_arm_resolve_spatial_constraints import OneArmResolveSpatialConstraints
 from planners.planner_without_reachability import PlannerWithoutReachability
 from planners.one_arm_planner_without_reachability import OneArmPlannerWithoutReachability
 from problem_environments.one_arm_mover_env import OneArmMover
+from trajectory_representation.swept_volume import PickAndPlaceSweptVolume
 
 from mover_library import utils
 
@@ -61,22 +63,40 @@ def parse_parameters():
     return parameters
 
 
-def find_plan_for_obj(obj_name, environment, stime, timelimit):
-    rsc = ResolveSpatialConstraints(problem_env=environment,
-                                    goal_object_name=obj_name,
-                                    goal_region_name='home_region',
-                                    misc_region_name='loading_region')
+def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
+    is_one_arm_environment = environment.name.find('one_arm') != -1
+    if is_one_arm_environment:
+        rsc = OneArmResolveSpatialConstraints(problem_env=environment,
+                                              goal_object_name=obj_name,
+                                              goal_region_name='rectangular_packing_box1_region')
+    else:
+        rsc = ResolveSpatialConstraints(problem_env=environment,
+                                        goal_object_name=obj_name,
+                                        goal_region_name='home_region',
+                                        misc_region_name='loading_region')
+        plan = None
     plan_found = False
-    plan = None
     status = 'NoSolution'
     while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < timelimit:
-        plan, status = rsc.search(obj_name,
-                                  parent_swept_volumes=None,
-                                  obstacles_to_remove=[],
-                                  objects_moved_before=[],
-                                  plan=[],
-                                  stime=stime,
-                                  timelimit=timelimit)
+        if is_one_arm_environment:
+            swept_volumes = PickAndPlaceSweptVolume(environment, None)
+            swept_volumes.add_pap_swept_volume(plan)
+
+            plan, status = rsc.search(obj_name,
+                                      parent_swept_volumes=None,
+                                      obstacles_to_remove=[],
+                                      objects_moved_before=[],
+                                      plan=[],
+                                      stime=stime,
+                                      timelimit=timelimit)
+        else:
+            plan, status = rsc.search(obj_name,
+                                      parent_swept_volumes=None,
+                                      obstacles_to_remove=[],
+                                      objects_moved_before=[],
+                                      plan=[],
+                                      stime=stime,
+                                      timelimit=timelimit)
         plan_found = status == 'HasSolution'
         if plan_found:
             print "Solution found"
@@ -111,11 +131,9 @@ def find_plan_without_reachability(problem_env, goal_object_names):
                                                    goal_region='rectangular_packing_box1_region')
     else:
         planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
-    goal_obj_order_plan = planner.search()
+    goal_obj_order_plan, plan = planner.search()
     goal_obj_order_plan = [o.GetName() for o in goal_obj_order_plan]
-    import pdb;
-    pdb.set_trace()
-    return goal_obj_order_plan
+    return goal_obj_order_plan, plan
 
 
 def main():
@@ -128,14 +146,16 @@ def main():
     # for creating problem
     np.random.seed(parameters.pidx)
     random.seed(parameters.pidx)
-    if parameters.domain.find('two_arm') != -1:
+    is_one_arm_env = parameters.domain.find('two_arm') != -1
+    if is_one_arm_env:
         environment = Mover(parameters.pidx)
+        goal_region = ['home_region']
     else:
         environment = OneArmMover(parameters.pidx)
+        goal_region = ['rectangular_packing_box1_region']
 
     goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
-    goal_object_names[0], goal_object_names[1] = goal_object_names[1], goal_object_names[0]
-    goal_entities = goal_object_names + ['home_region']
+    goal_entities = goal_object_names + goal_region
 
     # for randomized algorithms
     np.random.seed(parameters.planner_seed)
@@ -148,7 +168,7 @@ def main():
     # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
 
     stime = time.time()
-    goal_object_names = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+    goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
     total_n_nodes = 0
     total_plan = []
     idx = 0
@@ -157,7 +177,7 @@ def main():
     timelimit = parameters.timelimit
     while total_n_nodes < 1000 and total_time_taken < timelimit:
         goal_obj_name = goal_object_names[idx]
-        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, environment, stime, timelimit)
+        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, plan[idx], environment, stime, timelimit)
         total_n_nodes += n_nodes
         total_time_taken = time.time() - stime
         print goal_obj_name, goal_object_names, total_n_nodes
@@ -171,7 +191,7 @@ def main():
             idx += 1
         else:
             # Note that HPN does not have any recourse if this happens. We re-plan at the higher level.
-            goal_object_names = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+            goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
             total_plan = []
             idx = 0
 

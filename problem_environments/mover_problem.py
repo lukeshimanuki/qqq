@@ -537,7 +537,6 @@ class MoverProblem:
                                'home_region_xy': home_region_xy,
                                'home_region_extents': home_region_xy_extents,
                                'shelf_regions': shelf_regions,
-#                               'box_regions': box_regions,
                                'objects': objects}
 
     def get_problem_config(self):

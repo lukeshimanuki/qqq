@@ -1,6 +1,9 @@
-from mover_library.utils import two_arm_pick_object, two_arm_place_object, grab_obj, release_obj, set_robot_config, \
+from mover_library.utils import grab_obj, release_obj, set_robot_config, \
     fold_arms, CustomStateSaver
+
 from mover_library import utils
+from mover_library import utils
+from trajectory_representation.operator import Operator
 from manipulation.bodies.bodies import get_color, set_color
 import numpy as np
 
@@ -108,14 +111,18 @@ class PlaceSweptVolume(SweptVolume):
             obj_touched_before.Enable(True)
 
             pick_param = associated_pick.continuous_parameters
-            two_arm_pick_object(obj_touched_before, pick_param)
+            #utils.two_arm_pick_object(obj_touched_before, pick_param)
+            associated_pick.execute()
             print "Number of place swept volumes = ", len(self.op_instances)
 
             if self.is_collision_in_single_volume(op_instance.low_level_motion, obj_being_moved):
-                two_arm_place_object(pick_param)
+                if op_instance.type.find('one_arm') != -1:
+                    utils.one_arm_place_object(pick_param)
+                else:
+                    utils.two_arm_place_object(pick_param)
                 return True
 
-            two_arm_place_object(pick_param)
+            utils.two_arm_place_object(pick_param)
         return False
 
     def get_objects_in_collision_with_given_op_inst(self, op_inst):
@@ -127,7 +134,15 @@ class PlaceSweptVolume(SweptVolume):
             held = None
 
         associated_pick = self.pick_used[op_inst]
-        two_arm_pick_object(associated_pick.discrete_parameters['object'], associated_pick.continuous_parameters)
+        associated_pick.execute()
+        """
+        if op_inst.type.find('one_arm') != -1:
+            utils.one_arm_pick_object(associated_pick.discrete_parameters['object'],
+                                      associated_pick.continuous_parameters)
+        else:
+            utils.two_arm_pick_object(associated_pick.discrete_parameters['object'],
+                                      associated_pick.continuous_parameters)
+        """
         new_cols = self.problem_env.get_objs_in_collision(op_inst.low_level_motion, 'entire_region')
 
         saver.Restore()
@@ -157,6 +172,28 @@ class PickAndPlaceSweptVolume:
     def add_place_swept_volume(self, place_operator_instance, associated_pick_operator_instance):
         self.place_swept_volume.add_swept_volume(place_operator_instance, associated_pick_operator_instance)
 
+    def add_pap_swept_volume(self, pap_instance):
+        is_one_arm = pap_instance.type.find('one_arm') != -1
+        if not is_one_arm:
+            raise NotImplementedError
+
+        target_obj = pap_instance.discrete_parameters['object']
+        target_region = pap_instance.discrete_parameters['region']
+
+        dummy_pick = Operator(operator_type='one_arm_pick',
+                              discrete_parameters={'object': target_obj},
+                              continuous_parameters=pap_instance.continuous_parameters['pick'])
+        dummy_pick.low_level_motion = [pap_instance.continuous_parameters['pick']['q_goal']]
+        dummy_place = Operator(operator_type='one_arm_place',
+                               discrete_parameters={'object': target_obj, 'region': target_region},
+                               continuous_parameters=pap_instance.continuous_parameters['place'])
+        dummy_place.low_level_motion = [pap_instance.continuous_parameters['place']['q_goal']]
+
+        self.add_pick_swept_volume(dummy_pick)
+        self.add_place_swept_volume(dummy_place, dummy_pick)
+        import pdb;pdb.set_trace()
+        self.get_objects_in_collision_with_pick_and_place(dummy_pick, dummy_place)
+
     def is_swept_volume_cleared(self, obj):
         saver = CustomStateSaver(self.problem_env.env)
 
@@ -185,8 +222,10 @@ class PickAndPlaceSweptVolume:
 
         # place the object at the desired place
         associated_pick = self.place_swept_volume.pick_used[place]
-        utils.two_arm_pick_object(associated_pick.discrete_parameters['object'], associated_pick.continuous_parameters)
-        utils.two_arm_place_object(place.continuous_parameters)
+        associated_pick.execute()
+        place.execute()
+        #utils.two_arm_pick_object(associated_pick.discrete_parameters['object'], associated_pick.continuous_parameters)
+        #utils.two_arm_place_object(place.continuous_parameters)
 
         # now check the collision to the parent object
         if parent_obj_pick is not None:

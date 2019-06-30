@@ -14,13 +14,10 @@ class UniformGenerator(Generator):
         assert n_iter > 0
         feasible_op_parameters = []
         for i in range(n_iter):
-            print operator_skeleton.type, i
             op_parameters = self.sample_from_uniform()
-            stime = time.time()
             op_parameters, status = self.op_feasibility_checker.check_feasibility(operator_skeleton,
                                                                                   op_parameters,
                                                                                   self.swept_volume_constraint)
-            print "Total time", time.time() - stime
 
             if status == 'HasSolution':
                 feasible_op_parameters.append(op_parameters)

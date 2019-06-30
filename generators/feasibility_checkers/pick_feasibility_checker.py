@@ -30,9 +30,9 @@ class PickFeasibilityChecker(object):
         with self.robot:
             grasp_config = self.compute_grasp_config(obj, pick_base_pose, grasp_params)
             if grasp_config is not None:
-                stime = time.time()
+                #stime = time.time()
                 grasp_is_feasible = self.is_grasp_config_feasible(obj, pick_base_pose, grasp_params, grasp_config)
-                print "is_grasp_config_feasible", time.time() - stime
+                #print "is_grasp_config_feasible", time.time() - stime
                 if grasp_is_feasible:
                     return grasp_config
             else:

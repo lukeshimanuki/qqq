@@ -1,28 +1,23 @@
 from trajectory_representation.operator import Operator
 from generators.uniform import UniformGenerator
 from planners.subplanners.minimum_constraint_planner import MinimumConstraintPlanner
-from planners.subplanners.minimum_constraint_goal import MinimumConstraintGoalSampler
 from trajectory_representation.swept_volume import PickAndPlaceSweptVolume
 from manipulation.bodies.bodies import set_color, get_color
 
 from mover_library import utils
 
 import numpy as np
-import pdb
 import time
 
 
-class ResolveSpatialConstraints:
-    def __init__(self, problem_env, goal_object_name, goal_region_name, misc_region_name):
+class OneArmResolveSpatialConstraints:
+    def __init__(self, problem_env, goal_object_name, goal_region_name):
         self.objects_moved_before = []
         self.plan = []
         self.objects_in_collision = []
         self.problem_env = problem_env
-        if self.problem_env.name.find('two_arm') == -1:
-            raise NotImplementedError
         self.goal_object = self.problem_env.env.GetKinBody(goal_object_name)
         self.goal_region = self.problem_env.regions[goal_region_name]
-        self.misc_region = self.problem_env.regions[misc_region_name]
 
         self.robot = self.problem_env.robot
         self.sampled_pick_configs_for_objects = {}
@@ -169,6 +164,7 @@ class ResolveSpatialConstraints:
         if object_to_move == self.goal_object:
             target_region = self.goal_region
         else:
+            # todo fix it to place it in the shelf region
             if self.misc_region.contains(object_to_move.ComputeAABB()):
                 target_region = self.misc_region
             else:
@@ -179,6 +175,13 @@ class ResolveSpatialConstraints:
         set_color(object_to_move, [1, 0, 0])
         # End of debugging purpose
 
+        # get pap
+
+        # get obstacles in collision
+
+        # get pap for those obstacles
+
+        # todo combine PlanGrasp and FindPlacement into one pap sampling
         # PlanGrasp
         saver = utils.CustomStateSaver(self.problem_env.env)
         stime = time.time()
@@ -191,6 +194,11 @@ class ResolveSpatialConstraints:
             print "Infeasible branch"
             return False, 'NoSolution'
         utils.two_arm_pick_object(object_to_move, pick_operator_instance_for_curr_object.continuous_parameters)
+
+        # todo the output here, is two things:
+        #   1) pick operator instance for object_to_move
+        #   2) place operator instance for object_to_move
+        #   and their swept volumes
 
         # FindPlacements
         stime = time.time()

@@ -15,6 +15,7 @@ class OneArmMover(Mover):
         self.objects = [k for v in self.objects.values() for k in v]
         self.objects[0], self.objects[1] = self.objects[1], self.objects[0]
         self.regions[self.boxes[1].GetName() + "_region"] = self.compute_box_region(self.boxes[1])
+        self.shelf_regions = self.problem_config['shelf_regions']
         self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region']
         self.name = 'one_arm_mover'
 

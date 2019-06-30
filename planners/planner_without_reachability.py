@@ -112,4 +112,4 @@ class PlannerWithoutReachability:
                 break
 
         init_state.Restore()
-        return goal_obj_move_plan
+        return goal_obj_move_plan, plan
