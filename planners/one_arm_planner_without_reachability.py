@@ -12,22 +12,21 @@ class OneArmPlannerWithoutReachability:
         self.goal_objects = [problem_env.env.GetKinBody(o) for o in goal_object_names]
         self.goal_region = self.problem_env.regions[goal_region]
 
-    def sample_cont_params(self, operator_skeleton, n_iter):
-        target_object = operator_skeleton.discrete_parameters['object']
-        generator = OneArmPaPUniformGenerator(operator_skeleton, self.problem_env, None)
-        target_object.Enable(True)
-        print "Sampling paps for ", target_object
-        pick_cont_param, place_cont_param, status = generator.sample_next_point(max_ik_attempts=n_iter)
-        return pick_cont_param, place_cont_param, status
-
-    def find_pick_and_place(self, curr_obj):
+    def sample_op_instance(self, curr_obj, n_iter):
         op = Operator(operator_type='one_arm_pick_one_arm_place',
                       discrete_parameters={'object': curr_obj, 'region': self.goal_region})
+        target_object = op.discrete_parameters['object']
+        generator = OneArmPaPUniformGenerator(op, self.problem_env, None)
+        print "Sampling paps for ", target_object
+        pick_cont_param, place_cont_param, status = generator.sample_next_point(max_ik_attempts=n_iter)
+        op.continuous_parameters = {'pick': pick_cont_param, 'place':place_cont_param}
+        return op, status
+
+    def find_pick_and_place(self, curr_obj):
         stime = time.time()
-        pick_cont_param, place_cont_param, status = self.sample_cont_params(op, 5)
+        op, status = self.sample_op_instance(curr_obj, 5)
         print time.time() - stime
         if status == 'HasSolution':
-            op.continuous_parameters = {'pick': pick_cont_param, 'place': place_cont_param}
             return op, status
         else:
             return None, status
