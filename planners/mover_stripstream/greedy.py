@@ -25,6 +25,7 @@ sys.path.extend([
 # from pddlstream.language.generator import from_gen_fn, from_list_fn, from_test, fn_from_constant, from_fn
 
 from problem_environments.mover_env import Mover
+from problem_environments.one_arm_mover_env import OneArmMover
 from generators.PickUniform import PickWithBaseUnif
 from generators.PlaceUniform import PlaceUnif
 # from operator_utils.grasp_utils import solveTwoArmIKs, compute_two_arm_grasp
@@ -32,6 +33,7 @@ from generators.PlaceUniform import PlaceUnif
 from trajectory_representation.operator import Operator
 from trajectory_representation.pick_and_place_state import PaPState
 from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
+from trajectory_representation.one_arm_pap_state import OneArmPaPState
 from trajectory_representation.minimum_constraint_pick_and_place_state import MinimiumConstraintPaPState
 from trajectory_representation.trajectory import Trajectory
 
@@ -751,7 +753,19 @@ def get_problem(mover):
     n_objs_pack = config.n_objs_pack
     goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
 
-    state = ShortestPathPaPState(mover, goal)
+    if config.domain == 'two_arm_mover':
+        statecls = ShortestPathPaPState
+    elif config.domain == 'one_arm_mover':
+        statecls = OneArmPaPState
+    else:
+        raise NotImplementedError
+
+    pr = cProfile.Profile()
+    pr.enable()
+    state = statecls(mover, goal)
+    pr.disable()
+    pstats.Stats(pr).sort_stats('tottime').print_stats(30)
+    pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
 
     state.make_pklable()
 
@@ -947,12 +961,6 @@ def get_problem(mover):
 
     depth_limit = 60
 
-    # pr = cProfile.Profile()
-    # pr.enable()
-
-    # pr.disable()
-    # pstats.Stats(pr).sort_stats('tottime').print_stats(10)
-
     class Node(object):
         def __init__(self, parent, action, state, reward=0):
             self.parent = parent  # parent.state is initial state
@@ -1085,7 +1093,7 @@ def get_problem(mover):
 
                 set_robot_config(pick_action['base_pose'], mover.robot)
                 grab_obj(obj)
-                newstate = ShortestPathPaPState(mover, goal, state, action)
+                newstate = statecls(mover, goal, state, action)
                 newstate.make_pklable()
                 release_obj()
                 pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
@@ -1169,7 +1177,7 @@ def get_problem(mover):
 
                 set_robot_config(place_action['base_pose'], mover.robot)
                 set_obj_xytheta(place_action['object_pose'], obj)
-                newstate = ShortestPathPaPState(mover, goal, node.state, action)
+                newstate = statecls(mover, goal, node.state, action)
                 newstate.make_pklable()
                 place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
                 action.set_continuous_parameters(place_action)
@@ -1393,7 +1401,7 @@ def get_problem(mover):
                             pdb.set_trace()
                 two_arm_place_object(place_action)
 
-                newstate = ShortestPathPaPState(mover, goal, node.state, action)
+                newstate = statecls(mover, goal, node.state, action)
                 newstate.make_pklable()
                 newnode = Node(node, action, newstate)
 
@@ -1672,7 +1680,12 @@ import socket
 def generate_training_data_single():
     np.random.seed(config.pidx)
     random.seed(config.pidx)
-    mover = Mover(config.pidx)
+    if config.domain == 'two_arm_mover':
+        mover = Mover(config.pidx)
+    elif config.domain == 'one_arm_mover':
+        mover = OneArmMover(config.pidx)
+    else:
+        raise NotImplementedError
     np.random.seed(config.planner_seed)
     random.seed(config.planner_seed)
     mover.set_motion_planner(BaseMotionPlanner(mover, 'prm'))
@@ -1876,6 +1889,7 @@ if __name__ == '__main__':
     parser.add_argument('-dontsimulate', action='store_true', default=False)
     parser.add_argument('-plan', action='store_true', default=False)
     parser.add_argument('-loss', type=str, default='largemargin')
+    parser.add_argument('-domain', type=str, default='two_arm_mover')
 
     config = parser.parse_args()
     generate_training_data_single()
