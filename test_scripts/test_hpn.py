@@ -81,12 +81,17 @@ def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
         if is_one_arm_environment:
             swept_volumes = PickAndPlaceSweptVolume(environment, None)
             swept_volumes.add_pap_swept_volume(plan)
+            obstacles_to_remove = swept_volumes.get_objects_in_collision()
+            print len(obstacles_to_remove)
+            import pdb;pdb.set_trace()
+            if len(obstacles_to_remove) == 0:
+                return plan, 1, "HasSolution"
 
             plan, status = rsc.search(obj_name,
-                                      parent_swept_volumes=None,
-                                      obstacles_to_remove=[],
-                                      objects_moved_before=[],
-                                      plan=[],
+                                      parent_swept_volumes=swept_volumes,
+                                      obstacles_to_remove=obstacles_to_remove,
+                                      objects_moved_before=[plan.discrete_parameters['object']],
+                                      plan=[plan],
                                       stime=stime,
                                       timelimit=timelimit)
         else:
@@ -126,9 +131,10 @@ def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_
 
 
 def find_plan_without_reachability(problem_env, goal_object_names):
+    import pdb;pdb.set_trace()
     if problem_env.name.find('one_arm_mover') != -1:
         planner = OneArmPlannerWithoutReachability(problem_env, goal_object_names,
-                                                   goal_region='rectangular_packing_box1_region')
+                                                   goal_region='center_top')
     else:
         planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
     goal_obj_order_plan, plan = planner.search()
@@ -154,7 +160,9 @@ def main():
         environment = OneArmMover(parameters.pidx)
         goal_region = ['rectangular_packing_box1_region']
 
-    goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
+    #goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
+    goal_object_names = [environment.objects[-1].GetName()]
+    goal_object_names = ['c_obst2']
     goal_entities = goal_object_names + goal_region
 
     # for randomized algorithms

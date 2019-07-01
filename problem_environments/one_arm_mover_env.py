@@ -2,7 +2,7 @@ from problem_environments.mover_env import Mover
 from mover_library.utils import set_robot_config, set_obj_xytheta
 from trajectory_representation.operator import Operator
 from manipulation.regions import AARegion
-
+from mover_library import utils
 
 class OneArmMover(Mover):
     def __init__(self, problem_idx):
@@ -16,6 +16,8 @@ class OneArmMover(Mover):
         self.objects[0], self.objects[1] = self.objects[1], self.objects[0]
         self.regions[self.boxes[1].GetName() + "_region"] = self.compute_box_region(self.boxes[1])
         self.shelf_regions = self.problem_config['shelf_regions']
+        self.regions.update(self.shelf_regions)
+        import pdb;pdb.set_trace()
         self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region']
         self.name = 'one_arm_mover'
 

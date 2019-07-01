@@ -191,8 +191,19 @@ class PickAndPlaceSweptVolume:
 
         self.add_pick_swept_volume(dummy_pick)
         self.add_place_swept_volume(dummy_place, dummy_pick)
-        import pdb;pdb.set_trace()
-        self.get_objects_in_collision_with_pick_and_place(dummy_pick, dummy_place)
+
+    def get_objects_in_collision(self):
+        pick_collisions = []
+        for pick_sv in self.pick_swept_volume.swept_volumes:
+            pick_collisions += self.problem_env.get_objs_in_collision(pick_sv, 'entire_region')
+
+        place_collisions = []
+        for place_sv in self.place_swept_volume.swept_volumes:
+            place_collisions += self.problem_env.get_objs_in_collision(place_sv, 'entire_region')
+
+        return pick_collisions + place_collisions
+
+
 
     def is_swept_volume_cleared(self, obj):
         saver = CustomStateSaver(self.problem_env.env)

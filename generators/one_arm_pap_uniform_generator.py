@@ -123,6 +123,7 @@ class OneArmPaPUniformGenerator:
             utils.set_robot_config(robot_pose)
             return None, None, status
 
+        print "Pick succeeded, sampling place..."
         self.pick_op.continuous_parameters = pick_cont_params
         self.pick_op.execute()
 
@@ -147,6 +148,7 @@ class OneArmPaPUniformGenerator:
         self.robot.SetDOFValues(robot_config)
         utils.set_robot_config(robot_pose)
         if status != 'HasSolution':
+            print "place sampling failed"
             return None, None, status
         else:
             self.place_op.continuous_parameters = place_cont_params

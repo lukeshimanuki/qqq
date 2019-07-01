@@ -57,14 +57,16 @@ class Operator:
             raise NotImplementedError
 
     def execute_pick(self):
-        assert self.type == 'two_arm_pick_two_arm_place'
         env = openravepy.RaveGetEnvironments()[0]
         if isinstance(self.discrete_parameters['object'], openravepy.KinBody):
             obj_to_pick = self.discrete_parameters['object']
         else:
             obj_to_pick = env.GetKinBody(self.discrete_parameters['object'])
 
-        two_arm_pick_object(obj_to_pick, self.continuous_parameters['pick'])
+        if self.type == 'two_arm_pick_two_arm_place':
+            two_arm_pick_object(obj_to_pick, self.continuous_parameters['pick'])
+        else:
+            one_arm_pick_object(obj_to_pick, self.continuous_parameters['pick'])
 
     def is_discrete_parameters_eq_to(self, param):
         if self.type == 'two_arm_pick':

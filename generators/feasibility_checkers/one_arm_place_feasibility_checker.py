@@ -11,7 +11,9 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
 
     def place_object_and_robot_at_new_pose(self, obj, obj_pose, obj_region):
         T_r_wrt_o = np.dot(np.linalg.inv(obj.GetTransform()), self.robot.GetTransform())
-        release_obj()
+        if len(self.robot.GetGrabbed()) > 0:
+            release_obj()
+        import pdb;pdb.set_trace()
         set_obj_xytheta(obj_pose, obj)
         new_T_robot = np.dot(obj.GetTransform(), T_r_wrt_o)
         self.robot.SetTransform(new_T_robot)
@@ -43,24 +45,49 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         obj_region = operator_skeleton.discrete_parameters['region']
         if type(obj_region) == str:
             obj_region = self.problem_env.regions[obj_region]
-        new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
-        target_robot_region = self.problem_env.regions['entire_region']
+        target_robot_region = self.problem_env.regions['home_region']
         target_obj_region = obj_region
 
-        is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
-                                  (not target_robot_region.contains(self.robot.ComputeAABB()))
+        new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
+
+        #is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
+        #                              (not target_robot_region.contains(self.robot.ComputeAABB()))
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
-
-        if is_base_pose_infeasible or is_object_pose_infeasible:
+        import pdb;pdb.set_trace()
+        if is_object_pose_infeasible:
             action = {'operator_name': 'one_arm_place', 'q_goal': None, 'base_pose': None, 'object_pose': None,
-                      'action_parameters': place_parameters, 'grasp_params': grasp_params}
+                      'action_parameters': obj_pose, 'grasp_params': grasp_params}
             set_robot_config(robot_original_xytheta)
             self.robot.SetDOFValues(robot_original_config)
             obj.SetTransform(obj_original_pose)
             grab_obj(obj)
             return action, 'InfeasibleBase'
 
+
+        is_base_pose_infeasible = True
+        if is_base_pose_infeasible:
+            for i in range(3):
+                obj_pose[-1] += 90*np.pi/180.0
+                new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
+                is_object_pose_infeasible = self.env.CheckCollision(obj) or \
+                                                (not target_obj_region.contains(obj.ComputeAABB()))
+                if i == 0:
+                    is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
+                                                  (not target_robot_region.contains(self.robot.ComputeAABB()))
+                if not (is_base_pose_infeasible or is_object_pose_infeasible):
+                    break
+
+        if is_base_pose_infeasible or is_object_pose_infeasible:
+            action = {'operator_name': 'one_arm_place', 'q_goal': None, 'base_pose': None, 'object_pose': None,
+                      'action_parameters': obj_pose, 'grasp_params': grasp_params}
+            set_robot_config(robot_original_xytheta)
+            self.robot.SetDOFValues(robot_original_config)
+            obj.SetTransform(obj_original_pose)
+            grab_obj(obj)
+            return action, 'InfeasibleBase'
+
+        import pdb;pdb.set_trace()
         grasp_config = self.solve_ik_from_grasp_params(obj, grasp_params)
 
         self.problem_env.enable_objects_in_region('entire_region')
@@ -68,8 +95,8 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
 
         if grasp_config is None:
             action = {'operator_name': 'one_arm_place', 'base_pose': None, 'object_pose': None,
-                      'q_goal': None,
-                      'action_parameters': place_parameters, 'g_config': grasp_config, 'grasp_params': grasp_params}
+                      'q_goal': None, 'action_parameters': obj_pose, 'g_config': grasp_config,
+                      'grasp_params': grasp_params}
             set_robot_config(robot_original_xytheta)
             self.robot.SetDOFValues(robot_original_config)
             obj.SetTransform(obj_original_pose)
@@ -80,7 +107,7 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             new_base_pose = new_base_pose.squeeze()
             action = {'operator_name': 'one_arm_place', 'q_goal': np.hstack([grasp_config, new_base_pose]),
                       'base_pose': new_base_pose, 'object_pose': place_parameters,
-                      'action_parameters': place_parameters, 'g_config': grasp_config, 'grasp_params': grasp_params}
+                      'action_parameters': obj_pose, 'g_config': grasp_config, 'grasp_params': grasp_params}
             set_robot_config(robot_original_xytheta)
             self.robot.SetDOFValues(robot_original_config)
             obj.SetTransform(obj_original_pose)

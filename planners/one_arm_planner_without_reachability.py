@@ -10,6 +10,7 @@ class OneArmPlannerWithoutReachability:
     def __init__(self, problem_env, goal_object_names, goal_region):
         self.problem_env = problem_env
         self.goal_objects = [problem_env.env.GetKinBody(o) for o in goal_object_names]
+
         self.goal_region = self.problem_env.regions[goal_region]
 
     def sample_op_instance(self, curr_obj, n_iter):
@@ -55,7 +56,7 @@ class OneArmPlannerWithoutReachability:
                 idx = idx % len(self.goal_objects)
                 init_state.Restore()
                 self.problem_env.objects_to_check_collision = None
-                print "Sampling failed"
+                print "Pick sampling failed"
                 continue
 
             pap.execute()

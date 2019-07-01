@@ -55,7 +55,6 @@ def main():
     test_dir = 'test_results/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
     get_plan_times(test_dir, test_files, 1000)
-    import pdb;pdb.set_trace()
 
     test_dir = 'test_results/cloud_results/mcts_results_on_mover_domain/n_objs_pack_1/n_mp_params_3/widening_3/'
     test_files = os.listdir(test_dir)
