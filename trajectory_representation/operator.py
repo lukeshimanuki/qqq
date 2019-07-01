@@ -99,7 +99,8 @@ class Operator:
                 self.discrete_parameters['object'] = self.discrete_parameters['object'].GetName()
 
         if 'region' in self.discrete_parameters.keys():
-            if not isinstance(self.discrete_parameters['region'], str):
+            if not (isinstance(self.discrete_parameters['region'], str)
+                    or isinstance(self.discrete_parameters['region'], unicode)):
                 self.discrete_parameters['region'] = self.discrete_parameters['region'].name
 
 

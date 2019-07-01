@@ -47,13 +47,16 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         target_robot_region = self.problem_env.regions['home_region']
         target_obj_region = obj_region
 
-        set_color(obj, [0, 0, 0])
         new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
 
         # is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
         #                              (not target_robot_region.contains(self.robot.ComputeAABB()))
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
+        if not is_object_pose_infeasible:
+            if swept_volume_to_avoid is not None:
+                is_object_pose_infeasible = not swept_volume_to_avoid.is_swept_volume_cleared(obj)
+
         if is_object_pose_infeasible:
             action = {'operator_name': 'one_arm_place', 'q_goal': None, 'base_pose': None, 'object_pose': None,
                       'action_parameters': obj_pose, 'grasp_params': grasp_params}

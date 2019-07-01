@@ -63,12 +63,28 @@ def parse_parameters():
     return parameters
 
 
-def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
+def attach_q_goal_as_low_level_motion(target_op_inst):
+    target_op_inst.low_level_motion = {}
+    target_op_inst.low_level_motion['pick'] = target_op_inst.continuous_parameters['pick']['q_goal']
+    target_op_inst.low_level_motion['place'] = target_op_inst.continuous_parameters['place']['q_goal']
+    return target_op_inst
+
+
+def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
     is_one_arm_environment = environment.name.find('one_arm') != -1
     if is_one_arm_environment:
+        target_op_inst = attach_q_goal_as_low_level_motion(target_op_inst)
+        swept_volumes = PickAndPlaceSweptVolume(environment, None)
+        swept_volumes.add_pap_swept_volume(target_op_inst)
+        obstacles_to_remove = swept_volumes.get_objects_in_collision()
+        print len(obstacles_to_remove)
+        if len(obstacles_to_remove) == 0:
+            return [target_op_inst], 1, "HasSolution"
         rsc = OneArmResolveSpatialConstraints(problem_env=environment,
                                               goal_object_name=obj_name,
                                               goal_region_name='rectangular_packing_box1_region')
+        obstacle_to_remove_idx = 0
+
     else:
         rsc = ResolveSpatialConstraints(problem_env=environment,
                                         goal_object_name=obj_name,
@@ -79,20 +95,19 @@ def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
     status = 'NoSolution'
     while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < timelimit:
         if is_one_arm_environment:
-            swept_volumes = PickAndPlaceSweptVolume(environment, None)
-            swept_volumes.add_pap_swept_volume(plan)
-            obstacles_to_remove = swept_volumes.get_objects_in_collision()
-            print len(obstacles_to_remove)
-            if len(obstacles_to_remove) == 0:
-                return plan, 1, "HasSolution"
-
-            plan, status = rsc.search(object_to_move=obstacles_to_remove[0],
+            obj_to_move = obstacles_to_remove[obstacle_to_remove_idx]
+            tmp_obstacles_to_remove = set(obstacles_to_remove).difference(set([obj_to_move]))
+            tmp_obstacles_to_remove = list(tmp_obstacles_to_remove)
+            top_level_plan = [target_op_inst]
+            import pdb;pdb.set_trace()
+            plan, status = rsc.search(object_to_move=obj_to_move,
                                       parent_swept_volumes=swept_volumes,
-                                      obstacles_to_remove=obstacles_to_remove,
-                                      objects_moved_before=[plan.discrete_parameters['object']],
-                                      plan=[plan],
+                                      obstacles_to_remove=tmp_obstacles_to_remove,
+                                      objects_moved_before=[target_op_inst.discrete_parameters['object']],
+                                      plan=top_level_plan,
                                       stime=stime,
                                       timelimit=timelimit)
+            import pdb;pdb.set_trace()
         else:
             plan, status = rsc.search(obj_name,
                                       parent_swept_volumes=None,
@@ -105,6 +120,11 @@ def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
         if plan_found:
             print "Solution found"
         else:
+            import pdb;pdb.set_trace()
+            if is_one_arm_environment:
+                obstacle_to_remove_idx += 1
+                if obstacle_to_remove_idx == len(obstacles_to_remove):
+                    break
             print "Restarting..."
 
     if plan_found:
@@ -132,10 +152,11 @@ def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_
 def find_plan_without_reachability(problem_env, goal_object_names):
     if problem_env.name.find('one_arm_mover') != -1:
         planner = OneArmPlannerWithoutReachability(problem_env, goal_object_names,
-                                                   goal_region='center_top')
+                                                   goal_region='rectangular_packing_box1_region')
     else:
         planner = PlannerWithoutReachability(problem_env, goal_object_names, goal_region='home_region')
     goal_obj_order_plan, plan = planner.search()
+
     goal_obj_order_plan = [o.GetName() for o in goal_obj_order_plan]
     return goal_obj_order_plan, plan
 
@@ -173,13 +194,20 @@ def main():
     # from manipulation.bodies.bodies import set_color
     # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
 
+
     stime = time.time()
+    """
     if os.path.isfile('./tmp.pkl'):
         goal_object_names, plan = pickle.load(open('tmp.pkl', 'r'))
     else:
         goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+        [p.make_pklable() for p in plan]
         pickle.dump((goal_object_names, plan), open('tmp.pkl', 'wb'))
+    """
+    plan = pickle.load(open('test_results/prm_mcr_hpn_results_on_mover_domain/1/test_purpose/seed_0_pidx_4.pkl', 'r'))['plan']
 
+    import pdb;pdb.set_trace()
+    goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
 
     total_n_nodes = 0
     total_plan = []
@@ -192,6 +220,7 @@ def main():
         plan, n_nodes, status = find_plan_for_obj(goal_obj_name, plan[idx], environment, stime, timelimit)
         total_n_nodes += n_nodes
         total_time_taken = time.time() - stime
+        import pdb;pdb.set_trace()
         print goal_obj_name, goal_object_names, total_n_nodes
         print "Time taken: %.2f" % total_time_taken
         if status == 'HasSolution':
@@ -212,10 +241,9 @@ def main():
             break
         else:
             idx %= len(goal_object_names)
-
-        print 'plan saved'
     save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities,
               total_time_taken)
+    print 'plan saved'
 
 
 if __name__ == '__main__':

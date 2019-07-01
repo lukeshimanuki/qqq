@@ -23,6 +23,7 @@ class OneArmMover(Mover):
         self.regions.update(self.shelf_regions)
         self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region']
         self.name = 'one_arm_mover'
+        self.init_saver = utils.CustomStateSaver(self.env)
 
     def compute_box_region(self, box):
         box_region = AARegion.create_on_body(box)

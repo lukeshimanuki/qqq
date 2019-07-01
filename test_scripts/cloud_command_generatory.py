@@ -1,4 +1,4 @@
-num_train = 4000
+num_train = 100
 n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
@@ -9,7 +9,7 @@ loss = 'largemargin'
 algorithm = 'greedy'
 
 if algorithm != 'hpn':
-    train_seed = [0,1,2]
+    train_seed = [0, 1, 2]
 else:
     train_seed = [0]
 

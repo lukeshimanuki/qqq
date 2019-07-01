@@ -24,6 +24,7 @@ class OneArmPaPUniformGenerator:
         self.robot = problem_env.robot
         self.target_region = target_region
         self.target_obj = target_obj
+        self.swept_volume_constraint = swept_volume_constraint
 
         self.pick_op = Operator(operator_type='one_arm_pick',
                                 discrete_parameters={'object': target_obj})
@@ -90,7 +91,8 @@ class OneArmPaPUniformGenerator:
     def sample_place_cont_parameters(self, pick_params):
         obj_place_pose = self.place_generator.sample_from_uniform()
         self.place_op.continuous_parameters['grasp_params'] = pick_params['grasp_params']
-        cont_params, status = self.place_feasibility_checker.check_feasibility(self.place_op, obj_place_pose)
+        cont_params, status = self.place_feasibility_checker.check_feasibility(self.place_op, obj_place_pose,
+                                                                               self.swept_volume_constraint)
         if status != 'HasSolution':
             return None, status
         else:

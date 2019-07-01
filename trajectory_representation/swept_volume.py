@@ -4,6 +4,7 @@ from mover_library.utils import grab_obj, release_obj, set_robot_config, \
 from mover_library import utils
 from mover_library import utils
 from trajectory_representation.operator import Operator
+from openravepy import DOFAffine
 from manipulation.bodies.bodies import get_color, set_color
 import numpy as np
 
@@ -29,22 +30,43 @@ class SweptVolume:
         self.op_instances.append(operator_instance)
         self.swept_volumes.append(operator_instance.low_level_motion)
 
+    def set_active_dofs_based_on_config_dim(self, config):
+        if len(config) == 3:
+            self.robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis, [0, 0, 1])
+        elif len(config) == 11:
+            manip = self.robot.GetManipulator('rightarm_torso')
+            self.robot.SetActiveDOFs(manip.GetArmIndices(), DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis, [0, 0, 1])
+        assert len(config) == self.robot.GetActiveDOF(), 'Robot active dof should match the path'
+
     def is_collision_in_single_volume(self, vol, obj):
         # this is asking if the new object placement will collide with previous swept volumes
-        before = utils.get_body_xytheta(self.problem_env.robot)
+        self.set_active_dofs_based_on_config_dim(vol[0])
+        before = self.problem_env.robot.GetActiveDOFValues() # I guess this doesn't matter?
         for config in vol:
-            set_robot_config(config, self.problem_env.robot)
+            #set_robot_config(config, self.problem_env.robot)
+            # todo I need to set it to the right configurations
+            utils.set_active_config(config, self.robot)
+
             if self.problem_env.env.CheckCollision(self.problem_env.robot):
                 if self.problem_env.env.CheckCollision(self.problem_env.robot, obj):
                     # I don't know why, but checking collision with obj directly sometimes
                     # does not generate proper collision check result; it has to do with whether the robot is holding the
                     # object when the object is enabled.
-                    utils.set_robot_config(before)
+                    utils.set_active_config(before)
                     return True
         utils.set_robot_config(before)
         return False
 
     def get_objects_in_collision(self):
+        cols = []
+        for op in self.op_instances:
+            col = self.get_objects_in_collision_with_given_op_inst(op)
+            for c in col:
+                if c not in cols:
+                    cols.append(c)
+        return cols
+
+    def get_objects_in_collision_with_given_op_inst(self, op):
         raise NotImplementedError
 
     def reset(self):
@@ -111,7 +133,7 @@ class PlaceSweptVolume(SweptVolume):
             obj_touched_before.Enable(True)
 
             pick_param = associated_pick.continuous_parameters
-            #utils.two_arm_pick_object(obj_touched_before, pick_param)
+            # utils.two_arm_pick_object(obj_touched_before, pick_param)
             associated_pick.execute()
             print "Number of place swept volumes = ", len(self.op_instances)
 
@@ -135,14 +157,6 @@ class PlaceSweptVolume(SweptVolume):
 
         associated_pick = self.pick_used[op_inst]
         associated_pick.execute()
-        """
-        if op_inst.type.find('one_arm') != -1:
-            utils.one_arm_pick_object(associated_pick.discrete_parameters['object'],
-                                      associated_pick.continuous_parameters)
-        else:
-            utils.two_arm_pick_object(associated_pick.discrete_parameters['object'],
-                                      associated_pick.continuous_parameters)
-        """
         new_cols = self.problem_env.get_objs_in_collision(op_inst.low_level_motion, 'entire_region')
 
         saver.Restore()
@@ -183,26 +197,37 @@ class PickAndPlaceSweptVolume:
         dummy_pick = Operator(operator_type='one_arm_pick',
                               discrete_parameters={'object': target_obj},
                               continuous_parameters=pap_instance.continuous_parameters['pick'])
-        dummy_pick.low_level_motion = [pap_instance.continuous_parameters['pick']['q_goal']]
+        dummy_pick.low_level_motion = [pap_instance.low_level_motion['pick']]
         dummy_place = Operator(operator_type='one_arm_place',
                                discrete_parameters={'object': target_obj, 'region': target_region},
                                continuous_parameters=pap_instance.continuous_parameters['place'])
-        dummy_place.low_level_motion = [pap_instance.continuous_parameters['place']['q_goal']]
+        dummy_place.low_level_motion = [pap_instance.low_level_motion['place']]
 
         self.add_pick_swept_volume(dummy_pick)
         self.add_place_swept_volume(dummy_place, dummy_pick)
 
     def get_objects_in_collision(self):
-        pick_collisions = []
-        for pick_sv in self.pick_swept_volume.swept_volumes:
-            pick_collisions += self.problem_env.get_objs_in_collision(pick_sv, 'entire_region')
+        pick_cols = self.pick_swept_volume.get_objects_in_collision()
+        place_cols = self.place_swept_volume.get_objects_in_collision()
 
-        place_collisions = []
-        for place_sv in self.place_swept_volume.swept_volumes:
-            place_collisions += self.problem_env.get_objs_in_collision(place_sv, 'entire_region')
+        # reverse to get the last added volume collisions first
+        pick_cols = pick_cols[::-1]
+        place_cols = place_cols[::-1]
+        unique_cols = pick_cols
+        unique_cols += [p for p in place_cols if p not in unique_cols]
+        return unique_cols
 
-        unique_cols = set(pick_collisions+place_collisions)
-        return list(unique_cols)
+    def get_objects_in_collision_with_last_pap(self):
+        # I need to retrieve the volumes associated with the pick and place used in pap_instance
+        # How to do that?
+        pick_cols = self.pick_swept_volume.get_objects_in_collision_with_given_op_inst(
+            self.pick_swept_volume.op_instances[-1])
+        place_cols = self.place_swept_volume.get_objects_in_collision_with_given_op_inst(
+            self.place_swept_volume.op_instances[-1])
+
+        unique_cols = pick_cols
+        unique_cols += [p for p in place_cols if p not in unique_cols]
+        return unique_cols
 
     def is_swept_volume_cleared(self, obj):
         saver = CustomStateSaver(self.problem_env.env)
@@ -234,8 +259,8 @@ class PickAndPlaceSweptVolume:
         associated_pick = self.place_swept_volume.pick_used[place]
         associated_pick.execute()
         place.execute()
-        #utils.two_arm_pick_object(associated_pick.discrete_parameters['object'], associated_pick.continuous_parameters)
-        #utils.two_arm_place_object(place.continuous_parameters)
+        # utils.two_arm_pick_object(associated_pick.discrete_parameters['object'], associated_pick.continuous_parameters)
+        # utils.two_arm_place_object(place.continuous_parameters)
 
         # now check the collision to the parent object
         if parent_obj_pick is not None:

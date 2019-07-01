@@ -145,8 +145,14 @@ class Mover(ProblemEnvironment):
             if obj == held_obj:
                 continue
             obj.Enable(False)
+
         if self.objects_to_check_collision is not None:
-            [o.Enable(True) for o in self.objects_to_check_collision]
+            for o in self.objects_to_check_collision:
+                if isinstance(o, str) or isinstance(o, unicode):
+                    self.env.GetKinBody(o).Enable(True)
+                else:
+                    o.Enable(True)
+
 
     def enable_objects_in_region(self, region_name):
         movable_objs = [o for o in self.objects if not (self.env.GetKinBody(o.GetName()) is None)]

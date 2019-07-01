@@ -1,6 +1,5 @@
 import sys
 
-sys.path.append('../mover_library/')
 from manipulation.constants import PARALLEL_LEFT_ARM, REST_LEFT_ARM, HOLDING_LEFT_ARM, FOLDED_LEFT_ARM, \
     FAR_HOLDING_LEFT_ARM, LOWER_TOP_HOLDING_LEFT_ARM, REGION_Z_OFFSET
 
@@ -193,14 +192,14 @@ def generate_shelf_shapes():
 
 
 def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_name, table_name):
-    width = 0.3
+    width = 0.25
     length = 0.01
     height = obst_height
     top_wall_width = 0.001
     bottom_wall_width = 0.0001
 
     table_pos = aabb_from_body(env.GetKinBody(table_name)).pos()
-    table_x = table_pos[0]
+    table_x = table_pos[0] - 0.18
     table_y = table_pos[1]
     place_body(env,
                box_body(env,
@@ -246,6 +245,7 @@ def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_nam
     region = create_region(env, 'place_region_' + str(name_idx),
                            ((-1.0, 1.0), (-0.85, 0.85)),
                            'bottom_wall_' + str(name_idx), color=np.array((0, 0, 0, .5)))
+    #viewer()
     region.draw(env)
     return region
 
