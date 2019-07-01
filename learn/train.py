@@ -51,7 +51,7 @@ def create_callbacks(q_weight_file):
 def create_gnn_model(nodes, edges, config):
     num_entities = nodes.shape[1]
     m = PaPGNN(num_entities, nodes.shape[-1], edges.shape[-1], config)
-    if os.path.isfile(m.weight_file_name) and not config.donttrain:
+    if os.path.isfile(m.weight_file_name) and not config.donttrain and not config.f:
         print "Quitting because we've already trained with the given configuration"
         sys.exit(-1)
     return m
@@ -123,6 +123,7 @@ def parse_args():
     parser.add_argument('-operator', type=str, default='two_arm_pick_two_arm_place')
     parser.add_argument('-num_fc_layers', type=int, default=2)
     parser.add_argument('-no_goal_nodes', action='store_true', default=False)
+    parser.add_argument('-f', action='store_true', default=False)
     parser.add_argument('-n_msg_passing', type=int, default=1)
     parser.add_argument('-weight_initializer', type=str, default='glorot_uniform')
     parser.add_argument('-loss', type=str, default='largemargin')

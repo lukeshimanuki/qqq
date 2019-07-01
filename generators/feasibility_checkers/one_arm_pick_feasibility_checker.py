@@ -33,25 +33,26 @@ class OneArmPickFeasibilityChecker(PickFeasibilityChecker):
 
         if not from_place:
             # checks the base feasibility
+            no_collision = not self.env.CheckCollision(self.robot)
+            if not no_collision:
+                return None
+            # TODO: for some reason this is really slow, is it actually necessary?
             inside_region = self.problem_env.regions['home_region'].contains(self.robot.ComputeAABB()) or \
                             self.problem_env.regions['loading_region'].contains(self.robot.ComputeAABB())
-            stime=time.time()
-            no_collision = not self.env.CheckCollision(self.robot)
-            print "Collision time", time.time()-stime
-            if (not inside_region) or (not no_collision):
+            if not inside_region:
                 return None
 
-        stime = time.time()
+        #stime = time.time()
         open_gripper()
         grasps = compute_one_arm_grasp(depth_portion=grasp_params[2],
                                        height_portion=grasp_params[1],
                                        theta=grasp_params[0],
                                        obj=obj,
                                        robot=self.robot)
-        print 'grasp_computation', time.time()-stime
+        #print 'grasp_computation', time.time()-stime
         grasp_config, grasp = solveIKs(self.env, self.robot, grasps)
-        print 'Succeed?', grasp_config is not None
-        print 'IK computation', time.time()-stime
+        #print 'Succeed?', grasp_config is not None
+        #print 'IK computation', time.time()-stime
 
         return grasp_config
 
