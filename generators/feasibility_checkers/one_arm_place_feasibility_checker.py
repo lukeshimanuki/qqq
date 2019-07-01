@@ -13,14 +13,13 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         T_r_wrt_o = np.dot(np.linalg.inv(obj.GetTransform()), self.robot.GetTransform())
         if len(self.robot.GetGrabbed()) > 0:
             release_obj()
-        import pdb;pdb.set_trace()
         set_obj_xytheta(obj_pose, obj)
         new_T_robot = np.dot(obj.GetTransform(), T_r_wrt_o)
         self.robot.SetTransform(new_T_robot)
         new_base_pose = get_body_xytheta(self.robot)
         set_robot_config(new_base_pose, self.robot)
         fold_arms()
-        set_point(obj, np.hstack([obj_pose[0:2], obj_region.z]))
+        set_point(obj, np.hstack([obj_pose[0:2], obj_region.z + 0.001]))
         return new_base_pose
 
     def solve_ik_from_grasp_params(self, obj, grasp_params):
@@ -48,13 +47,13 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         target_robot_region = self.problem_env.regions['home_region']
         target_obj_region = obj_region
 
+        set_color(obj, [0, 0, 0])
         new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
 
-        #is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
+        # is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
         #                              (not target_robot_region.contains(self.robot.ComputeAABB()))
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
-        import pdb;pdb.set_trace()
         if is_object_pose_infeasible:
             action = {'operator_name': 'one_arm_place', 'q_goal': None, 'base_pose': None, 'object_pose': None,
                       'action_parameters': obj_pose, 'grasp_params': grasp_params}
@@ -64,17 +63,16 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             grab_obj(obj)
             return action, 'InfeasibleBase'
 
-
-        is_base_pose_infeasible = True
+        is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
+                                  (not target_robot_region.contains(self.robot.ComputeAABB()))
         if is_base_pose_infeasible:
             for i in range(3):
-                obj_pose[-1] += 90*np.pi/180.0
+                obj_pose[-1] += 90 * np.pi / 180.0
                 new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
-                is_object_pose_infeasible = self.env.CheckCollision(obj) or \
-                                                (not target_obj_region.contains(obj.ComputeAABB()))
-                if i == 0:
-                    is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
-                                                  (not target_robot_region.contains(self.robot.ComputeAABB()))
+                #is_object_pose_infeasible = self.env.CheckCollision(obj) or \
+                #                            (not target_obj_region.contains(obj.ComputeAABB()))
+                is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
+                                          (not target_robot_region.contains(self.robot.ComputeAABB()))
                 if not (is_base_pose_infeasible or is_object_pose_infeasible):
                     break
 
@@ -87,7 +85,6 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             grab_obj(obj)
             return action, 'InfeasibleBase'
 
-        import pdb;pdb.set_trace()
         grasp_config = self.solve_ik_from_grasp_params(obj, grasp_params)
 
         self.problem_env.enable_objects_in_region('entire_region')

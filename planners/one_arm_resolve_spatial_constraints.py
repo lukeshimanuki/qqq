@@ -33,7 +33,6 @@ class OneArmResolveSpatialConstraints:
     def generate_potential_pick_configs(self, operator_skeleton, n_pick_configs):
         target_object = operator_skeleton.discrete_parameters['object']
 
-
         self.problem_env.disable_objects_in_region('entire_region')
         target_object.Enable(True)
         # todo I think it might be better to try to generate goals without disabling first?
@@ -152,24 +151,30 @@ class OneArmResolveSpatialConstraints:
         print time.time() - stime
         if time.time() - stime > timelimit:
             return False, 'NoSolution'
+
+        # initialize data necessary for this recursion level
         swept_volumes = PickAndPlaceSweptVolume(self.problem_env, parent_swept_volumes)
         objects_moved_before = [o for o in objects_moved_before]
         plan = [p for p in plan]
-
         self.problem_env.set_exception_objs_when_disabling_objects_in_region(objects_moved_before)
 
         self.number_of_nodes += 1
         if isinstance(object_to_move, unicode):
             object_to_move = self.problem_env.env.GetKinBody(object_to_move)
+
+        # select the region to move the object to
         if object_to_move == self.goal_object:
             target_region = self.goal_region
         else:
-            # todo fix it to place it in the shelf region
-            if self.misc_region.contains(object_to_move.ComputeAABB()):
-                target_region = self.misc_region
+            obj_curr_region = self.problem_env.get_region_containing(object_to_move)
+            not_in_box = obj_curr_region.name.find('box') == -1
+            if not_in_box:
+                # randomly choose one of the shelf regions
+                target_region = self.problem_env.shelf_regions.values()[np.random.randint(2)]
             else:
-                target_region = self.goal_region
+                target_region = obj_curr_region
 
+        import pdb;pdb.set_trace()
         # Debugging purpose
         color_before = get_color(object_to_move)
         set_color(object_to_move, [1, 0, 0])

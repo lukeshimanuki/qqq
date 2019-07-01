@@ -14,10 +14,13 @@ class OneArmMover(Mover):
         self.objects = self.problem_config['shelf_objects']
         self.objects = [k for v in self.objects.values() for k in v]
         self.objects[0], self.objects[1] = self.objects[1], self.objects[0]
-        self.regions[self.boxes[1].GetName() + "_region"] = self.compute_box_region(self.boxes[1])
+
+        self.target_box = self.env.GetKinBody('rectangular_packing_box1')
+        utils.randomly_place_region(self.target_box, self.regions['home_region'])
+        self.regions['rectangular_packing_box1_region'] = self.compute_box_region(self.target_box)
         self.shelf_regions = self.problem_config['shelf_regions']
+        self.target_box_region = self.regions['rectangular_packing_box1_region']
         self.regions.update(self.shelf_regions)
-        import pdb;pdb.set_trace()
         self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region']
         self.name = 'one_arm_mover'
 
@@ -32,6 +35,19 @@ class OneArmMover(Mover):
         saver = node.state_saver
         saver.Restore()
         # todo finish implementing this function
+
+    def get_region_containing(self, obj):
+        if type(obj) == str or type(obj) == unicode:
+            obj = self.env.GetKinBody(obj)
+
+        for shelf_region in self.shelf_regions.values():
+            if shelf_region.contains(obj.ComputeAABB()):
+                return shelf_region
+
+        if self.target_box_region.contains(obj.ComputeAABB()):
+            return self.target_box_region
+
+        assert False, "An object must belong to one of shelf or object regions"
 
     def get_applicable_ops(self, parent_op=None):
         applicable_ops = []

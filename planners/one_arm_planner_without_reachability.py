@@ -25,7 +25,7 @@ class OneArmPlannerWithoutReachability:
 
     def find_pick_and_place(self, curr_obj):
         stime = time.time()
-        op, status = self.sample_op_instance(curr_obj, 5)
+        op, status = self.sample_op_instance(curr_obj, 10)
         print time.time() - stime
         if status == 'HasSolution':
             return op, status

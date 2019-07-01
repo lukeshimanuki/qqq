@@ -201,9 +201,8 @@ class PickAndPlaceSweptVolume:
         for place_sv in self.place_swept_volume.swept_volumes:
             place_collisions += self.problem_env.get_objs_in_collision(place_sv, 'entire_region')
 
-        return pick_collisions + place_collisions
-
-
+        unique_cols = set(pick_collisions+place_collisions)
+        return list(unique_cols)
 
     def is_swept_volume_cleared(self, obj):
         saver = CustomStateSaver(self.problem_env.env)

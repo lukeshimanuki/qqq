@@ -25,20 +25,7 @@ max_length = 0.6
 OBST_COLOR = (1, 0, 0)
 OBST_TRANSPARENCY = .25
 
-
-def randomly_place_region(env, body, region):
-    if env.GetKinBody(get_name(body)) is None:
-        env.Add(body)
-    while True:
-        set_quat(body, quat_from_z_rot(uniform(0, 2 * PI)))
-        aabb = aabb_from_body(body)
-        cspace = region.cspace(aabb)
-        if cspace is None: continue
-        set_point(body, np.array([uniform(*range) for range in cspace] + [
-            region.z + aabb.extents()[2] + BODY_PLACEMENT_Z_OFFSET]) - aabb.pos() + get_point(body))
-        if not body_collision(env, body):
-            return
-
+N_OBJS = 7
 
 def generate_rand(min, max):
     return np.random.rand() * (max - min) + min
@@ -59,7 +46,7 @@ def create_objects(env, obj_region, n_objects):
         trans[2, -1] = 0.075
         env.Add(new_body)
         new_body.SetTransform(trans)
-        obj_pose = randomly_place_region(env, new_body, obj_region)  # TODO fix this to return xytheta
+        obj_pose = randomly_place_region(new_body, obj_region)  # TODO fix this to return xytheta
         OBJECTS.append(new_body)
 
         obj_shapes['obj%s' % i] = [width[0], length[0], height[0]]
@@ -181,9 +168,9 @@ def generate_shelf_shapes():
     right_shelf_height = generate_rand(0.3, 0.5)
     right_shelf_top_height = generate_rand(0.3, 0.5)
 
-    center_shelf_width = 1.0 #generate_rand(min_shelf_width, max_shelf_width)  # np.random.rand(0.5,0.8)
-    center_shelf_height = 0.3 #generate_rand(0.3, 0.5)
-    center_shelf_top_height = 0.7 #generate_rand(0.3, 0.5)
+    center_shelf_width = 1  # generate_rand(min_shelf_width, max_shelf_width)  # np.random.rand(0.5,0.8)
+    center_shelf_height = 0.26  # generate_rand(0.3, 0.5)
+    center_shelf_top_height = 0.7  # generate_rand(0.3, 0.5)
 
     shelf_shapes = {'center_shelf_top_height': center_shelf_top_height,
                     'center_shelf_height': center_shelf_height,
@@ -206,7 +193,7 @@ def generate_shelf_shapes():
 
 
 def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_name, table_name):
-    width = 0.4
+    width = 0.3
     length = 0.01
     height = obst_height
     top_wall_width = 0.001
@@ -281,12 +268,12 @@ def create_shelves(env, shelf_shapes, shelf_xs, table_name):
     center_shelf_width = shelf_shapes['center_shelf_width']
     center_shelf_height = shelf_shapes['center_shelf_height']
     center_shelf_top_height = shelf_shapes['center_shelf_top_height']
-    #left_shelf_width = shelf_shapes['left_shelf_width']
-    #left_shelf_height = shelf_shapes['left_shelf_height']
-    #left_shelf_top_height = shelf_shapes['left_shelf_top_height']
-    #right_shelf_width = shelf_shapes['right_shelf_width']
-    #right_shelf_height = shelf_shapes['right_shelf_height']
-    #right_shelf_top_height = shelf_shapes['right_shelf_top_height']
+    # left_shelf_width = shelf_shapes['left_shelf_width']
+    # left_shelf_height = shelf_shapes['left_shelf_height']
+    # left_shelf_top_height = shelf_shapes['left_shelf_top_height']
+    # right_shelf_width = shelf_shapes['right_shelf_width']
+    # right_shelf_height = shelf_shapes['right_shelf_height']
+    # right_shelf_top_height = shelf_shapes['right_shelf_top_height']
 
     left_x = shelf_xs['left_x']
     right_x = shelf_xs['right_x']
@@ -312,23 +299,23 @@ def create_shelves(env, shelf_shapes, shelf_xs, table_name):
                                     obst_height=right_shelf_top_height, name_idx=6,
                                     stacked_obj_name='back_wall_5', table_name=table_name)
     """
-    #regions = {'center': center_region, 'center_top': center_top_region,
-               #           'left': left_region, 'left_top': left_top_region}
+    # regions = {'center': center_region, 'center_top': center_top_region,
+    #           'left': left_region, 'left_top': left_top_region}
     #           'right': right_region, 'right_top': right_top_region}
     regions = {'center': center_region, 'center_top': center_top_region}
     return regions
 
 
 def generate_shelf_obj_shapes():
-    max_obj_height = 0.28
+    max_obj_height = 0.25
     min_obj_height = 0.15
-    n_objs = 5
-    l_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
-    ltop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
-    c_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
-    ctop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
-    r_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
-    rtop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(n_objs)]
+
+    l_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    ltop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    c_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    ctop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    r_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    rtop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
 
     obj_shapes = {'l_obj_shapes': l_obj_shapes, 'ltop_obj_shapes': ltop_obj_shapes,
                   'c_obj_shapes': c_obj_shapes, 'ctop_obj_shapes': ctop_obj_shapes,
@@ -338,29 +325,28 @@ def generate_shelf_obj_shapes():
 
 
 def create_shelf_objs(env, obj_shapes):
-    n_objs = 5
     # left_objs = create_box_bodies(obj_shapes['l_obj_shapes'], color='green', name='l_obst', n_objs=n_objs,
     #                              env=env)
     # left_top_objs = create_box_bodies(obj_shapes['ltop_obj_shapes'], color='green', name='ltop_obst',
     #                                  n_objs=n_objs, env=env)
-    center_objs = create_box_bodies(obj_shapes['c_obj_shapes'], color='blue', name='c_obst', n_objs=n_objs,
+    center_objs = create_box_bodies(obj_shapes['c_obj_shapes'], color='blue', name='c_obst', n_objs=N_OBJS,
                                     env=env)
-    center_top_objs = create_box_bodies(obj_shapes['ctop_obj_shapes'], color='blue', name='ctop_obst',
-                                        n_objs=n_objs, env=env)
-    #right_objs = create_box_bodies(obj_shapes['r_obj_shapes'], color='red', name='r_obst',
+    center_top_objs = create_box_bodies(obj_shapes['ctop_obj_shapes'], color='blue', name='ctop_obst', n_objs=N_OBJS,
+                                        env=env)
+    # right_objs = create_box_bodies(obj_shapes['r_obj_shapes'], color='red', name='r_obst',
     #                               n_objs=n_objs, env=env)
-    #right_top_objs = create_box_bodies(obj_shapes['rtop_obj_shapes'], color='red', name='rtop_obst',
+    # right_top_objs = create_box_bodies(obj_shapes['rtop_obj_shapes'], color='red', name='rtop_obst',
     #                                   n_objs=n_objs, env=env)
-    #objects = {  # 'left': left_objs, 'left_top': left_top_objs,
+    # objects = {  # 'left': left_objs, 'left_top': left_top_objs,
     #    'center': center_objs, 'center_top': center_top_objs,
     #    'right': right_objs, 'right_top': right_top_objs}
-    objects = { 'center': center_objs, 'center_top': center_top_objs}
+    objects = {'center': center_objs, 'center_top': center_top_objs}
     return objects
 
 
 def place_objs_in_region(objs, region, env):
     for obj in objs:
-        randomly_place_region(env, obj, region)
+        randomly_place_region(obj, region)
 
 
 def generate_poses_and_place_shelf_objs(objects, regions, env):
@@ -381,7 +367,7 @@ def generate_poses_and_place_shelf_objs(objects, regions, env):
 
     # place_objs_in_region(left_objs, left_region, env)
     # place_objs_in_region(left_top_objs, left_top_region, env)
-    #place_objs_in_region(right_objs, right_region, env)
+    # place_objs_in_region(right_objs, right_region, env)
     # place_objs_in_region(right_top_objs, right_top_region, env)
     place_objs_in_region(center_objs, center_region, env)
     place_objs_in_region(center_top_objs, center_top_region, env)

@@ -83,11 +83,10 @@ def find_plan_for_obj(obj_name, plan, environment, stime, timelimit):
             swept_volumes.add_pap_swept_volume(plan)
             obstacles_to_remove = swept_volumes.get_objects_in_collision()
             print len(obstacles_to_remove)
-            import pdb;pdb.set_trace()
             if len(obstacles_to_remove) == 0:
                 return plan, 1, "HasSolution"
 
-            plan, status = rsc.search(obj_name,
+            plan, status = rsc.search(object_to_move=obstacles_to_remove[0],
                                       parent_swept_volumes=swept_volumes,
                                       obstacles_to_remove=obstacles_to_remove,
                                       objects_moved_before=[plan.discrete_parameters['object']],
@@ -131,7 +130,6 @@ def save_plan(total_plan, total_n_nodes, n_remaining_objs, found_solution, file_
 
 
 def find_plan_without_reachability(problem_env, goal_object_names):
-    import pdb;pdb.set_trace()
     if problem_env.name.find('one_arm_mover') != -1:
         planner = OneArmPlannerWithoutReachability(problem_env, goal_object_names,
                                                    goal_region='center_top')
@@ -176,7 +174,13 @@ def main():
     # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
 
     stime = time.time()
-    goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+    if os.path.isfile('./tmp.pkl'):
+        goal_object_names, plan = pickle.load(open('tmp.pkl', 'r'))
+    else:
+        goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+        pickle.dump((goal_object_names, plan), open('tmp.pkl', 'wb'))
+
+
     total_n_nodes = 0
     total_plan = []
     idx = 0
