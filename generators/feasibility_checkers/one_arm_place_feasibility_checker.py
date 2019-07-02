@@ -52,7 +52,6 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
 
-
         if not is_object_pose_infeasible:
             if swept_volume_to_avoid is not None:
                 is_object_pose_infeasible = not swept_volume_to_avoid.is_swept_volume_cleared(obj)
@@ -72,7 +71,7 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
             for i in range(3):
                 obj_pose[-1] += 90 * np.pi / 180.0
                 new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
-                #is_object_pose_infeasible = self.env.CheckCollision(obj) or \
+                # is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                 #                            (not target_obj_region.contains(obj.ComputeAABB()))
                 is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
                                           (not target_robot_region.contains(self.robot.ComputeAABB()))
