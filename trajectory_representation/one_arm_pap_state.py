@@ -18,6 +18,20 @@ class OneArmPaPState(PaPState):
     def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None, paps_used_in_data=None):
         PaPState.__init__(self, problem_env, goal_entities, parent_state=None, parent_action=None)
 
+        self.objects = objects = {
+            o: problem_env.env.GetKinBody(o)
+            for o in problem_env.entity_names
+            if 'region' not in o
+        }
+        self.regions = regions = {
+            r: problem_env.regions[r]
+            for r in problem_env.entity_names
+            if 'region' in r
+        }
+
+        self.pick_used = {}
+        self.place_used = {}
+
         self.parent_state = parent_state
         self.parent_ternary_predicates = {}
         self.parent_binary_predicates = {}
@@ -27,29 +41,36 @@ class OneArmPaPState(PaPState):
                 moved_obj = parent_action.discrete_parameters['object']
             else:
                 moved_obj = parent_action.discrete_parameters['object'].GetName()
-            self.initialize_parent_predicates(moved_obj, parent_state, parent_action)
         else:
             moved_obj = None
         problem_env.enable_objects_in_region('entire_region')
 
-        object_names = {obj.GetName() for obj in problem_env.objects}
-
         self.pap_params = {}
         self.pick_params = {}
         self.place_params = {}
-        for obj in object_names:
+        for obj in objects:
             self.pick_params[obj] = []
-            for r in problem_env.regions:
-                papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place', discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]}), problem_env)
-                pick_params, place_params, status = papg.sample_next_point(5)
+            for r in regions:
+                if parent_state is not None and obj != moved_obj:
+                    if (obj, r) in parent_state.pap_params:
+                        status = 'HasSolution'
+                        pick_params, place_params = parent_state.pap_params[(obj,r)]
+                    else:
+                        status = 'NoSolution'
+                else:
+                    papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place', discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]}), problem_env)
+                    if obj in goal_entities and r in goal_entities:
+                        num_tries = 20
+                    else:
+                        num_tries = 5
+                    pick_params, place_params, status = papg.sample_next_point(num_tries)
                 self.place_params[(obj,r)] = []
                 if status == 'HasSolution':
                     self.pap_params[(obj, r)] = pick_params, place_params
                     self.pick_params[obj].append(pick_params)
-                    self.place_params[(obj,r)].append(place_params)
 
         #problem_env.disable_objects()
-        #for obj in object_names:
+        #for obj in objects:
         #    if parent_state is not None and obj != moved_obj:
         #        self.pick_params[obj] = parent_state.pick_params[obj]
         #    else:
@@ -78,7 +99,7 @@ class OneArmPaPState(PaPState):
                     break
 
                 collisions = {
-                    o for o in object_names
+                    o for o in objects
                     if self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(o))
                 }
                 if obj not in self.collision_pick_op or len(collisions) < len(self.collision_pick_op[obj][1]):
@@ -86,8 +107,8 @@ class OneArmPaPState(PaPState):
 
                 before.Restore()
 
-        #for obj in object_names:
-        #    for r in problem_env.regions:
+        #for obj in objects:
+        #    for r in regions:
         #        if obj not in self.nocollision_pick_op:
         #            self.place_params[(obj, r)] = []
         #            continue
@@ -108,37 +129,42 @@ class OneArmPaPState(PaPState):
 
         self.nocollision_place_op = {}
         self.collision_place_op = {}
-        prepick = CustomStateSaver(problem_env.env)
-        for obj in object_names:
-            if obj in self.nocollision_pick_op:
-                self.nocollision_pick_op[obj].execute()
-                preplace = CustomStateSaver(problem_env.env)
-                for r in self.problem_env.regions:
-                    for pp in self.place_params[(obj,r)]:
-                        place_op = Operator(
-                            operator_type='one_arm_place',
-                            discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]},
-                            continuous_parameters=pp
-                        )
-                        place_op.execute()
+        before = CustomStateSaver(problem_env.env)
+        for obj in objects:
+            for r in regions:
+                if (obj,r) in self.pap_params:
+                    pickp, placep = self.pap_params[(obj,r)]
+                    pick_op = Operator(
+                        operator_type='one_arm_pick',
+                        discrete_parameters={'object': problem_env.env.GetKinBody(obj)},
+                        continuous_parameters=pickp
+                    )
+                    pick_op.execute()
+                    if self.problem_env.env.CheckCollision(self.problem_env.robot) or self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
+                        before.Restore()
+                        continue
+                    place_op = Operator(
+                        operator_type='one_arm_place',
+                        discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]},
+                        continuous_parameters=placep
+                    )
+                    place_op.execute()
 
-                        if not self.problem_env.env.CheckCollision(self.problem_env.robot) and not self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
-                            self.nocollision_place_op[(obj,r)] = place_op
-                            preplace.Restore()
-                            break
+                    if not self.problem_env.env.CheckCollision(self.problem_env.robot) and not self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
+                        self.nocollision_place_op[(obj,r)] = pick_op, place_op
+                        before.Restore()
+                        break
 
-                        collisions = {
-                            o for o in object_names
-                            if self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(o))
-                        }
-                        if (obj,r) not in self.collision_place_op or len(collisions) < len(self.collision_place_op[(obj,r)][1]):
-                            self.collision_place_op[(obj,r)] = place_op, collisions
+                    collisions = {
+                        o for o in objects
+                        if self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(o))
+                    }
+                    if (obj,r) not in self.collision_place_op or len(collisions) < len(self.collision_place_op[(obj,r)][1]):
+                        self.collision_place_op[(obj,r)] = place_op, collisions
 
-                        preplace.Restore()
-                    preplace.Restore()
-                prepick.Restore()
+                    before.Restore()
 
-        print(sum([o in self.collision_pick_op for o in object_names]), sum([o in self.nocollision_pick_op for o in object_names]), sum([(o,r) in self.collision_place_op for o in object_names for r in problem_env.regions]), sum([(o,r) in self.nocollision_place_op for o in object_names for r in problem_env.regions]))
+        print(sum([o in self.collision_pick_op for o in objects]), sum([o in self.nocollision_pick_op for o in objects]), sum([(o,r) in self.collision_place_op for o in objects for r in regions]), sum([(o,r) in self.nocollision_place_op for o in objects for r in regions]))
 
         # predicates
         self.pick_in_way = PickInWay(self.problem_env)
@@ -171,7 +197,7 @@ class OneArmPaPState(PaPState):
         edges = {}
         for a in self.problem_env.entity_names:
             for b in self.problem_env.entity_names:
-                for r in self.problem_env.regions:
+                for r in self.problem_env.entity_names:
                     key = (a, b, r)
                     if r.find('region') == -1 or r.find('entire') != -1:
                         continue

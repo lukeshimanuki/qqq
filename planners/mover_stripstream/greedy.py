@@ -751,12 +751,13 @@ def get_problem(mover):
             assert False
 
     n_objs_pack = config.n_objs_pack
-    goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
 
     if config.domain == 'two_arm_mover':
         statecls = ShortestPathPaPState
+        goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
     elif config.domain == 'one_arm_mover':
         statecls = OneArmPaPState
+        goal = ['rectangular_packing_box1_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
     else:
         raise NotImplementedError
 
@@ -848,10 +849,15 @@ def get_problem(mover):
         weight_initializer='glorot_uniform',
         loss=config.loss,
     )
-    num_entities = 11
+    if config.domain == 'two_arm_mover':
+        num_entities = 11
+    elif config.domain == 'one_arm_mover':
+        num_entities = 16
+    else:
+        raise NotImplementedError
     num_node_features = 10
     num_edge_features = 44
-    entity_names = list(state.nodes.keys())
+    entity_names = mover.entity_names
 
     with tf.variable_scope('pap'):
         pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names)
@@ -886,8 +892,23 @@ def get_problem(mover):
             unhelpful = object_is_goal and not region_is_goal
             return -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[
                 None, ...]) + 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
+        elif action.type == 'one_arm_pick_one_arm_place':
+            o = action.discrete_parameters['object'].GetName()
+            r = action.discrete_parameters['region'].name
+            nodes, edges, actions, _ = extract_individual_example(state, action)
+            nodes = nodes[..., 6:]
+
+            object_is_goal = state.nodes[o][8]
+            region_is_goal = state.nodes[r][8]
+            number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
+                                 i != o and r in state.nodes and state.nodes[r][8]) + int(region_is_goal)
+            redundant = state.binary_edges[(o, r)][0]
+            helps_goal = object_is_goal and region_is_goal and not redundant
+            unhelpful = object_is_goal and not region_is_goal
+            return -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[
+                None, ...]) + 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
         else:
-            assert False
+            raise NotImplementedError
 
     ps = PickWithBaseUnif(mover)
     pls = PlaceUnif(mover)
@@ -981,10 +1002,20 @@ def get_problem(mover):
 
     action_queue = Queue.PriorityQueue()  # (heuristic, nan, operator skeleton, state. trajectory)
     initnode = Node(None, None, state)
-    for o in obj_names:
+    for o in mover.entity_names:
+        if 'region' in o:
+            continue
         # action = Operator('two_arm_pick', {'object': o})
-        for r in ('home_region', 'loading_region'):
-            action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
+        for r in mover.entity_names:
+            if 'region' not in r or 'entire' in r:
+                continue
+            if config.domain == 'two_arm_mover':
+                action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
+            elif config.domain == 'one_arm_mover':
+                action = Operator('one_arm_pick_one_arm_place', {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
+            else:
+                raise NotImplementedError
+
             action_queue.put((heuristic(state, action), float('nan'), action, initnode))
     # print('\n'.join(str(v) for v in sorted([
     #	(heuristic(state, Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})), o,r)
@@ -1432,8 +1463,76 @@ def get_problem(mover):
 
                 break
 
+        elif action.type == 'one_arm_pick_one_arm_place':
+            obj = action.discrete_parameters['object']
+            region = action.discrete_parameters['region']
+            o = obj.GetName()
+            r = region.name
+
+            if (o,r) in state.nocollision_place_op:
+                pick_op, place_op = node.state.nocollision_place_op[(o,r)]
+                action = Operator(
+                    operator_type='one_arm_pick_one_arm_place',
+                    discrete_parameters={
+                        'object': obj,
+                        'region': mover.regions[r],
+                    },
+                    continuous_parameters={
+                        'pick': pick_op.continuous_parameters,
+                        'place': place_op.continuous_parameters,
+                    }
+                )
+                action.execute()
+
+                success = True
+
+                newstate = statecls(mover, goal, node.state, action)
+                newstate.make_pklable()
+                newnode = Node(node, action, newstate)
+
+                # TODO: figure out why region.contains isn't working
+                if o in goal and r in goal:
+                #if all(mover.regions['rectangular_packing_box1_region'].contains_point(
+                #        get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
+                #       obj_names[:n_objs_pack]):
+                    print("found successful plan: {}".format(n_objs_pack))
+                    trajectory = Trajectory(mover.seed, mover.seed)
+                    plan = list(newnode.backtrack())[::-1]
+                    trajectory.states = [nd.state for nd in plan]
+                    for s in trajectory.states:
+                        s.pap_params = None
+                        s.pick_params = None
+                        s.place_params = None
+                        s.nocollision_pick_op = None
+                        s.collision_pick_op = None
+                        s.nocollision_place_op = None
+                        s.collision_place_op = None
+                    trajectory.actions = [nd.action for nd in plan[1:]]
+                    for op in trajectory.actions:
+                        op.discrete_parameters = {
+                            key: value.name if 'region' in key else value.GetName()
+                            for key,value in op.discrete_parameters.items()
+                        }
+                    trajectory.rewards = [nd.reward for nd in plan[1:]]
+                    trajectory.state_prime = [nd.state for nd in plan[1:]]
+                    trajectory.seed = mover.seed
+                    print(trajectory)
+                    return trajectory, iter
+
+                for o in mover.entity_names:
+                    if 'region' in o:
+                        continue
+                    if o == action.discrete_parameters['object'].GetName():
+                        continue
+                    for r in mover.entity_names:
+                        if 'region' not in r:
+                            continue
+                        newaction = Operator('one_arm_pick_one_arm_place',
+                                             {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
+                        action_queue.put(
+                            (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
         else:
-            assert False
+            raise NotImplementedError
 
         if not success:
             print('failed to execute action')

@@ -21,9 +21,15 @@ class OneArmMover(Mover):
         self.shelf_regions = self.problem_config['shelf_regions']
         self.target_box_region = self.regions['rectangular_packing_box1_region']
         self.regions.update(self.shelf_regions)
-        self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region']
+        self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region', 'center_top_shelf_region']
         self.name = 'one_arm_mover'
         self.init_saver = utils.CustomStateSaver(self.env)
+
+        # fix incorrectly named regions
+        self.regions = {
+            region.name: region
+            for region in self.regions.values()
+        }
 
     def compute_box_region(self, box):
         box_region = AARegion.create_on_body(box)

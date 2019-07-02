@@ -51,7 +51,7 @@ def make_one_hot_encoded_edge(edge):
 def get_edges(state, region_nodes, entity_names):
     # Desired output shape: n_e x n_e x n_r x n_edge
 
-    regions = ['home_region', 'loading_region']
+    regions = [r for r in entity_names if 'region' in r and 'entire' not in r]
     n_edge_features = 44
     n_regions = len(regions)
     n_entities = len(entity_names)
@@ -73,6 +73,8 @@ def get_edges(state, region_nodes, entity_names):
 
 def get_actions(op_skeleton, entity_names):
     name_to_idx = {name: i for i, name in enumerate(entity_names)}
+    regions = [r for r in entity_names if 'region' in r]
+    region_name_to_idx = {name: i for i, name in enumerate(regions)}
 
     if op_skeleton.type == 'two_arm_pick':
         object_idx = name_to_idx[op_skeleton.discrete_parameters['object']]
@@ -92,6 +94,15 @@ def get_actions(op_skeleton, entity_names):
             raise NotImplementedError
 
         n_regions = 2
+        n_entities = len(entity_names)
+        action = np.zeros((n_entities, n_regions))
+        action[object_idx, region_idx] = 1
+    elif op_skeleton.type == 'one_arm_pick_one_arm_place':
+        object_idx = name_to_idx[op_skeleton.discrete_parameters['object'].GetName()]
+        region_name = op_skeleton.discrete_parameters['region'].name
+        region_idx = region_name_to_idx[region_name]
+
+        n_regions = len(regions)
         n_entities = len(entity_names)
         action = np.zeros((n_entities, n_regions))
         action[object_idx, region_idx] = 1
