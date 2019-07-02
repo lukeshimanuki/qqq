@@ -38,7 +38,7 @@ from trajectory_representation.minimum_constraint_pick_and_place_state import Mi
 from trajectory_representation.trajectory import Trajectory
 
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, \
-    two_arm_place_object, get_body_xytheta, grab_obj, release_obj, fold_arms
+    two_arm_place_object, get_body_xytheta, grab_obj, release_obj, fold_arms, one_arm_pick_object, one_arm_place_object
 
 # from motion_planner import rrt_region
 
@@ -1815,8 +1815,7 @@ def generate_training_data_single():
     mover.init_saver = DynamicEnvironmentStateSaver(mover.env)
 
     hostname = socket.gethostname()
-    if hostname == 'dell-XPS-15-9560' or hostname == 'phaedra' or hostname == 'shakey' or hostname == 'lab' or \
-            hostname == 'glaucus':
+    if hostname in {'dell-XPS-15-9560', 'phaedra', 'shakey', 'lab', 'glaucus', 'luke-laptop-1'}:
         root_dir = './'
     else:
         root_dir = '/data/public/rw/pass.port/tamp_q_results/'
@@ -1838,14 +1837,15 @@ def generate_training_data_single():
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
-                         '_train_seed_' + str(config.train_seed) + '.pkl'
+                         '_train_seed_' + str(config.train_seed) + \
+                         '_domain_' + str(config.domain) + '.pkl'
 
     if not os.path.isdir(solution_file_dir):
         os.makedirs(solution_file_dir)
 
     solution_file_name = solution_file_dir + solution_file_name
 
-    is_problem_solved_before = os.path.isfile(solution_file_dir + solution_file_name)
+    is_problem_solved_before = os.path.isfile(solution_file_name)
 
     if is_problem_solved_before and not config.plan:
         with open(solution_file_name, 'rb') as f:
@@ -1991,8 +1991,41 @@ def generate_training_data_single():
                     raw_input('Continue?')
 
                 check_collisions()
+
+            elif action.type == 'one_arm_pick_one_arm_place':
+                def check_collisions(q=None):
+                    if q is not None:
+                        set_robot_config(q, mover.robot)
+                    collision = False
+                    if mover.env.CheckCollision(mover.robot):
+                        collision = True
+                    for obj in mover.objects:
+                        if mover.env.CheckCollision(obj):
+                            collision = True
+                    if collision:
+                        print('collision')
+                        if config.visualize_sim:
+                            raw_input('Continue after collision?')
+
+                check_collisions()
+                pick_params = action.continuous_parameters['pick']
+                place_params = action.continuous_parameters['place']
+
+                one_arm_pick_object(mover.env.GetKinBody(action.discrete_parameters['object']), pick_params)
+
+                check_collisions()
+
+                if config.visualize_sim:
+                    raw_input('Place?')
+
+                one_arm_place_object(place_params)
+
+                check_collisions()
+
+                if config.visualize_sim:
+                    raw_input('Continue?')
             else:
-                assert False
+                raise NotImplementedError
 
         n_objs_pack = config.n_objs_pack
 

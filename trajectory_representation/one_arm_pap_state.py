@@ -65,9 +65,9 @@ class OneArmPaPState(PaPState):
                                                                   'object': problem_env.env.GetKinBody(obj),
                                                                   'region': problem_env.regions[r]}), problem_env)
                     if obj in goal_entities and r in goal_entities:
-                        num_tries = 20
+                        num_tries = 10
                     else:
-                        num_tries = 5
+                        num_tries = 3
                     pick_params, place_params, status = papg.sample_next_point(num_tries)
                 self.place_params[(obj, r)] = []
                 if status == 'HasSolution':
