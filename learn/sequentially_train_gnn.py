@@ -7,7 +7,7 @@ import multiprocessing
 
 
 def worker_p(config):
-    command = 'python -m learn.train '
+    command = 'python -m learn.train -loss dql'
 
     for key, value in zip(config.keys(), config.values()):
         option = ' -'+str(key)+' ' + str(value)
@@ -25,7 +25,8 @@ def worker_wrapper_multi_input(multi_args):
 def main():
     configs = []
     seed = sys.argv[1]
-    for n_data in range(100, 4100, 100):
+    data_range = [50] + range(100, 5100, 100)
+    for n_data in data_range:
         config = {'num_train': n_data, 'seed': seed}
         configs.append(config)
 

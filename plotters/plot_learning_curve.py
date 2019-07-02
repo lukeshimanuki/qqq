@@ -15,16 +15,30 @@ def load_data(algo, n_objs, n_data=0):
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
     elif algo == 'greedy_no_gnn':
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'r'))
+    elif algo == 'greedy_no_h':
+        return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_h.pkl' % n_objs, 'r'))
     else:
         raise NotImplementedError
 
 
 def get_success_rate_at(time_data, success_data, interval):
-    #success_data = copy.copy(success_data)
+    # success_data = copy.copy(success_data)
     rates = []
     for tlimit in interval:
         rates.append(np.sum(success_data[time_data <= tlimit]) / float(len(success_data)))
     return rates
+
+
+def print_plan_time(statfile, max_time):
+    plantimes = np.array(statfile['times'])
+    successes = np.array(statfile['successes'])
+    num_nodes = np.array(statfile['num_nodes'])
+    successes[plantimes > max_time] = False
+    plantimes[plantimes > max_time] = max_time
+
+    print np.mean(successes)
+    print np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
+    print np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
 
 
 def plot_success_vs_time(n_objs):
@@ -35,48 +49,19 @@ def plot_success_vs_time(n_objs):
     else:
         raise NotImplementedError
 
-    interval = np.linspace(10, max_time, 500)
 
     hpn = load_data('hpn', n_objs)
     greedy = load_data('greedy', n_objs, n_data=5000)
     nognn = load_data('greedy_no_gnn', n_objs)
-
-    hpn_times = np.array(hpn['times'])
-    hpn_successes = np.array(hpn['successes'])
-    hpn_rates = get_success_rate_at(hpn_times, hpn_successes, interval)
-
-    greedy_times = np.array(greedy['times'])
-    greedy_successes = np.array(greedy['successes'])
-    greedy_rates = get_success_rate_at(greedy_times, greedy_successes, interval)
-
-    nognn_times = np.array(nognn['times'])
-    nognn_successes = np.array(nognn['successes'])
-    nognn_rates = get_success_rate_at(nognn_times, nognn_successes, interval)
-
-    sns.tsplot(hpn_rates, interval, condition='HPN', color=[0,1,0])
-    sns.tsplot(greedy_rates, interval, condition='GreedyQ', color=[1, 0, 0])
-    sns.tsplot(nognn_rates, interval, condition='NoGNN', color=[0, 0, 1])
-    plt.show()
-    hpn_successes[hpn_times > max_time] = False
-    print 'hpn', np.mean(hpn_successes)
-    greedy_successes[greedy_times > max_time] = False
-    print 'greedy', np.mean(greedy_successes)
-    nognn_successes[nognn_times > max_time] = False
-    print 'nognn', np.mean(nognn_successes)
-
-    hpn_times[hpn_times > max_time] = max_time
-    print 'hpn',np.mean(hpn_times), np.std(hpn_times) * 1.96 /np.sqrt(len(hpn_times))
-    greedy_times[greedy_times > max_time] = max_time
-    print 'greedy', np.mean(greedy_times), np.std(greedy_times) * 1.96 /np.sqrt(len(greedy_times))
-    nognn_times[nognn_times > max_time] = max_time
-    print 'nognn', np.mean(nognn_times), np.std(nognn_times) * 1.96 / np.sqrt(len(nognn_times))
-
-
-    """
-    sns.tsplot(rates, interval)
-    sns.tsplot(greedy_rates, interval)
-    plt.show()
-    """
+    noh = load_data('greedy_no_h', n_objs)
+    print "hpn"
+    print_plan_time(hpn, max_time)
+    print "gnn"
+    print_plan_time(greedy, max_time)
+    print "no gnn"
+    print_plan_time(nognn, max_time)
+    print "no h"
+    print_plan_time(noh, max_time)
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -110,19 +95,18 @@ def plot_learning_curve():
         greedy_successes[overlimit_idxs] = False
         rates.append(np.mean(greedy_successes))
 
-    plt.plot(data_ranges, [hpn_rate]*len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
+    plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
     plt.plot(data_ranges, rates, label='GreedyQ', color=[1, 0, 0], marker='o')
     plt.xticks(data_ranges)
     savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
 
-
-    import pdb;pdb.set_trace()
-
+    import pdb;
+    pdb.set_trace()
 
 
 def main():
-    plot_success_vs_time(8)
-    #plot_learning_curve()
+    plot_success_vs_time(1)
+    # plot_learning_curve()
     pass
 
 
