@@ -43,28 +43,16 @@ def get_plan_times(test_dir, test_files, t_limit):
         pidx = get_pidx(test_dir, filename)
         if pidx < 20000:
             continue
-        # print filename
 
         stat = pickle.load(open(test_dir + filename, 'r'))
         ftime_taken = get_time_taken(test_dir, stat)
-        if test_dir.find('hpn') == -1:
-            import pdb;
-            pdb.set_trace()
         fsuccess = get_success(test_dir, stat)
 
-        """
-        if filename.find('pidx_1_') !=-1 and test_dir.find('greedy') !=-1:
-            print stat.metrics['num_nodes']
-            print filename
-            print ftime_taken
-        elif filename.find('pidx_1.') !=-1:
-            print filename, ftime_taken
-        """
-
-        time_taken.append(ftime_taken)
         if ftime_taken < t_limit:
+            time_taken.append(ftime_taken)
             successes.append(fsuccess)
         else:
+            time_taken.append(t_limit)
             successes.append(False)
 
     CI95 = 1.96 * np.std(time_taken) / np.sqrt(len(time_taken))
@@ -72,7 +60,7 @@ def get_plan_times(test_dir, test_files, t_limit):
     print "Success rate %.3f" % np.mean(successes)
 
 
-def save_summary(stat_summary, test_dir,  n_data, n_objs):
+def save_summary(stat_summary, test_dir, n_data, n_objs):
     if test_dir.find('hpn') != -1:
         pickle.dump(stat_summary, open('./plotters/stats/hpn_n_objs_%d.pkl' % n_objs, 'wb'))
     elif test_dir.find('greedy') != -1:
@@ -98,18 +86,20 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         successes.append(fsuccess)
         num_nodes.append(fnodes)
 
-    stat_summary = {'times': time_taken, 'successes':successes, 'num_nodes': num_nodes}
+    stat_summary = {'times': time_taken, 'successes': successes, 'num_nodes': num_nodes}
     save_summary(stat_summary, test_dir, n_data, n_objs)
 
 
 def main():
     n_objs = 1
-    t_limit = 300
+    t_limit = 1000
     test_dir = 'test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
-    get_metrics(test_dir, test_files, n_objs)
+    #get_metrics(test_dir, test_files, n_objs)
+    get_plan_times(test_dir, test_files, t_limit)
+
 
     """
     test_dir = 'test_results/cloud_results/mcts_results_on_mover_domain/n_objs_pack_1/n_mp_params_3/widening_3/'
@@ -121,7 +111,7 @@ def main():
         test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
                    'test_purpose/num_train_%d/' % (n_objs, n_train)
         test_files = os.listdir(test_dir)
-        get_metrics(test_dir, test_files, n_objs, n_train)
+        get_plan_times(test_dir, test_files, t_limit)
 
 
 if __name__ == '__main__':

@@ -202,7 +202,7 @@ def main():
         pickle.dump((goal_object_names, plan), open('tmp.pkl', 'wb'))
     """
     plan = pickle.load(open('test_results/prm_mcr_hpn_results_on_mover_domain/1/test_purpose/seed_0_pidx_4.pkl', 'r'))['plan']
-
+    import pdb;pdb.set_trace()
     goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
 
     total_n_nodes = 0
