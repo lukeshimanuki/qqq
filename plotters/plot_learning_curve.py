@@ -13,8 +13,11 @@ def load_data(algo, n_objs, n_data=0):
         return pickle.load(open('./plotters/stats/hpn_n_objs_' + str(n_objs) + '.pkl', 'r'))
     elif algo == 'greedy':
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
+<<<<<<< HEAD
     elif algo == 'greedy_no_gnn':
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'r'))
+=======
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
     else:
         raise NotImplementedError
 
@@ -28,6 +31,7 @@ def get_success_rate_at(time_data, success_data, interval):
 
 
 def plot_success_vs_time(n_objs):
+<<<<<<< HEAD
     if n_objs == 8:
         max_time = n_objs * 62.5
     elif n_objs == 1:
@@ -35,11 +39,17 @@ def plot_success_vs_time(n_objs):
     else:
         raise NotImplementedError
 
+=======
+    max_time = n_objs * 62.5
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
     interval = np.linspace(10, max_time, 500)
 
     hpn = load_data('hpn', n_objs)
     greedy = load_data('greedy', n_objs, n_data=5000)
+<<<<<<< HEAD
     nognn = load_data('greedy_no_gnn', n_objs)
+=======
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
 
     hpn_times = np.array(hpn['times'])
     hpn_successes = np.array(hpn['successes'])
@@ -49,10 +59,13 @@ def plot_success_vs_time(n_objs):
     greedy_successes = np.array(greedy['successes'])
     greedy_rates = get_success_rate_at(greedy_times, greedy_successes, interval)
 
+<<<<<<< HEAD
     nognn_times = np.array(nognn['times'])
     nognn_successes = np.array(nognn['successes'])
     nognn_rates = get_success_rate_at(nognn_times, nognn_successes, interval)
 
+=======
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
     """
     sns.tsplot(hpn_rates, interval, condition='HPN', color=[0,1,0])
     sns.tsplot(greedy_rates, interval, condition='GreedyQ', color=[1, 0, 0])
@@ -60,19 +73,29 @@ def plot_success_vs_time(n_objs):
     hpn_successes[hpn_times > max_time] = False
     print np.mean(hpn_successes)
     """
+<<<<<<< HEAD
     hpn_successes[hpn_times > max_time] = False
     print np.mean(hpn_successes)
     greedy_successes[greedy_times > max_time] = False
     print np.mean(greedy_successes)
     nognn_successes[nognn_times > max_time] = False
     print np.mean(nognn_successes)
+=======
+
+    greedy_successes[greedy_times > max_time] = False
+    print np.mean(greedy_successes)
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
 
     hpn_times[hpn_times > max_time] = max_time
     print np.mean(hpn_times), np.std(hpn_times) * 1.96 /np.sqrt(len(hpn_times))
     greedy_times[greedy_times > max_time] = max_time
     print np.mean(greedy_times), np.std(greedy_times) * 1.96 /np.sqrt(len(greedy_times))
+<<<<<<< HEAD
     nognn_times[nognn_times > max_time] = max_time
     print np.mean(nognn_times), np.std(nognn_times) * 1.96 / np.sqrt(len(nognn_times))
+=======
+
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
 
     """
     sns.tsplot(rates, interval)
@@ -102,7 +125,11 @@ def plot_learning_curve():
     hpn_successes[hpn_times > time_limit] = False
     hpn_rate = np.mean(hpn_successes)
 
+<<<<<<< HEAD
     data_ranges = [50, 100, 1000, 3000, 4000, 5000]
+=======
+    data_ranges = [100, 1000, 3000, 4000, 5000]
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
 
     rates = []
     for n_data in data_ranges:
@@ -115,8 +142,11 @@ def plot_learning_curve():
 
     plt.plot(data_ranges, [hpn_rate]*len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
     plt.plot(data_ranges, rates, label='GreedyQ', color=[1, 0, 0], marker='o')
+<<<<<<< HEAD
     plt.xticks(data_ranges)
     import pdb;pdb.set_trace()
+=======
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
     savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
 
 
@@ -125,8 +155,13 @@ def plot_learning_curve():
 
 
 def main():
+<<<<<<< HEAD
     plot_success_vs_time(1)
     #plot_learning_curve()
+=======
+    #plot_success_vs_time(8)
+    plot_learning_curve()
+>>>>>>> ad5aea383ef00055d563b54aba32eeb855220c10
     pass
 
 

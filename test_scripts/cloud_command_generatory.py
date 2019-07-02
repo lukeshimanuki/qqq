@@ -1,5 +1,6 @@
 num_train = 1000
 n_objs_pack = 8
+
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 if n_objs_pack == 8:
@@ -9,7 +10,7 @@ else:
 # pidxs = [[0, 50], [50, 100]]
 
 loss = 'largemargin'
-algorithm = 'greedy'
+algorithm = 'greedy_no_gnn'
 
 if algorithm != 'hpn' and algorithm != 'greedy_no_gnn':
     train_seed = [0, 1, 2]

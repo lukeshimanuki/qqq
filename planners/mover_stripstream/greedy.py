@@ -904,6 +904,7 @@ def get_problem(mover):
             else:
                 gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
                 return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
+
         elif action.type == 'one_arm_pick_one_arm_place':
             o = action.discrete_parameters['object'].GetName()
             r = action.discrete_parameters['region'].name

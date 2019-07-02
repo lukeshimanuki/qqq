@@ -194,21 +194,7 @@ def main():
 
 
     stime = time.time()
-    """
-    if os.path.isfile('./tmp.pkl'):
-        goal_object_names, plan = pickle.load(open('tmp.pkl', 'r'))
-    else:
-        goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
-        [p.make_pklable() for p in plan]
-        pickle.dump((goal_object_names, plan), open('tmp.pkl', 'wb'))
-    """
-    if parameters.f:
-        plan = pickle.load(open('test_results/prm_mcr_hpn_results_on_mover_domain/1/test_purpose/seed_%d_pidx_%d.pkl'
-                                % (parameters.planner_seed, parameters.pidx), 'r'))['plan']
-        env=environment.env
-        robot = environment.robot
 
-        import pdb;pdb.set_trace()
     goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
 
     total_n_nodes = 0
