@@ -1518,11 +1518,10 @@ def get_problem(mover):
                 newstate.make_pklable()
                 newnode = Node(node, action, newstate)
 
-                # TODO: figure out why region.contains isn't working
-                if o in goal and r in goal:
-                #if all(mover.regions['rectangular_packing_box1_region'].contains_point(
-                #        get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
-                #       obj_names[:n_objs_pack]):
+                if all(
+                    mover.regions['rectangular_packing_box1_region'].contains(mover.env.GetKinBody(o).ComputeAABB())
+                    for o in obj_names[:n_objs_pack]
+                ):
                     print("found successful plan: {}".format(n_objs_pack))
                     trajectory = Trajectory(mover.seed, mover.seed)
                     plan = list(newnode.backtrack())[::-1]

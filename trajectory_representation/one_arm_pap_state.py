@@ -53,7 +53,8 @@ class OneArmPaPState(PaPState):
         for obj in objects:
             self.pick_params[obj] = []
             for r in regions:
-                if parent_state is not None and obj != moved_obj:
+                #print(obj, r)
+                if parent_state is not None and obj != moved_obj and (obj,r) in parent_state.pap_params:
                     if (obj, r) in parent_state.pap_params:
                         status = 'HasSolution'
                         pick_params, place_params = parent_state.pap_params[(obj, r)]
@@ -65,14 +66,18 @@ class OneArmPaPState(PaPState):
                                                                   'object': problem_env.env.GetKinBody(obj),
                                                                   'region': problem_env.regions[r]}), problem_env)
                     if obj in goal_entities and r in goal_entities:
-                        num_tries = 10
+                        num_tries = int(200 / len(goal_entities)) + 5
                     else:
-                        num_tries = 3
+                        num_tries = 5
                     pick_params, place_params, status = papg.sample_next_point(num_tries)
-                self.place_params[(obj, r)] = []
-                if status == 'HasSolution':
-                    self.pap_params[(obj, r)] = pick_params, place_params
-                    self.pick_params[obj].append(pick_params)
+                    self.place_params[(obj, r)] = []
+                    if status == 'HasSolution':
+                        #print('success')
+                        self.pap_params[(obj, r)] = pick_params, place_params
+                        self.pick_params[obj].append(pick_params)
+                    else:
+                        #print('failed')
+                        pass
 
         # problem_env.disable_objects()
         # for obj in objects:
