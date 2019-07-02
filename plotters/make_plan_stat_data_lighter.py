@@ -74,7 +74,12 @@ def save_summary(stat_summary, test_dir, n_data, n_objs):
         if test_dir.find('no_h') != -1:
             pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_h.pkl' % n_objs, 'wb'))
         elif test_dir.find('no_gnn') != -1:
-            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'wb'))
+            if test_dir.find('num_goals') != -1:
+                pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs, 'wb'))
+            else:
+                pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'wb'))
+        elif test_dir.find('helps_goal') != -1:
+            pickle.dump(stat_summary, open('./plotters/stats/greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
         else:
             pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
 
@@ -84,6 +89,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
     time_taken = []
     num_nodes = []
     plan_lengths = []
+
     for fidx, filename in enumerate(test_files):
         print "%d / %d" % (fidx, len(test_files))
         pidx = get_pidx(test_dir, filename)
@@ -106,17 +112,16 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def main():
-    n_objs = 1
+    n_objs = 8
 
     test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs)
 
 
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/test_purpose/no_gnn/' % n_objs
-    test_files = os.listdir(test_dir)
+    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/test_purpose/no_gnn/num_goals/' % n_objs
+    #test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs)
-
 
     n_train = 5000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
@@ -131,7 +136,8 @@ def main():
     #get_metrics(test_dir, test_files, n_objs, n_train)
 
     n_train = 5000
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_1/test_purpose/helps_goal/num_train_5000/'
+    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d' \
+               '/test_purpose/helps_goal/num_train_5000/' % n_objs
     test_files = os.listdir(test_dir)
     get_metrics(test_dir, test_files, n_objs, n_train)
 

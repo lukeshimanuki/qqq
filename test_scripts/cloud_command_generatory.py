@@ -1,7 +1,7 @@
 num_train = 5000
 n_objs_pack = 1
 time_limit = 300 * n_objs_pack
-planning_seed = range(3)
+planning_seed = range(5)
 loss = 'largemargin'
 algorithm = 'greedy'
 domain = 'two_arm_mover'
@@ -11,7 +11,7 @@ if n_objs_pack == 8:
     pidxs = [[20000, 20050], [20050, 20100]]
 else:
     pidxs = [[20000, 20100]]
-    pidxs = [[20000, 20050]]
+    #pidxs = [[20000, 20050]]
 
 
 command = "cd /root/qqq ; git pull;  python test_scripts/threaded_test_%s.py" % algorithm

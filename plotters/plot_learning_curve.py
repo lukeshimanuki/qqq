@@ -13,6 +13,8 @@ def load_data(algo, n_objs, n_data=0):
         return pickle.load(open('./plotters/stats/hpn_n_objs_' + str(n_objs) + '.pkl', 'r'))
     elif algo == 'greedy':
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
+    elif algo == 'greedy_helps_goal':
+        return pickle.load(open('./plotters/stats/greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
     elif algo == 'greedy_no_gnn':
         return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'r'))
     elif algo == 'greedy_no_h':
@@ -33,19 +35,19 @@ def print_plan_time(statfile, max_time):
     plantimes = np.array(statfile['times'])
     successes = np.array(statfile['successes'])
     num_nodes = np.array(statfile['num_nodes'])
-    planlength = np.array(statfile['plan_length'])
+    #planlength = np.array(statfile['plan_length'])
     successes[plantimes > max_time] = False
     plantimes[plantimes > max_time] = max_time
 
     print "Success rate", np.mean(successes)
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
-    print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
+    #print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
 
 
 def plot_success_vs_time(n_objs):
     if n_objs == 8:
-        max_time = n_objs * 62.5
+        max_time = 2400 #n_objs * 62.5
     elif n_objs == 1:
         max_time = 300
     else:
@@ -54,16 +56,24 @@ def plot_success_vs_time(n_objs):
 
     hpn = load_data('hpn', n_objs)
     greedy = load_data('greedy', n_objs, n_data=5000)
+    greedy_helps_goal = load_data('greedy_helps_goal', n_objs, n_data=5000)
     nognn = load_data('greedy_no_gnn', n_objs)
     noh = load_data('greedy_no_h', n_objs)
     print "hpn"
     print_plan_time(hpn, max_time)
+    print "=="
     print "gnn"
     print_plan_time(greedy, max_time)
+    print "=="
+    print "gnn helps goal"
+    print_plan_time(greedy_helps_goal, max_time)
+    print "=="
     print "no gnn"
     print_plan_time(nognn, max_time)
+    print "=="
     print "no h"
     print_plan_time(noh, max_time)
+    print "=="
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -107,7 +117,7 @@ def plot_learning_curve():
 
 
 def main():
-    plot_success_vs_time(1)
+    plot_success_vs_time(8)
     # plot_learning_curve()
     pass
 
