@@ -9,6 +9,7 @@ from predicates.is_holding_goal_entity import IsHoldingGoalEntity
 from predicates.pick_in_way import PickInWay
 from predicates.place_in_way import PlaceInWay
 from trajectory_representation.operator import Operator
+from generators.one_arm_pap_uniform_generator import OneArmPaPUniformGenerator
 from trajectory_representation.state import State
 import pickle
 import copy
@@ -33,19 +34,32 @@ class OneArmPaPState(PaPState):
 
         object_names = {obj.GetName() for obj in problem_env.objects}
 
-        problem_env.disable_objects()
+        self.pap_params = {}
         self.pick_params = {}
+        self.place_params = {}
         for obj in object_names:
-            if parent_state is not None and obj != moved_obj:
-                self.pick_params[obj] = parent_state.pick_params[obj]
-            else:
-                op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': problem_env.env.GetKinBody(obj)})
-                params, status = UniformGenerator(op, problem_env).sample_feasible_op_parameters(op, 300, 20)
+            self.pick_params[obj] = []
+            for r in problem_env.regions:
+                papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place', discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]}), problem_env)
+                pick_params, place_params, status = papg.sample_next_point(5)
+                self.place_params[(obj,r)] = []
                 if status == 'HasSolution':
-                    self.pick_params[obj] = params
-                else:
-                    self.pick_params[obj] = []
-        problem_env.enable_objects()
+                    self.pap_params[(obj, r)] = pick_params, place_params
+                    self.pick_params[obj].append(pick_params)
+                    self.place_params[(obj,r)].append(place_params)
+
+        #problem_env.disable_objects()
+        #for obj in object_names:
+        #    if parent_state is not None and obj != moved_obj:
+        #        self.pick_params[obj] = parent_state.pick_params[obj]
+        #    else:
+        #        op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': problem_env.env.GetKinBody(obj)})
+        #        params, status = UniformGenerator(op, problem_env).sample_feasible_op_parameters(op, 300, 20)
+        #        if status == 'HasSolution':
+        #            self.pick_params[obj] = params
+        #        else:
+        #            self.pick_params[obj] = []
+        #problem_env.enable_objects()
 
         self.nocollision_pick_op = {}
         self.collision_pick_op = {}
@@ -72,27 +86,25 @@ class OneArmPaPState(PaPState):
 
                 before.Restore()
 
-        # assume that pick params don't affect placement feasibility much
-        self.place_params = {}
-        for obj in object_names:
-            for r in problem_env.regions:
-                if obj not in self.nocollision_pick_op:
-                    self.place_params[(obj, r)] = []
-                    continue
-                pick = self.nocollision_pick_op[obj]
-                before = CustomStateSaver(problem_env.env)
-                pick.execute()
-                place_op = Operator(
-                    operator_type='one_arm_place',
-                    discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]},
-                    continuous_parameters=pick.continuous_parameters
-                )
-                params, status = UniformGenerator(op, problem_env).sample_feasible_op_parameters(op, 300, 20)
-                if status == 'HasSolution':
-                    self.place_params[(obj, r)] = params
-                else:
-                    self.place_params[(obj, r)] = []
-                before.Restore()
+        #for obj in object_names:
+        #    for r in problem_env.regions:
+        #        if obj not in self.nocollision_pick_op:
+        #            self.place_params[(obj, r)] = []
+        #            continue
+        #        pick = self.nocollision_pick_op[obj]
+        #        before = CustomStateSaver(problem_env.env)
+        #        pick.execute()
+        #        place_op = Operator(
+        #            operator_type='one_arm_place',
+        #            discrete_parameters={'object': problem_env.env.GetKinBody(obj), 'region': problem_env.regions[r]},
+        #            continuous_parameters=pick.continuous_parameters
+        #        )
+        #        params, status = UniformGenerator(op, problem_env).sample_feasible_op_parameters(op, 300, 20)
+        #        if status == 'HasSolution':
+        #            self.place_params[(obj, r)] = params
+        #        else:
+        #            self.place_params[(obj, r)] = []
+        #        before.Restore()
 
         self.nocollision_place_op = {}
         self.collision_place_op = {}
@@ -125,6 +137,8 @@ class OneArmPaPState(PaPState):
                         preplace.Restore()
                     preplace.Restore()
                 prepick.Restore()
+
+        print(sum([o in self.collision_pick_op for o in object_names]), sum([o in self.nocollision_pick_op for o in object_names]), sum([(o,r) in self.collision_place_op for o in object_names for r in problem_env.regions]), sum([(o,r) in self.nocollision_place_op for o in object_names for r in problem_env.regions]))
 
         # predicates
         self.pick_in_way = PickInWay(self.problem_env)
