@@ -6,9 +6,9 @@ pidxs = [[20000, 20100]]
 #pidxs = [[0, 50], [50, 100]]
 
 loss = 'largemargin'
-algorithm = 'greedy'
+algorithm = 'greedy_no_gnn'
 
-if algorithm != 'hpn':
+if algorithm != 'hpn' and algorithm != 'greedy_no_gnn':
     train_seed = [0, 1, 2]
 else:
     train_seed = [0]

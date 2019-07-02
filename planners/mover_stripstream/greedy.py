@@ -884,8 +884,12 @@ def get_problem(mover):
             redundant = state.binary_edges[(o, r)][0]
             helps_goal = object_is_goal and region_is_goal and not redundant
             unhelpful = object_is_goal and not region_is_goal
-            return -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[
-                None, ...]) + 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
+
+            if config.dont_use_gnn:
+                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
+            else:
+                gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
+                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
         else:
             assert False
 
@@ -1701,10 +1705,15 @@ def generate_training_data_single():
     else:
         root_dir = '/data/public/rw/pass.port/tamp_q_results/'
 
-    solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                        + '/n_objs_pack_' + str(config.n_objs_pack) \
-                        + '/test_purpose/' \
-                        + '/num_train_' + str(config.num_train) + '/'
+    if config.dont_use_gnn:
+        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
+                            + '/n_objs_pack_' + str(config.n_objs_pack) \
+                            + '/test_purpose/no_gnn/'
+    else:
+        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
+                            + '/n_objs_pack_' + str(config.n_objs_pack) \
+                            + '/test_purpose/' \
+                            + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
@@ -1888,6 +1897,7 @@ if __name__ == '__main__':
     parser.add_argument('-visualize_sim', action='store_true', default=False)
     parser.add_argument('-dontsimulate', action='store_true', default=False)
     parser.add_argument('-plan', action='store_true', default=False)
+    parser.add_argument('-dont_use_gnn', action='store_true', default=False)
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-domain', type=str, default='two_arm_mover')
 
