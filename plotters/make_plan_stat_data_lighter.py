@@ -93,22 +93,19 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def main():
-    n_objs = 1
-    t_limit = 1000
-    test_dir = 'test_results/hpn_results_on_mover_domain/results_from_cloud/tamp_q_results/test_results/hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
-    test_dir = 'test_results/cloud_results/faster_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
+    n_objs = 8
+
     test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs)
-    #get_plan_times(test_dir, test_files, t_limit)
 
 
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_1/test_purpose/no_gnn/'
+    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/test_purpose/no_gnn/' % n_objs
     test_files = os.listdir(test_dir)
-    get_metrics(test_dir, test_files, n_objs)
+    #get_metrics(test_dir, test_files, n_objs)
 
 
-    n_train = 50
+    n_train = 1000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
                'test_purpose/num_train_%d/' % (n_objs, n_train)
     test_files = os.listdir(test_dir)
