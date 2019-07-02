@@ -1,14 +1,17 @@
-num_train = 100
-n_objs_pack = 1
+num_train = 1000
+n_objs_pack = 8
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
-pidxs = [[20000, 20100]]
-#pidxs = [[0, 50], [50, 100]]
+if n_objs_pack == 8:
+    pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
+else:
+    pidxs = [[20000, 20100]]
+# pidxs = [[0, 50], [50, 100]]
 
 loss = 'largemargin'
 algorithm = 'greedy'
 
-if algorithm != 'hpn':
+if algorithm != 'hpn' and algorithm != 'greedy_no_gnn':
     train_seed = [0, 1, 2]
 else:
     train_seed = [0]
@@ -24,6 +27,3 @@ for tseed in train_seed:
             new_command = command + "-planner_seed %d -train_seed %d -pidxs %d %d" % (pseed, tseed, pidx[0], pidx[1])
             print new_command
             raw_input('continue?')
-
-
-
