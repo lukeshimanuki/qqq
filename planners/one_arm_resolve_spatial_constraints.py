@@ -104,12 +104,15 @@ class OneArmResolveSpatialConstraints:
         # Get PaP
         self.problem_env.set_exception_objs_when_disabling_objects_in_region(objects_moved_before)
         self.problem_env.disable_objects_in_region('entire_region')
-        if object_to_move == self.problem_env.env.GetKinBody('c_obst6'):
-            import pdb;pdb.set_trace()
+        object_to_move.Enable(True)
+        assert self.problem_env.env.GetKinBody('c_obst2').IsEnabled()
+
         pap, status = self.find_pick_and_place(object_to_move, target_region, swept_volumes)
         if status != 'HasSolution':
             print "Failed to sample pap, giving up on branch"
             return False, "NoSolution"
+        #if status == 'HasSolution' and object_to_move == self.problem_env.env.GetKinBody('c_obst6'):
+        #    import pdb;pdb.set_trace()
 
         pap = attach_q_goal_as_low_level_motion(pap)
         swept_volumes.add_pap_swept_volume(pap)
@@ -120,8 +123,7 @@ class OneArmResolveSpatialConstraints:
         prev = obstacles_to_remove
         obstacles_to_remove = objects_in_collision_for_pap + [o for o in obstacles_to_remove
                                                               if o not in objects_in_collision_for_pap]
-        if self.problem_env.env.GetKinBody('c_obst2') in obstacles_to_remove:
-            import pdb;pdb.set_trace()
+
 
         # O_{FUC} update
         objects_moved_before.append(object_to_move)
@@ -134,7 +136,6 @@ class OneArmResolveSpatialConstraints:
         """
 
         if len(obstacles_to_remove) == 0:
-            import pdb;pdb.set_trace()
             return plan, 'HasSolution'
 
         # enumerate through all object orderings
@@ -146,8 +147,6 @@ class OneArmResolveSpatialConstraints:
             tmp_obstacles_to_remove = list(tmp_obstacles_to_remove)
             print "tmp obstacles to remove:", tmp_obstacles_to_remove
             print "Recursing on", new_obj_to_move
-            if new_obj_to_move.GetName() == 'c_obst2':
-                import pdb;pdb.set_trace()
             branch_plan, status = self.search(new_obj_to_move,
                                               swept_volumes,
                                               tmp_obstacles_to_remove,

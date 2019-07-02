@@ -4,7 +4,7 @@ from threaded_test_utils import get_configs
 
 
 def worker_p(config):
-    command = 'python ./planners/mover_stripstream/greedy.py'
+    command = 'python ./planners/mover_stripstream/greedy.py -dont_use_gnn'
 
     for key, value in zip(config.keys(), config.values()):
         if value is not None:

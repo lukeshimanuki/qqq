@@ -48,11 +48,15 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
         target_obj_region = obj_region
 
         new_base_pose = self.place_object_and_robot_at_new_pose(obj, obj_pose, obj_region)
+        if np.all(np.isclose(get_body_xytheta(self.robot), np.array([[4.0547493, 0.41676211, 5.12699987]]))):
+            import pdb;pdb.set_trace()
 
         # is_base_pose_infeasible = self.env.CheckCollision(self.robot) or \
         #                              (not target_robot_region.contains(self.robot.ComputeAABB()))
         is_object_pose_infeasible = self.env.CheckCollision(obj) or \
                                     (not target_obj_region.contains(obj.ComputeAABB()))
+
+
         if not is_object_pose_infeasible:
             if swept_volume_to_avoid is not None:
                 is_object_pose_infeasible = not swept_volume_to_avoid.is_swept_volume_cleared(obj)
