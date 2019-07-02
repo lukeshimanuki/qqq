@@ -63,10 +63,13 @@ def get_plan_times(test_dir, test_files, t_limit):
 def save_summary(stat_summary, test_dir, n_data, n_objs):
     if test_dir.find('hpn') != -1:
         pickle.dump(stat_summary, open('./plotters/stats/hpn_n_objs_%d.pkl' % n_objs, 'wb'))
-    elif test_dir.find('greedy') != -1 and test_dir.find('no_gnn') == -1:
-        pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
-    elif test_dir.find('greedy') != -1 and test_dir.find('no_gnn') != -1:
-        pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'wb'))
+    elif test_dir.find('greedy') != -1:
+        if test_dir.find('no_h') != -1:
+            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_h.pkl' % n_objs, 'wb'))
+        elif test_dir.find('no_gnn') != -1:
+            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'wb'))
+        else:
+            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
 
 
 def get_metrics(test_dir, test_files, n_objs, n_data=None):
@@ -93,7 +96,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def main():
-    n_objs = 8
+    n_objs = 1
 
     test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     test_files = os.listdir(test_dir)
@@ -105,11 +108,17 @@ def main():
     #get_metrics(test_dir, test_files, n_objs)
 
 
-    n_train = 1000
+    n_train = 5000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
                'test_purpose/num_train_%d/' % (n_objs, n_train)
     test_files = os.listdir(test_dir)
     get_metrics(test_dir, test_files, n_objs, n_train)
+
+    n_train = 5000
+    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
+               'test_purpose/no_h/num_train_%d/' % (n_objs, n_train)
+    test_files = os.listdir(test_dir)
+    #get_metrics(test_dir, test_files, n_objs, n_train)
 
 
 
