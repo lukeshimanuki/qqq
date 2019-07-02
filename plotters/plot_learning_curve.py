@@ -2,12 +2,13 @@ import pickle
 import argparse
 import os
 import numpy as np
+import copy
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def load_data(algo, n_objs, n_data=None):
+def load_data(algo, n_objs, n_data=0):
     if algo == 'hpn':
         return pickle.load(open('./plotters/stats/hpn_n_objs_' + str(n_objs) + '.pkl', 'r'))
     elif algo == 'greedy':
@@ -16,74 +17,97 @@ def load_data(algo, n_objs, n_data=None):
         raise NotImplementedError
 
 
-def get_success_rate_at(time_success_data, interval):
-    time_success_data = np.array(time_success_data)
-    result =[]
+def get_success_rate_at(time_data, success_data, interval):
+    #success_data = copy.copy(success_data)
+    rates = []
     for tlimit in interval:
-        successes = []
-        for tsuccess in time_success_data:
-            time_taken = tsuccess[1]
-            if time_taken <= tlimit:
-                successes.append(tsuccess[0])
-            else:
-                successes.append(False)
-        result.append(np.mean(successes))
-
-
-        """
-        idxs = time_success_data[:, 1] < tlimit
-
-        if len(idxs) == 0:
-            successes.append(False)
-        else:
-            successes_within_tlimit = np.sum(time_success_data[idxs, 0]) / float(len(time_success_data))
-        rates.append(successes_within_tlimit)
-        """
-    return result
+        rates.append(np.sum(success_data[time_data <= tlimit]) / float(len(success_data)))
+    return rates
 
 
 def plot_success_vs_time(n_objs):
-    max_time = n_objs * 50
+    max_time = n_objs * 62.5
     interval = np.linspace(10, max_time, 500)
 
     hpn = load_data('hpn', n_objs)
     greedy = load_data('greedy', n_objs, n_data=5000)
 
     hpn_times = np.array(hpn['times'])
-    greedy_times = np.array(greedy['times'])
-
     hpn_successes = np.array(hpn['successes'])
-    greedy_successes = np.array(greedy['successes'])
-    hpn_successes[hpn_times > max_time] = False
-    greedy_successes[greedy_times > max_time] = False
+    hpn_rates = get_success_rate_at(hpn_times, hpn_successes, interval)
 
+    greedy_times = np.array(greedy['times'])
+    greedy_successes = np.array(greedy['successes'])
+    greedy_rates = get_success_rate_at(greedy_times, greedy_successes, interval)
+
+    """
+    sns.tsplot(hpn_rates, interval, condition='HPN', color=[0,1,0])
+    sns.tsplot(greedy_rates, interval, condition='GreedyQ', color=[1, 0, 0])
+    plt.show()
+    hpn_successes[hpn_times > max_time] = False
     print np.mean(hpn_successes)
+    """
+
+    greedy_successes[greedy_times > max_time] = False
     print np.mean(greedy_successes)
 
-    hpn_times[hpn_times>max_time] = max_time
+    hpn_times[hpn_times > max_time] = max_time
+    print np.mean(hpn_times), np.std(hpn_times) * 1.96 /np.sqrt(len(hpn_times))
     greedy_times[greedy_times > max_time] = max_time
+    print np.mean(greedy_times), np.std(greedy_times) * 1.96 /np.sqrt(len(greedy_times))
 
-    print np.mean(hpn_times)
-    print np.mean(greedy_times)
+
+    """
+    sns.tsplot(rates, interval)
+    sns.tsplot(greedy_rates, interval)
+    plt.show()
+    """
+
+
+def savefig(xlabel, ylabel, fname=''):
+    plt.legend(loc='best', prop={'size': 13})
+    plt.xlabel(xlabel, fontsize=14, fontweight='bold')
+    plt.ylabel(ylabel, fontsize=14, fontweight='bold')
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    print 'Saving figure ', fname + '.png'
+    plt.savefig(fname + '.png', dpi=100, format='png')
+
+
+def plot_learning_curve():
+    time_limit = 300
+    n_objs = 1
+
+    hpn = load_data('hpn', n_objs)
+
+    hpn_times = np.array(hpn['times'])
+    hpn_successes = np.array(hpn['successes'])
+    hpn_successes[hpn_times > time_limit] = False
+    hpn_rate = np.mean(hpn_successes)
+
+    data_ranges = [100, 1000, 3000, 4000, 5000]
+
+    rates = []
+    for n_data in data_ranges:
+        greedy = load_data('greedy', 1, n_data)
+        greedy_times = np.array(greedy['times'])
+        greedy_successes = np.array(greedy['successes'])
+        overlimit_idxs = greedy_times > time_limit
+        greedy_successes[overlimit_idxs] = False
+        rates.append(np.mean(greedy_successes))
+
+    plt.plot(data_ranges, [hpn_rate]*len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
+    plt.plot(data_ranges, rates, label='GreedyQ', color=[1, 0, 0], marker='o')
+    savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
+
 
     import pdb;pdb.set_trace()
 
-    """
-    hpn_success_rates = get_success_rate_at(zip(hpn['successes'], hpn['times']), interval)
-    greedy_success_rates = get_success_rate_at(zip(greedy['successes'], greedy['times']), interval)
-
-    sns.tsplot(hpn_success_rates, interval, ci=95, condition='HPN',
-               color=[1,0,0])
-    sns.tsplot(greedy_success_rates, interval, ci=95, condition='GreedyQ',
-               color=[0, 1, 0])
-    plt.show()
-    import pdb;
-    pdb.set_trace()
-    """
 
 
 def main():
-    plot_success_vs_time(8)
+    #plot_success_vs_time(8)
+    plot_learning_curve()
     pass
 
 
