@@ -1,4 +1,4 @@
-num_train = 100
+num_train = 50
 n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)

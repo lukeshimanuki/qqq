@@ -99,7 +99,6 @@ def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
             tmp_obstacles_to_remove = set(obstacles_to_remove).difference(set([obj_to_move]))
             tmp_obstacles_to_remove = list(tmp_obstacles_to_remove)
             top_level_plan = [target_op_inst]
-            import pdb;pdb.set_trace()
             plan, status = rsc.search(object_to_move=obj_to_move,
                                       parent_swept_volumes=swept_volumes,
                                       obstacles_to_remove=tmp_obstacles_to_remove,
@@ -107,7 +106,6 @@ def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
                                       plan=top_level_plan,
                                       stime=stime,
                                       timelimit=timelimit)
-            import pdb;pdb.set_trace()
         else:
             plan, status = rsc.search(obj_name,
                                       parent_swept_volumes=None,
@@ -120,7 +118,6 @@ def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
         if plan_found:
             print "Solution found"
         else:
-            import pdb;pdb.set_trace()
             if is_one_arm_environment:
                 obstacle_to_remove_idx += 1
                 if obstacle_to_remove_idx == len(obstacles_to_remove):
@@ -206,7 +203,6 @@ def main():
     """
     plan = pickle.load(open('test_results/prm_mcr_hpn_results_on_mover_domain/1/test_purpose/seed_0_pidx_4.pkl', 'r'))['plan']
 
-    import pdb;pdb.set_trace()
     goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
 
     total_n_nodes = 0
@@ -220,7 +216,6 @@ def main():
         plan, n_nodes, status = find_plan_for_obj(goal_obj_name, plan[idx], environment, stime, timelimit)
         total_n_nodes += n_nodes
         total_time_taken = time.time() - stime
-        import pdb;pdb.set_trace()
         print goal_obj_name, goal_object_names, total_n_nodes
         print "Time taken: %.2f" % total_time_taken
         if status == 'HasSolution':
