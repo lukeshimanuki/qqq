@@ -895,6 +895,7 @@ def get_problem(mover):
             helps_goal = object_is_goal and region_is_goal and not redundant
             redundant = 0
             unhelpful = 0 #object_is_goal and not region_is_goal
+            number_in_goal = 0
 
             if config.dont_use_gnn:
                 return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
