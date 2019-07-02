@@ -891,11 +891,16 @@ def get_problem(mover):
             region_is_goal = state.nodes[r][8]
             number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
                                  i != o and state.nodes[r][8]) + int(region_is_goal)
+            # this translates to: number of objects that would be in goal if the action was executed
+            # This would be the dual of number of remaining objects after the action was executed, which would be
+            # the more traditional heuristic function. The negative sign helps with that.
             redundant = state.binary_edges[(o, r)][0]
             helps_goal = object_is_goal and region_is_goal and not redundant
+
             redundant = 0
-            unhelpful = 0 #object_is_goal and not region_is_goal
-            number_in_goal = 0
+            unhelpful = 0
+            #number_in_goal = 0
+            helps_goal = 0
 
             if config.dont_use_gnn:
                 return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
@@ -1826,7 +1831,7 @@ def generate_training_data_single():
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/no_gnn/'
+                            + '/test_purpose/no_gnn/num_goals/'
     elif config.dont_use_h:
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
@@ -1839,11 +1844,10 @@ def generate_training_data_single():
         helps_goal = object_is_goal and region_is_goal and not redundant
         unhelpful = object_is_goal and not region_is_goal
         """
-
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/helps_goal/' \
+                            + '/test_purpose/num_goals/' \
                             + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \

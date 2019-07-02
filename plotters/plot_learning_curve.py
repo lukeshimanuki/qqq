@@ -33,12 +33,14 @@ def print_plan_time(statfile, max_time):
     plantimes = np.array(statfile['times'])
     successes = np.array(statfile['successes'])
     num_nodes = np.array(statfile['num_nodes'])
+    planlength = np.array(statfile['plan_length'])
     successes[plantimes > max_time] = False
     plantimes[plantimes > max_time] = max_time
 
-    print np.mean(successes)
-    print np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
-    print np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
+    print "Success rate", np.mean(successes)
+    print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
+    print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
+    print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
 
 
 def plot_success_vs_time(n_objs):

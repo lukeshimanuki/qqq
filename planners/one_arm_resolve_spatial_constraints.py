@@ -105,7 +105,6 @@ class OneArmResolveSpatialConstraints:
         self.problem_env.set_exception_objs_when_disabling_objects_in_region(objects_moved_before)
         self.problem_env.disable_objects_in_region('entire_region')
         object_to_move.Enable(True)
-        assert self.problem_env.env.GetKinBody('c_obst2').IsEnabled()
 
         pap, status = self.find_pick_and_place(object_to_move, target_region, swept_volumes)
         if status != 'HasSolution':

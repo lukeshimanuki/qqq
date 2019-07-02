@@ -28,6 +28,13 @@ def get_num_nodes(test_dir, stat):
         return stat.metrics['num_nodes']
 
 
+def get_plan_length(test_dir, stat):
+    if test_dir.find('hpn') != -1:
+        return len(stat['plan'])
+    elif test_dir.find('greedy') != -1:
+        return stat.metrics['plan_length']
+
+
 def get_pidx(test_dir, filename):
     if test_dir.find('hpn') != -1:
         return int(filename.split('pidx_')[1].split('.pkl')[0])
@@ -76,6 +83,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
     successes = []
     time_taken = []
     num_nodes = []
+    plan_lengths = []
     for fidx, filename in enumerate(test_files):
         print "%d / %d" % (fidx, len(test_files))
         pidx = get_pidx(test_dir, filename)
@@ -86,12 +94,14 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         ftime_taken = get_time_taken(test_dir, stat)
         fsuccess = get_success(test_dir, stat)
         fnodes = get_num_nodes(test_dir, stat)
-
+        if fsuccess:
+            plan_length = get_plan_length(test_dir, stat)
         time_taken.append(ftime_taken)
         successes.append(fsuccess)
         num_nodes.append(fnodes)
+        plan_lengths.append(plan_length)
 
-    stat_summary = {'times': time_taken, 'successes': successes, 'num_nodes': num_nodes}
+    stat_summary = {'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
     save_summary(stat_summary, test_dir, n_data, n_objs)
 
 
@@ -112,7 +122,7 @@ def main():
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
                'test_purpose/num_train_%d/' % (n_objs, n_train)
     test_files = os.listdir(test_dir)
-    get_metrics(test_dir, test_files, n_objs, n_train)
+    #get_metrics(test_dir, test_files, n_objs, n_train)
 
     n_train = 5000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
@@ -120,8 +130,10 @@ def main():
     test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs, n_train)
 
-
-
+    n_train = 5000
+    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_1/test_purpose/helps_goal/num_train_5000/'
+    test_files = os.listdir(test_dir)
+    get_metrics(test_dir, test_files, n_objs, n_train)
 
 if __name__ == '__main__':
     main()
