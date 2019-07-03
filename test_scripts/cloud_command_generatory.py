@@ -11,6 +11,7 @@ if n_objs_pack == 8:
     pidxs = [[20000, 20050], [20050, 20100]]
 else:
     pidxs = [[20000, 20100]]
+    #pidxs = [[20000, 20050]]
 
 
 command = "cd /root/qqq ; git pull;  python test_scripts/threaded_test_%s.py" % algorithm

@@ -177,9 +177,7 @@ def main():
         environment = OneArmMover(parameters.pidx)
         goal_region = ['rectangular_packing_box1_region']
 
-    #goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
-    goal_object_names = [environment.objects[-1].GetName()]
-    goal_object_names = ['c_obst2']
+    goal_object_names = [obj.GetName() for obj in environment.objects[:parameters.n_objs_pack]]
     goal_entities = goal_object_names + goal_region
 
     # for randomized algorithms
@@ -191,7 +189,6 @@ def main():
 
     # from manipulation.bodies.bodies import set_color
     # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
-
 
     stime = time.time()
 
