@@ -500,7 +500,7 @@ def generate_training_data_single():
         plan_length = len(trajectory.actions) if success else 0
         if not success:
             trajectory = Trajectory(mover.seed, mover.seed)
-        trajectory.states = None
+        trajectory.states = [s.get_predicate_evaluations() for s in trajectory.states]
         trajectory.metrics = {
             'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,

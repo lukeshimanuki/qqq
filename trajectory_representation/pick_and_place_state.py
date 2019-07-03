@@ -228,3 +228,6 @@ class PaPState(State):
         self.is_holding_goal_entity.problem_env = problem_env
         if self.parent_state is not None:
             self.parent_state.make_plannable(problem_env)
+
+    def get_predicate_evaluations(self):
+        return {'nodes': self.nodes, 'binary': self.binary_edges, 'ternary': self.ternary_edges}

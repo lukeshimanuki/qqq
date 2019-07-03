@@ -115,7 +115,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def main():
-    n_objs = 1
+    n_objs = 8
 
     test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
     #test_files = os.listdir(test_dir)
@@ -123,7 +123,7 @@ def main():
 
 
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d/test_purpose/no_gnn/no_goal_obj_same_region/num_goals/' % n_objs
-    test_files = os.listdir(test_dir)
+    #test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs)
 
     n_train = 5000
@@ -135,7 +135,7 @@ def main():
     n_train = 5000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
                'test_purpose/no_h/num_train_%d/' % (n_objs, n_train)
-    test_files = os.listdir(test_dir)
+    #test_files = os.listdir(test_dir)
     #get_metrics(test_dir, test_files, n_objs, n_train)
 
     n_train = 5000
