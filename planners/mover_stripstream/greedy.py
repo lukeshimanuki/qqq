@@ -26,6 +26,9 @@ import numpy as np
 import tensorflow as tf
 import openravepy
 
+from generators.uniform import UniformGenerator, PaPUniformGenerator
+
+from mover_library import utils
 from manipulation.primitives.display import set_viewer_options, draw_line, draw_point
 from manipulation.primitives.savers import DynamicEnvironmentStateSaver
 
@@ -43,52 +46,37 @@ DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 
 
-def find_path(graph, start, goal, heuristic=lambda x: 0, collision=lambda x: False):
-    visited = {s for s in start}
-    queue = Queue.PriorityQueue()
-    for s in start:
-        if not collision(s):
-            queue.put((heuristic(s), 0, np.random.rand(), s, [s]))
-    while not queue.empty():
-        _, dist, _, vertex, path = queue.get()
-
-        for next in graph[vertex] - visited:
-            visited.add(next)
-
-            if collision(next):
+def get_actions(mover, goal, config):
+    actions = []
+    for o in mover.entity_names:
+        if 'region' in o:
+            continue
+        for r in mover.entity_names:
+            if 'region' not in r or 'entire' in r:
                 continue
-
-            if goal(next):
-                return path + [next]
+            if o not in goal and r in goal:
+                # you cannot place non-goal object in the goal region
+                continue
+            if config.domain == 'two_arm_mover':
+                action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
+            elif config.domain == 'one_arm_mover':
+                action = Operator('one_arm_pick_one_arm_place',
+                                  {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
             else:
-                newdist = dist + np.linalg.norm(prm_vertices[vertex] - prm_vertices[next])
-                queue.put((newdist + heuristic(next), newdist, np.random.rand(), next, path + [next]))
-    return None
+                raise NotImplementedError
+            # following two lines are for legacy reasons, will fix later
+            action.discrete_parameters['object'] = action.discrete_parameters['two_arm_place_object']
+            action.discrete_parameters['region'] = action.discrete_parameters['two_arm_place_region']
+            actions.append(action)
+
+    return actions
+
 
 
 def get_problem(mover):
     tt = time.time()
 
     obj_names = [obj.GetName() for obj in mover.objects]
-    obj_poses = [get_body_xytheta(mover.env.GetKinBody(obj_name)).squeeze() for obj_name in obj_names]
-
-    initial_robot_conf = get_body_xytheta(mover.robot).squeeze()
-
-    def dfs(start, goal, collide):
-        path = find_path(prm_edges, list(start), goal, collision=collide)
-        if path is None:
-            return path
-        return path  # [-1]
-
-    def inregion(i, r):
-        q = prm_vertices[i]
-        if r == 'home_region':
-            return q[1] > -3
-        elif r == 'loading_region':
-            return q[1] < -5
-        else:
-            assert False
-
     n_objs_pack = config.n_objs_pack
 
     if config.domain == 'two_arm_mover':
@@ -213,9 +201,6 @@ def get_problem(mover):
         else:
             raise NotImplementedError
 
-    ps = PickWithBaseUnif(mover)
-    pls = PlaceUnif(mover)
-
     mover.reset_to_init_state_stripstream()
     if config.visualize_plan:
         mover.env.SetViewer('qtcoin')
@@ -243,25 +228,13 @@ def get_problem(mover):
 
     action_queue = Queue.PriorityQueue()  # (heuristic, nan, operator skeleton, state. trajectory)
     initnode = Node(None, None, state)
-    for o in mover.entity_names:
-        if 'region' in o:
-            continue
-        for r in mover.entity_names:
-            if 'region' not in r or 'entire' in r:
-                continue
-            if o not in goal and r in goal:
-                # you cannot place non-goal object in the goal region
-                continue
-            if config.domain == 'two_arm_mover':
-                action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
-            elif config.domain == 'one_arm_mover':
-                action = Operator('one_arm_pick_one_arm_place',
-                                  {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
-            else:
-                raise NotImplementedError
+    initial_state = state
+    actions = get_actions(mover, goal, config)
+    for a in actions:
+        action_queue.put((heuristic(state, a), float('nan'), a, initnode)) # initial q
 
-            action_queue.put((heuristic(state, action), float('nan'), action, initnode)) # initial q
     iter = 0
+    # beginning of the planner
     while True:
         if time.time() - tt > config.timelimit:
             return None, iter
@@ -273,24 +246,17 @@ def get_problem(mover):
             return None, iter
 
         if action_queue.empty():
-            print('failed to find plan: ran out of actions')
-            return None, iter
+            import pdb;pdb.set_trace()
+            actions = get_actions(mover, goal, config)
+            for a in actions:
+                action_queue.put((heuristic(initial_state, a), float('nan'), a, initnode))  # initial q
 
-        _, _, action, node = action_queue.get()
+        curr_hval, _, action, node = action_queue.get()
         state = node.state
 
         print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
         print("{}".format(action.discrete_parameters.values()))
 
-        def collide(i, ignore=set(), target='robot', holding=None):
-            q = prm_vertices[i]
-            if True:
-                set_robot_config(q, mover.robot)
-                if mover.env.CheckCollision(mover.robot) or holding is not None and mover.env.CheckCollision(holding):
-                    return True
-            return False
-
-        success = False
         if node.depth >= 2 and action.type == 'two_arm_pick' and node.parent.action.discrete_parameters['object'] == \
                 action.discrete_parameters['object']:  # and plan[-1][1] == r:
             print('skipping because repeat', action.discrete_parameters['object'])
@@ -300,208 +266,46 @@ def get_problem(mover):
             print('skipping because depth limit', node.action.discrete_parameters.values())
 
         # reset to state
-        for obj_name, obj_pose in state.object_poses.items():
-            set_obj_xytheta(obj_pose, mover.env.GetKinBody(obj_name))
-        set_robot_config(state.robot_pose, mover.robot)
+        state.restore(mover)
+        utils.set_color(action.discrete_parameters['object'], [1,0,0]) #visualization purpose
 
         if action.type == 'two_arm_pick_two_arm_place':
-            o = action.discrete_parameters['two_arm_place_object']
-            obj = mover.env.GetKinBody(o)
-
-            old_q = get_body_xytheta(mover.robot)
-            old_p = get_body_xytheta(obj)
-
-            success = False
-            for _ in range(10):
-                pick_action = None
-                mover.enable_objects_in_region('entire_region')
-                for _ in range(10):
-                    a = ps.predict(obj, mover.regions['entire_region'], 10)
-                    if a['base_pose'] is not None:
-                        pick_action = a
-                        break
-
-                if pick_action is None:
-                    print('pick_action is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                start_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - old_q)[:2]) < .8
-                }
-                pick_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - pick_action['base_pose'])[:2]) < .8
-                }
-                if np.linalg.norm((pick_action['base_pose'] - old_q)[:2]) < .8:
-                    pick_traj = []
-                else:
-                    pick_traj = dfs(start_neighbors, lambda i: i in pick_neighbors, lambda i: collide(i))
-
-                if pick_traj is None:
-                    print('pick_traj is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
-
-                success = True
-
-                break
-
-            if not success:
+            smpler = PaPUniformGenerator(action, mover, None)
+            smpled_param = smpler.sample_next_point(action, n_iter=200, n_parameters_to_try_motion_planning=3,
+                                                    cached_collisions=state.collides, cached_holding_collisions=None)
+            if smpled_param['is_feasible']:
+                action.continuous_parameters = smpled_param
+                action.execute()
+                print "Action executed"
+            else:
+                print "Failed to sample an action"
                 continue
 
-            r = action.discrete_parameters['two_arm_place_region']
-            o = action.discrete_parameters['two_arm_place_object']
-            obj = mover.env.GetKinBody(o)
-
-            # old_q = get_body_xytheta(mover.robot)
-            # old_p = get_body_xytheta(obj)
-
-            success = False
-
-            def reset_for_place():
-                if len(mover.robot.GetGrabbed()) > 0:
-                    release_obj()
-                fold_arms()
-                set_robot_config(old_q, mover.robot)
-                set_obj_xytheta(old_p, obj)
-                two_arm_pick_object(obj, pick_action)
-
-            for _ in range(10):
-                place_action = None
-                mover.enable_objects_in_region('entire_region')
-                for _ in range(10):
-                    reset_for_place()
-                    a = pls.predict(obj, mover.regions[r], 10)
-                    q = a['base_pose']
-                    p = a['object_pose']
-                    if q is not None and p is not None:
-                        # set_robot_config(q, mover.robot)
-                        # set_obj_xytheta(p, obj)
-                        # if not mover.env.CheckCollision(mover.robot) and not mover.env.CheckCollision(obj):
-                        if True:
-                            place_action = a
-                            break
-
-                # set_robot_config(old_q, mover.robot)
-
-                if place_action is None:
-                    print('place_action is None')
-                    # set_robot_config(old_q, mover.robot)
-                    # set_obj_xytheta(old_p, obj)
-                    continue
-
-                # grab_obj(mover.robot, obj)
-                # set_obj_xytheta([1000,1000,0], obj)
-                pick_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - pick_action['base_pose'])[:2]) < .8
-                }
-                place_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - place_action['base_pose'])[:2]) < .8
-                }
-                if np.linalg.norm((place_action['base_pose'] - pick_action['base_pose'])[:2]) < .8:
-                    place_traj = []
-                else:
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    two_arm_pick_object(obj, pick_action)
-                    if mover.env.CheckCollision(mover.robot) or mover.env.CheckCollision(obj):
-                        print('pick in collision')
-                        two_arm_place_object(place_action)
-                        continue
-                    place_traj = dfs(list(pick_neighbors), lambda i: i in place_neighbors,
-                                     lambda i: collide(i, holding=obj))
-                    assert len(mover.robot.GetGrabbed()) > 0
-                    if place_traj is not None:
-                        for i in place_traj:
-                            if collide(i, holding=obj):
-                                print('in collision: {}'.format(i))
-                                import pdb;
-                                pdb.set_trace()
-
-                            set_robot_config(prm_vertices[i], mover.robot)
-
-                            if mover.env.CheckCollision(mover.robot):
-                                import pdb;
-                                pdb.set_trace()
-                            for objj in mover.objects:
-                                if mover.env.CheckCollision(objj):
-                                    import pdb;
-                                    pdb.set_trace()
-                    two_arm_place_object(place_action)
-                    if mover.env.CheckCollision(mover.robot) or mover.env.CheckCollision(obj):
-                        print('place in collision')
-                        continue
-                # release_obj(mover.robot, obj)
-
-                if place_traj is None:
-                    print('place_traj is None')
-                    # set_robot_config(old_q, mover.robot)
-                    # set_obj_xytheta(old_p, obj)
-                    continue
-
-
-                success = True
-
-                place_action['path'] = [pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [
-                    place_action['base_pose']]
-                action.set_continuous_parameters((pick_action, place_action))
-
-                set_robot_config(old_q, mover.robot)
-                set_obj_xytheta(old_p, obj)
-                two_arm_pick_object(obj, pick_action)
-                for q in place_action['path']:
-                    set_robot_config(q, mover.robot)
-
-                    if mover.env.CheckCollision(mover.robot):
-                        import pdb;
-                        pdb.set_trace()
-                    for objj in mover.objects:
-                        if mover.env.CheckCollision(objj):
-                            import pdb;
-                            pdb.set_trace()
-                two_arm_place_object(place_action)
-
+            is_goal_achieved = \
+                np.all([mover.regions['home_region'].contains(mover.env.GetKinBody(o).ComputeAABB()) for o in obj_names[:n_objs_pack]])
+            if is_goal_achieved:
+                print("found successful plan: {}".format(n_objs_pack))
+                trajectory = Trajectory(mover.seed, mover.seed)
+                plan = list(newnode.backtrack())[::-1]
+                trajectory.states = [nd.state for nd in plan]
+                trajectory.actions = [nd.action for nd in plan[1:]]
+                trajectory.rewards = [nd.reward for nd in plan[1:]]
+                trajectory.state_prime = [nd.state for nd in plan[1:]]
+                trajectory.seed = mover.seed
+                print(trajectory)
+                return trajectory, iter
+            else:
                 newstate = statecls(mover, goal, node.state, action)
+                print "New state computed"
                 newstate.make_pklable()
                 newnode = Node(node, action, newstate)
-
-                if all(mover.regions['home_region'].contains_point(
-                        get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
-                       obj_names[:n_objs_pack]):
-                    print("found successful plan: {}".format(n_objs_pack))
-                    trajectory = Trajectory(mover.seed, mover.seed)
-                    plan = list(newnode.backtrack())[::-1]
-                    trajectory.states = [nd.state for nd in plan]
-                    trajectory.actions = [nd.action for nd in plan[1:]]
-                    trajectory.rewards = [nd.reward for nd in plan[1:]]
-                    trajectory.state_prime = [nd.state for nd in plan[1:]]
-                    trajectory.seed = mover.seed
-                    print(trajectory)
-                    # if len(mover.robot.GetGrabbed()) > 0:
-                    #	release_obj()
-                    return trajectory, iter
-
-                for o in obj_names:
-                    if o == action.discrete_parameters['two_arm_place_object']:
-                        continue
-                    for r in ('home_region', 'loading_region'):
-                        newaction = Operator('two_arm_pick_two_arm_place',
-                                             {'two_arm_place_object': o, 'two_arm_place_region': r})
-                        if o not in goal and r in goal:
-                            # you cannot place non-goal object in the goal region
-                            continue
-                        action_queue.put(
-                            (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
-
-                break
+                newactions = get_actions(mover, goal, config)
+                print "Old h value", curr_hval
+                for newaction in newactions:
+                    hval = heuristic(newstate, newaction) - 1. * newnode.depth
+                    print "New state h value %.4f for %s %s" % (hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
+                    action_queue.put(
+                        (hval, float('nan'), newaction, newnode))
 
         elif action.type == 'one_arm_pick_one_arm_place':
             obj = action.discrete_parameters['object']
@@ -571,13 +375,15 @@ def get_problem(mover):
                                              {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
                         action_queue.put(
                             (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
+
+                if not success:
+                    print('failed to execute action')
+                else:
+                    print('action successful')
+
         else:
             raise NotImplementedError
 
-        if not success:
-            print('failed to execute action')
-        else:
-            print('action successful')
 
 
 ##################################################
