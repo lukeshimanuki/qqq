@@ -246,7 +246,6 @@ def get_problem(mover):
             return None, iter
 
         if action_queue.empty():
-            import pdb;pdb.set_trace()
             actions = get_actions(mover, goal, config)
             for a in actions:
                 action_queue.put((heuristic(initial_state, a), float('nan'), a, initnode))  # initial q
