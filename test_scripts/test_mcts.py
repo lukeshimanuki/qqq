@@ -107,7 +107,7 @@ def parse_parameters():
     parser.add_argument('-pw', action='store_true', default=False)
     parser.add_argument('-n_motion_plan_trials', type=int, default=3)
     parser.add_argument('-n_objs_pack', type=int, default=1)
-    parser.add_argument('-timelimit', type=int, default=1)
+    parser.add_argument('-timelimit', type=int, default=300)
     parser.add_argument('-f', action='store_true', default=False)
     parser.add_argument('-planner_seed', type=int, default=0)
     parameters = parser.parse_args()

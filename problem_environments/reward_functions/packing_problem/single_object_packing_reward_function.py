@@ -1,6 +1,7 @@
 from problem_environments.reward_functions.reward_function import RewardFunction
 from mover_library.utils import two_arm_pick_object, two_arm_place_object, one_arm_place_object, one_arm_pick_object
 from manipulation.bodies.bodies import set_color
+from mover_library import utils
 import numpy as np
 
 
@@ -9,6 +10,9 @@ class ObjectPackingRewardFunction(RewardFunction):
         RewardFunction.__init__(self, problem_env)
         self.goal_objects = [self.problem_env.env.GetKinBody(obj_name) for obj_name in goal_objects]
         self.goal_region = self.problem_env.regions[goal_region]
+        self.goal_object_names = goal_objects
+        self.goal_region_name = goal_region
+
         self.achieved = []
         self.infeasible_reward = -1
         # set_color(self.goal_object, [1, 0, 0])
@@ -34,7 +38,17 @@ class ObjectPackingRewardFunction(RewardFunction):
         return 0
 
     def apply_operator_skeleton_and_get_reward(self, state, operator_instance):
-        return self.n_cleared_obstacles_to_goal(state)
+        # reward for clearing obstacle
+        target_obj = operator_instance.discrete_parameters['object']
+        target_region = operator_instance.discrete_parameters['region']
+        is_goal_obj = target_obj in self.goal_object_names
+        is_goal_region = target_region in self.goal_region_name
+        is_already_in_region = state.in_region(target_obj, target_region)
+
+        helps_goal = is_goal_obj and is_goal_region and not is_already_in_region
+        parent_action_cleared_obstacle_to_goal = self.n_cleared_obstacles_to_goal(state)
+
+        return (parent_action_cleared_obstacle_to_goal + helps_goal)*0.1
 
     def get_reward_of_curr_scene(self, entity):
         is_goal_entity = entity in self.goal_objects

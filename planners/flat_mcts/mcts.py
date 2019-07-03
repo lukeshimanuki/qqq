@@ -131,7 +131,7 @@ class MCTS:
                         state = ShortestPathPaPState(self.environment,
                                                      parent_state=parent_state,
                                                      parent_action=parent_action,
-                                                     goal_entities=self.goal_entities)
+                                                     goal_entities=self.goal_entities, planner='mcts')
             else:
                 state = parent_node.state
         else:
@@ -365,9 +365,15 @@ class MCTS:
             # it should never get here
         #    sys.exit(-1)
 
+
+        utils.viewer()
         action = self.choose_action(curr_node)
+        utils.set_color(action.discrete_parameters['object'], [1, 0, 0])
+        import pdb;pdb.set_trace()
         reward = self.apply_action(curr_node, action)
+        utils.set_color(action.discrete_parameters['object'], [0, 1, 0])
         print "Reward is", reward
+        import pdb;pdb.set_trace()
 
         if not curr_node.is_action_tried(action):
             next_node = self.create_node(action, depth + 1, reward, curr_node)

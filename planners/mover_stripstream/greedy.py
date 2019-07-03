@@ -21,7 +21,6 @@ from trajectory_representation.trajectory import Trajectory
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, \
     two_arm_place_object, get_body_xytheta, grab_obj, release_obj, fold_arms, one_arm_pick_object, one_arm_place_object
 
-
 import numpy as np
 import tensorflow as tf
 import openravepy
@@ -70,7 +69,6 @@ def get_actions(mover, goal, config):
             actions.append(action)
 
     return actions
-
 
 
 def get_problem(mover):
@@ -160,7 +158,7 @@ def get_problem(mover):
 
             redundant = 0
             unhelpful = 0
-            #number_in_goal = 0
+            # number_in_goal = 0
             helps_goal = 0
 
             if config.dont_use_gnn:
@@ -231,7 +229,7 @@ def get_problem(mover):
     initial_state = state
     actions = get_actions(mover, goal, config)
     for a in actions:
-        action_queue.put((heuristic(state, a), float('nan'), a, initnode)) # initial q
+        action_queue.put((heuristic(state, a), float('nan'), a, initnode))  # initial q
 
     iter = 0
     # beginning of the planner
@@ -266,7 +264,7 @@ def get_problem(mover):
 
         # reset to state
         state.restore(mover)
-        utils.set_color(action.discrete_parameters['object'], [1,0,0]) #visualization purpose
+        utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
 
         if action.type == 'two_arm_pick_two_arm_place':
             smpler = PaPUniformGenerator(action, mover, None)
@@ -278,10 +276,12 @@ def get_problem(mover):
                 print "Action executed"
             else:
                 print "Failed to sample an action"
+                utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
                 continue
 
             is_goal_achieved = \
-                np.all([mover.regions['home_region'].contains(mover.env.GetKinBody(o).ComputeAABB()) for o in obj_names[:n_objs_pack]])
+                np.all([mover.regions['home_region'].contains(mover.env.GetKinBody(o).ComputeAABB()) for o in
+                        obj_names[:n_objs_pack]])
             if is_goal_achieved:
                 print("found successful plan: {}".format(n_objs_pack))
                 trajectory = Trajectory(mover.seed, mover.seed)
@@ -302,9 +302,11 @@ def get_problem(mover):
                 print "Old h value", curr_hval
                 for newaction in newactions:
                     hval = heuristic(newstate, newaction) - 1. * newnode.depth
-                    print "New state h value %.4f for %s %s" % (hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
+                    print "New state h value %.4f for %s %s" % (
+                    hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
                         (hval, float('nan'), newaction, newnode))
+            utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
 
         elif action.type == 'one_arm_pick_one_arm_place':
             obj = action.discrete_parameters['object']
@@ -382,7 +384,6 @@ def get_problem(mover):
 
         else:
             raise NotImplementedError
-
 
 
 ##################################################
@@ -475,7 +476,7 @@ def generate_training_data_single():
         with open(solution_file_name, 'wb') as f:
             pickle.dump(trajectory, f)
     print 'Time: %.2f Success: %d Plan length: %d Num nodes: %d' % (tottime, success, trajectory.metrics['plan_length'],
-                                                                trajectory.metrics['num_nodes'])
+                                                                    trajectory.metrics['num_nodes'])
 
     """
     print("time: {}".format(','.join(str(trajectory.metrics[m]) for m in [
@@ -486,8 +487,6 @@ def generate_training_data_single():
         'num_nodes',
     ])))
     """
-
-
 
     print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
