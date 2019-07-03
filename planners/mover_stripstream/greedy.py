@@ -173,8 +173,8 @@ def get_problem(mover):
 
             redundant = 0
             unhelpful = 0
-            number_in_goal = 0
-            #helps_goal = 0
+            #number_in_goal = 0
+            helps_goal = 0
 
             if config.dont_use_gnn:
                 return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
@@ -250,6 +250,9 @@ def get_problem(mover):
         for r in mover.entity_names:
             if 'region' not in r or 'entire' in r:
                 continue
+            if o not in goal and r in goal:
+                # you cannot place non-goal object in the goal region
+                continue
             if config.domain == 'two_arm_mover':
                 action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
             elif config.domain == 'one_arm_mover':
@@ -302,168 +305,7 @@ def get_problem(mover):
             set_obj_xytheta(obj_pose, mover.env.GetKinBody(obj_name))
         set_robot_config(state.robot_pose, mover.robot)
 
-        if action.type == 'two_arm_pick':
-            o = action.discrete_parameters['object']
-            obj = mover.env.GetKinBody(o)
-
-            old_q = get_body_xytheta(mover.robot)
-            old_p = get_body_xytheta(obj)
-
-            for _ in range(10):
-                pick_action = None
-                mover.enable_objects_in_region('entire_region')
-                for _ in range(10):
-                    a = ps.predict(obj, mover.regions['entire_region'], 10)
-                    if a['base_pose'] is not None:
-                        pick_action = a
-                        break
-                # set_robot_config(q, mover.robot)
-                # if not mover.env.CheckCollision(mover.robot):
-                #	print('free pick')
-                #	pick_action = action
-                #	break
-
-                if pick_action is None:
-                    print('pick_action is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                start_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - old_q)[:2]) < .8
-                }
-                pick_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - pick_action['base_pose'])[:2]) < .8
-                }
-                if np.linalg.norm((pick_action['base_pose'] - old_q)[:2]) < .8:
-                    pick_traj = []
-                else:
-                    pick_traj = dfs(start_neighbors, lambda i: i in pick_neighbors, lambda i: collide(i))
-
-                if pick_traj is None:
-                    print('pick_traj is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                set_robot_config(pick_action['base_pose'], mover.robot)
-                grab_obj(obj)
-                newstate = statecls(mover, goal, state, action)
-                newstate.make_pklable()
-                release_obj()
-                pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
-                action.set_continuous_parameters(pick_action)
-                newnode = Node(node, action, newstate)
-
-                success = True
-
-                for r in ('home_region', 'loading_region'):
-                    newaction = Operator('two_arm_place', {'object': o, 'region': r})
-                    action_queue.put(
-                        (heuristic(newstate, newaction) - 0. * newnode.depth - 0., float('nan'), newaction, newnode))
-
-                break
-
-        elif action.type == 'two_arm_place':
-            r = action.discrete_parameters['region'].name
-            o = node.action.discrete_parameters['object']
-            obj = mover.env.GetKinBody(o)
-
-            old_q = get_body_xytheta(mover.robot)
-            old_p = get_body_xytheta(obj)
-
-            for _ in range(10):
-                place_action = None
-                mover.enable_objects_in_region('entire_region')
-                for _ in range(10):
-                    grab_obj(obj)
-                    a = pls.predict(obj, mover.regions[r], 10)
-                    if len(mover.robot.GetGrabbed()) > 0:
-                        release_obj()
-                    q = a['base_pose']
-                    p = a['object_pose']
-                    if q is not None and p is not None:
-                        # set_robot_config(q, mover.robot)
-                        # set_obj_xytheta(p, obj)
-                        # if not mover.env.CheckCollision(mover.robot) and not mover.env.CheckCollision(obj):
-                        if True:
-                            place_action = a
-                            break
-                set_robot_config(old_q, mover.robot)
-
-                if place_action is None:
-                    print('place_action is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                # grab_obj(mover.robot, obj)
-                set_obj_xytheta([1000, 1000, 0], obj)
-                pick_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - old_q)[:2]) < .8
-                }
-                place_neighbors = {
-                    i for i, q in enumerate(prm_vertices)
-                    if np.linalg.norm((q - place_action['base_pose'])[:2]) < .8
-                }
-                if np.linalg.norm((place_action['base_pose'] - old_q)[:2]) < .8:
-                    place_traj = []
-                else:
-                    place_traj = dfs(list(pick_neighbors), lambda i: i in place_neighbors, lambda i: collide(i))
-                # release_obj(mover.robot, obj)
-
-                if place_traj is None:
-                    print('place_traj is None')
-                    set_robot_config(old_q, mover.robot)
-                    set_obj_xytheta(old_p, obj)
-                    continue
-
-                # newplan = copy.deepcopy(plan)
-                # state.make_pklable()
-                # newplan.append((o, r, pick_action['base_pose'], place_action['base_pose'], place_action['object_pose'],
-                #	[get_body_xytheta(mover.robot)] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']],
-                #	[pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']],
-                # copy.deepcopy(state)))
-                # state.make_plannable(mover)
-                # print('action successful')
-                # print(newplan[-1][:5])
-                success = True
-
-                set_robot_config(place_action['base_pose'], mover.robot)
-                set_obj_xytheta(place_action['object_pose'], obj)
-                newstate = statecls(mover, goal, node.state, action)
-                newstate.make_pklable()
-                place_action['path'] = [old_q] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']]
-                action.set_continuous_parameters(place_action)
-                newnode = Node(node, action, newstate)
-
-                if all(mover.regions['home_region'].contains_point(
-                        get_body_xytheta(mover.env.GetKinBody(o))[0].tolist()[:2] + [1]) for o in
-                       obj_names[:n_objs_pack]):
-                    print("found successful plan: {}".format(n_objs_pack))
-                    trajectory = Trajectory(mover.seed, mover.seed)
-                    plan = list(newnode.backtrack())[::-1]
-                    trajectory.states = [nd.state for nd in plan]
-                    trajectory.actions = [nd.action for nd in plan[1:]]
-                    trajectory.rewards = [nd.reward for nd in plan[1:]]
-                    trajectory.state_prime = [nd.state for nd in plan[1:]]
-                    trajectory.seed = mover.seed
-                    print(trajectory)
-                    if len(mover.robot.GetGrabbed()) > 0:
-                        release_obj()
-                    return trajectory, iter
-
-                for o in obj_names:
-                    newaction = Operator('two_arm_pick', {'object': o})
-                    action_queue.put(
-                        (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
-
-                break
-
-        elif action.type == 'two_arm_pick_two_arm_place':
+        if action.type == 'two_arm_pick_two_arm_place':
             o = action.discrete_parameters['two_arm_place_object']
             obj = mover.env.GetKinBody(o)
 
@@ -479,11 +321,6 @@ def get_problem(mover):
                     if a['base_pose'] is not None:
                         pick_action = a
                         break
-                # set_robot_config(q, mover.robot)
-                # if not mover.env.CheckCollision(mover.robot):
-                #	print('free pick')
-                #	pick_action = action
-                #	break
 
                 if pick_action is None:
                     print('pick_action is None')
@@ -510,20 +347,9 @@ def get_problem(mover):
                     set_obj_xytheta(old_p, obj)
                     continue
 
-                # set_robot_config(pick_action['base_pose'], mover.robot)
-                # grab_obj(obj)
-                # newstate = PaPState(mover, goal, state, action)
-                # newstate.make_pklable()
-                # release_obj()
                 pick_action['path'] = [old_q] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']]
-                # action.set_continuous_parameters(pick_action)
-                # newnode = Node(node, action, newstate)
 
                 success = True
-
-                # for r in ('home_region', 'loading_region'):
-                #	newaction = Operator('two_arm_place', {'object': o, 'region': mover.regions[r]})
-                #	action_queue.put((heuristic(newstate, newaction) - 1. * newnode.depth - 0., float('nan'), newaction, newnode))
 
                 break
 
@@ -622,19 +448,9 @@ def get_problem(mover):
                     # set_obj_xytheta(old_p, obj)
                     continue
 
-                # newplan = copy.deepcopy(plan)
-                # state.make_pklable()
-                # newplan.append((o, r, pick_action['base_pose'], place_action['base_pose'], place_action['object_pose'],
-                #	[get_body_xytheta(mover.robot)] + [prm_vertices[i] for i in pick_traj] + [pick_action['base_pose']],
-                #	[pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [place_action['base_pose']],
-                # copy.deepcopy(state)))
-                # state.make_plannable(mover)
-                # print('action successful')
-                # print(newplan[-1][:5])
+
                 success = True
 
-                # set_robot_config(place_action['base_pose'], mover.robot)
-                # set_obj_xytheta(place_action['object_pose'], obj)
                 place_action['path'] = [pick_action['base_pose']] + [prm_vertices[i] for i in place_traj] + [
                     place_action['base_pose']]
                 action.set_continuous_parameters((pick_action, place_action))
@@ -643,10 +459,6 @@ def get_problem(mover):
                 set_obj_xytheta(old_p, obj)
                 two_arm_pick_object(obj, pick_action)
                 for q in place_action['path']:
-                    # if collide(i, holding=obj):
-                    #	print('in collision: {}'.format(i))
-                    #	import pdb; pdb.set_trace()
-
                     set_robot_config(q, mover.robot)
 
                     if mover.env.CheckCollision(mover.robot):
@@ -801,7 +613,7 @@ def generate_training_data_single():
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/no_gnn/helps_goal/'
+                            + '/test_purpose/no_gnn/no_goal_obj_same_region/num_goals/'
     elif config.dont_use_h:
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
@@ -817,7 +629,7 @@ def generate_training_data_single():
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/num_goals/' \
+                            + '/test_purpose/no_goal_obj_same_region/num_goals/' \
                             + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
