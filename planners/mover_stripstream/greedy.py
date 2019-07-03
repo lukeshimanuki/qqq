@@ -640,7 +640,6 @@ def generate_training_data_single():
                          '_planner_seed_' + str(config.planner_seed) + \
                          '_train_seed_' + str(config.train_seed) + \
                          '_domain_' + str(config.domain) + '.pkl'
-
     if not os.path.isdir(solution_file_dir):
         os.makedirs(solution_file_dir)
 
@@ -658,9 +657,9 @@ def generate_training_data_single():
         tottime = time.time() - t
         success = trajectory is not None
         plan_length = len(trajectory.actions) if success else 0
-
         if not success:
             trajectory = Trajectory(mover.seed, mover.seed)
+        trajectory.states = None
         trajectory.metrics = {
             'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,
