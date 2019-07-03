@@ -9,9 +9,9 @@ from gnn import GNN
 
 
 class PaPGNN(GNN):
-    def __init__(self, num_entities, num_node_features, num_edge_features, config=None, entity_names=None):
+    def __init__(self, num_entities, num_node_features, num_edge_features, config=None, entity_names=None, n_regions=2):
+        self.n_regions = n_regions
         GNN.__init__(self, num_entities, num_node_features, num_edge_features, config, entity_names)
-        self.n_regions = 2
         self.create_concat_model_for_verification()
         """
         self.num_entities = num_entities
@@ -27,7 +27,7 @@ class PaPGNN(GNN):
         """
 
     def create_inputs(self, num_entities, num_node_features, num_edge_features, dim_action):
-        num_regions = 2
+        num_regions = self.n_regions
         node_shape = (num_entities, num_node_features)
         edge_shape = (num_entities, num_entities, num_regions, num_edge_features)
         dim_action = (num_entities, num_regions)
@@ -81,7 +81,7 @@ class PaPGNN(GNN):
             repeated_dests = tf.tile(tf.expand_dims(dest_node_tensor, 1), dest_repetitons)
 
             src_dest_concatenated = tf.concat([repeated_srcs, repeated_dests], axis=-1)
-            repetitions = [1, 1, 1, 2, 1]
+            repetitions = [1, 1, 1, self.n_regions, 1]
             repeated_src_dest_concatenated = tf.tile(tf.expand_dims(src_dest_concatenated, -2), repetitions)
 
             all_concat = tf.concat([repeated_src_dest_concatenated, edge_tensor], axis=-1)
@@ -103,7 +103,7 @@ class PaPGNN(GNN):
 
     def create_msg_computation_model(self, num_latent_features, name, n_layers):
         n_entities = self.num_entities
-        num_regions = 2
+        num_regions = self.n_regions
         place_holder_input = tf.keras.Input(shape=(n_entities, n_entities, num_regions, num_latent_features * 3))
         h = self.create_msg_computaton_layers(place_holder_input, num_latent_features, name, n_layers)
         h_model = self.make_model(place_holder_input, h, 'msg_computation')
@@ -119,7 +119,7 @@ class PaPGNN(GNN):
                                              bias_initializer=self.config.weight_initializer,
                                              name='value_layer',
                                              activation='linear')(msg_aggregation_layer)
-        n_regions = 2
+        n_regions = self.n_regions
 
         def compute_q(values, actions):
             values = tf.squeeze(values)
@@ -213,8 +213,8 @@ class PaPGNN(GNN):
         return self.q_model.predict([nodes[:, :, :], edges, actions])
 
     def create_loss_model(self, q_layer, value_layer):
-        n_regions = 2
-        n_entities = 11
+        n_regions = self.n_regions
+        n_entities = self.num_entities
 
         def compute_rank_loss(alt_msgs, target_msg, costs):
             alt_msgs = tf.squeeze(alt_msgs)

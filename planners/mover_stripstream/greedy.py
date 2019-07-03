@@ -6,6 +6,7 @@ import argparse
 import Queue
 
 import cProfile
+import pstats
 from problem_environments.mover_env import Mover
 from problem_environments.one_arm_mover_env import OneArmMover
 from generators.PickUniform import PickWithBaseUnif
@@ -99,16 +100,12 @@ def get_problem(mover):
     else:
         raise NotImplementedError
 
-    """
     pr = cProfile.Profile()
     pr.enable()
-    """
     state = statecls(mover, goal)
-    """
     pr.disable()
     pstats.Stats(pr).sort_stats('tottime').print_stats(30)
     pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
-    """
 
     state.make_pklable()
 
@@ -142,8 +139,10 @@ def get_problem(mover):
     )
     if config.domain == 'two_arm_mover':
         num_entities = 11
+        n_regions = 2
     elif config.domain == 'one_arm_mover':
-        num_entities = 16
+        num_entities = 17
+        n_regions = 3
     else:
         raise NotImplementedError
     num_node_features = 10
@@ -151,7 +150,7 @@ def get_problem(mover):
     entity_names = mover.entity_names
 
     with tf.variable_scope('pap'):
-        pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names)
+        pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names, n_regions)
     pap_model.load_weights()
 
     def heuristic(state, action):
