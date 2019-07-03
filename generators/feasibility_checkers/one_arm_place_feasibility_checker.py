@@ -89,8 +89,8 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
 
         grasp_config = self.solve_ik_from_grasp_params(obj, grasp_params)
 
-        self.problem_env.enable_objects_in_region('entire_region')
-        [o.Enable(True) for o in self.problem_env.boxes]
+        #self.problem_env.enable_objects_in_region('entire_region')
+        #[o.Enable(True) for o in self.problem_env.boxes]
 
         if grasp_config is None:
             action = {'operator_name': 'one_arm_place', 'base_pose': None, 'object_pose': None,
