@@ -24,6 +24,10 @@ class Generator:
             target_region = operator_skeleton.discrete_parameters['region']
             if type(target_region) == str:
                 target_region = self.problem_env.regions[target_region]
+        if 'two_arm_place_region' in operator_skeleton.discrete_parameters:
+            target_region = operator_skeleton.discrete_parameters['two_arm_place_region']
+            if type(target_region) == str:
+                target_region = self.problem_env.regions[target_region]
 
         if operator_type == 'two_arm_pick':
             self.domain = get_pick_domain()
