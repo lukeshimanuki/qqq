@@ -111,6 +111,13 @@ class PaPState(State):
         objs_in_way = list(objs_in_way)
         return objs_in_way
 
+    def restore(self, problem_env=None):
+        if problem_env is None:
+            problem_env = self.problem_env
+
+        for obj_name, obj_pose in self.object_poses.items():
+            set_obj_xytheta(obj_pose, problem_env.env.GetKinBody(obj_name))
+        set_robot_config(self.robot_pose, problem_env.robot)
 
     def update_cached_data_after_binary(self):
         self.mc_pick_path = self.pick_in_way.mc_path_to_entity
