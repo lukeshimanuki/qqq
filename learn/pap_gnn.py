@@ -233,6 +233,7 @@ class PaPGNN(GNN):
         # https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
         def compute_dql_loss(msgs, target_msg, costs):
             msgs = tf.squeeze(msgs)
+            msgs = tf.reshape(msgs, [-1, n_regions * n_entities])
             target_msg = tf.squeeze(target_msg)
             costs = tf.squeeze(costs)
 
