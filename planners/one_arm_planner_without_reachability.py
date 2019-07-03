@@ -72,4 +72,5 @@ class OneArmPlannerWithoutReachability:
             if len(plan) == len(self.goal_objects):
                 break
         init_state.Restore()
+        self.problem_env.enable_objects_in_region('entire_region')
         return goal_obj_move_plan, plan

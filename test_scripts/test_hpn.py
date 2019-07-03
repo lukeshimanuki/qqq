@@ -124,7 +124,6 @@ def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
                 if obstacle_to_remove_idx == len(obstacles_to_remove):
                     break
             print "Restarting..."
-
     if plan_found:
         return plan, rsc.get_num_nodes(), status
     else:

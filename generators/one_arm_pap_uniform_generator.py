@@ -1,6 +1,4 @@
-from generator import Generator
 import numpy as np
-import time
 
 from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters
 from mover_library import utils
@@ -114,18 +112,18 @@ class OneArmPaPUniformGenerator:
             pick_cont_params, status = self.sample_pick_cont_parameters()
             if status == 'InfeasibleBase':
                 n_base_attempts += 1
-            if status == 'InfeasibleIK':
+            elif status == 'InfeasibleIK':
                 n_ik_attempts += 1
-            if status == 'HasSolution':
+            elif status == 'HasSolution':
                 n_ik_attempts += 1
                 break
+
             if n_ik_attempts == 1 or n_base_attempts == 500:
                 break
         if status != 'HasSolution':
             utils.set_robot_config(robot_pose)
             return None, None, status
 
-        #print "Pick succeeded, sampling place..."
         self.pick_op.continuous_parameters = pick_cont_params
         self.pick_op.execute()
 
@@ -138,10 +136,9 @@ class OneArmPaPUniformGenerator:
             place_cont_params, status = self.sample_place_cont_parameters(pick_cont_params)
             if status == 'InfeasibleBase':
                 n_base_attempts += 1
-            if status == 'InfeasibleIK':
+            elif status == 'InfeasibleIK':
                 n_ik_attempts += 1
-
-            if status == 'HasSolution':
+            elif status == 'HasSolution':
                 n_ik_attempts += 1
                 break
             if n_ik_attempts == 1 or n_base_attempts == 500:
@@ -150,7 +147,6 @@ class OneArmPaPUniformGenerator:
         self.robot.SetDOFValues(robot_config)
         utils.set_robot_config(robot_pose)
         if status != 'HasSolution':
-            #print "place sampling failed"
             return None, None, status
         else:
             self.place_op.continuous_parameters = place_cont_params

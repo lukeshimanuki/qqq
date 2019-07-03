@@ -1,17 +1,4 @@
-
-from time import time
-import numpy as np
-
-
-from manipulation.primitives.transforms import trans_from_base_values, set_pose, set_quat, \
-    point_from_pose, axis_angle_from_rot, \
-    rot_from_quat, quat_from_pose, quat_from_z_rot, \
-    get_pose, base_values_from_pose, \
-    pose_from_base_values, get_point
-
 from manipulation.primitives.inverse_kinematics import inverse_kinematics_helper
-from manipulation.bodies.bodies import *
-from manipulation.primitives.transforms import *
 from manipulation.primitives.savers import *
 
 import time
@@ -74,7 +61,7 @@ def compute_one_arm_grasp(depth_portion, height_portion, theta, obj, robot):
 
         for yaw in [0, np.pi / 2, np.pi, 3 * np.pi / 2]:
             roll = 0
-            pitch = theta #np.pi / 2
+            pitch = theta  # np.pi / 2
 
             if yaw == np.pi / 2:
                 grasp_axis = np.array([0, 1, 0])
@@ -92,7 +79,8 @@ def compute_one_arm_grasp(depth_portion, height_portion, theta, obj, robot):
             # I want this to be:
             # out of reach if depth_portion is 0
             # in full contact with palm if depth portion is 1
-            grasp_depth = grasp_axis * (-PR2_GRIPPER_LENGTH + depth_portion*2*PR2_GRIPPER_LENGTH) #obj_extent_in_grasp_dir * (-depth_portion*PR2_GRIPPER_LENGTH)
+            grasp_depth = grasp_axis * (
+                        -PR2_GRIPPER_LENGTH + depth_portion * 2 * PR2_GRIPPER_LENGTH)  # obj_extent_in_grasp_dir * (-depth_portion*PR2_GRIPPER_LENGTH)
             obj_center_xyz = aabb.pos()
             tool_point = obj_center_xyz + grasp_depth
 
@@ -100,8 +88,8 @@ def compute_one_arm_grasp(depth_portion, height_portion, theta, obj, robot):
             grasp_height = np.array([0, 0, 1]) * (-z_extent + 2 * z_extent * grasp_height_portion)
 
             T_tool_wrt_obj = tool_wrt_world(roll, pitch, yaw, tool_point + grasp_height)
-            #desired_ee_world = compute_Tee_at_given_Ttool(T_tool_wrt_obj, manip.GetLocalToolTransform())
-            #visualize_grasp(manip, desired_ee_world)
+            # desired_ee_world = compute_Tee_at_given_Ttool(T_tool_wrt_obj, manip.GetLocalToolTransform())
+            # visualize_grasp(manip, desired_ee_world)
             T_tools_wrt_obj.append(T_tool_wrt_obj)
 
     grasps = [compute_grasp_global_transform(T, obj) for T in T_tools_wrt_obj]
@@ -218,6 +206,7 @@ def visualize_grasp(manip, Tworld):
                                            rightarm_manip.GetLocalToolTransform())
     """
 
+
 def solveTwoArmIKs(env, robot, obj, grasps):
     leftarm_manip = robot.GetManipulator('leftarm')
     rightarm_manip = robot.GetManipulator('rightarm')
@@ -305,17 +294,3 @@ def solveTwoArmIKs(env, robot, obj, grasps):
             obj.Enable(True)
             return [left_g_config, right_g_config]
     return None
-
-
-"""
-def IK_helper(env, robot, grasp_transform, manip):
-  with robot:
-    robot.SetActiveDOFs(manip.GetArmIndices())
-    with collision_saver(env, openravepy_int.CollisionOptions.ActiveDOFs):
-      #print get_manipulator(robot).GetIkSolver()
-      config = manip.FindIKSolution(grasp_transform, 0) 
-      if config is None: return None
-      set_config(robot, config, manip.GetArmIndices())
-      if env.CheckCollision(robot) or robot.CheckSelfCollision(): return None
-      return config
-"""

@@ -58,17 +58,51 @@ def get_actions(mover, goal, config):
                 continue
             if config.domain == 'two_arm_mover':
                 action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
+                # following two lines are for legacy reasons, will fix later
+                action.discrete_parameters['object'] = action.discrete_parameters['two_arm_place_object']
+                action.discrete_parameters['region'] = action.discrete_parameters['two_arm_place_region']
             elif config.domain == 'one_arm_mover':
                 action = Operator('one_arm_pick_one_arm_place',
                                   {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
+
             else:
                 raise NotImplementedError
-            # following two lines are for legacy reasons, will fix later
-            action.discrete_parameters['object'] = action.discrete_parameters['two_arm_place_object']
-            action.discrete_parameters['region'] = action.discrete_parameters['two_arm_place_region']
             actions.append(action)
 
     return actions
+
+
+def compute_heuristic(state, action):
+    o = action.discrete_parameters['two_arm_place_object']
+    r = action.discrete_parameters['two_arm_place_region']
+    nodes, edges, actions, _ = extract_individual_example(state, action)
+    nodes = nodes[..., 6:]
+
+    object_is_goal = state.nodes[o][8]
+    region_is_goal = state.nodes[r][8]
+    number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
+                         i != o and state.nodes[r][8]) + int(region_is_goal)
+    # this translates to: number of objects that would be in goal if the action was executed
+    # This would be the dual of number of remaining objects after the action was executed, which would be
+    # the more traditional heuristic function. The negative sign helps with that.
+    redundant = state.binary_edges[(o, r)][0]
+    helps_goal = object_is_goal and region_is_goal and not redundant
+
+    redundant = 0
+    unhelpful = 0
+    # number_in_goal = 0
+    helps_goal = 0
+
+    if config.dont_use_gnn:
+        return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
+    elif config.dont_use_h:
+        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
+                                                            actions[None, ...])
+        return gnn_pred
+    else:
+        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
+                                                            actions[None, ...])
+        return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
 
 
 def get_problem(mover):
@@ -335,6 +369,8 @@ def get_problem(mover):
                 newstate.make_pklable()
                 newnode = Node(node, action, newstate)
 
+
+
                 if all(
                         mover.regions['rectangular_packing_box1_region'].contains(mover.env.GetKinBody(o).ComputeAABB())
                         for o in obj_names[:n_objs_pack]
@@ -377,10 +413,10 @@ def get_problem(mover):
                         action_queue.put(
                             (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
 
-                if not success:
-                    print('failed to execute action')
-                else:
-                    print('action successful')
+            if not success:
+                print('failed to execute action')
+            else:
+                print('action successful')
 
         else:
             raise NotImplementedError
@@ -464,7 +500,7 @@ def generate_training_data_single():
         plan_length = len(trajectory.actions) if success else 0
         if not success:
             trajectory = Trajectory(mover.seed, mover.seed)
-        trajectory.states = None
+        trajectory.states = [s.get_predicate_evaluations() for s in trajectory.states]
         trajectory.metrics = {
             'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,
