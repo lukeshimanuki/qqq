@@ -45,7 +45,6 @@ class OneArmPaPState(PaPState):
                 moved_obj = parent_action.discrete_parameters['object'].GetName()
         else:
             moved_obj = None
-        problem_env.enable_objects_in_region('entire_region')
 
         self.pap_params = {}
         self.pick_params = {}
@@ -54,30 +53,37 @@ class OneArmPaPState(PaPState):
             self.pick_params[obj] = []
             for r in regions:
                 #print(obj, r)
-                if parent_state is not None and obj != moved_obj and (obj,r) in parent_state.pap_params:
-                    if (obj, r) in parent_state.pap_params:
-                        status = 'HasSolution'
-                        pick_params, place_params = parent_state.pap_params[(obj, r)]
-                    else:
-                        status = 'NoSolution'
+                if obj in goal_entities and r in goal_entities:
+                    num_tries = int(20 / len(goal_entities)) + 1
+                    num_iters = 10
+                    problem_env.disable_objects()
+                elif obj not in goal_entities and r in goal_entities:
+                    num_iters = 0
+                    num_tries = 0
                 else:
-                    papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place',
-                                                              discrete_parameters={
-                                                                  'object': problem_env.env.GetKinBody(obj),
-                                                                  'region': problem_env.regions[r]}), problem_env)
-                    if obj in goal_entities and r in goal_entities:
-                        num_tries = int(200 / len(goal_entities)) + 5
-                    else:
-                        num_tries = 5
+                    num_tries = 1
+                    num_iters = 5
+                    problem_env.enable_objects()
+
+                if parent_state is not None and obj != moved_obj:
+                    status = 'HasSolution'
+                    self.pap_params[(obj,r)]  = parent_state.pap_params[(obj, r)]
+                else:
+                    self.pap_params[(obj, r)] = []
+
+
+                papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place',
+                                                          discrete_parameters={
+                                                              'object': problem_env.env.GetKinBody(obj),
+                                                              'region': problem_env.regions[r]}), problem_env)
+                for _ in range(num_iters - len(self.pap_params[(obj, r)])):
                     pick_params, place_params, status = papg.sample_next_point(num_tries)
-                    self.place_params[(obj, r)] = []
                     if status == 'HasSolution':
-                        #print('success')
-                        self.pap_params[(obj, r)] = pick_params, place_params
+                        self.pap_params[(obj, r)].append((pick_params, place_params))
                         self.pick_params[obj].append(pick_params)
-                    else:
-                        #print('failed')
-                        pass
+
+                    self.place_params[(obj, r)] = []
+        problem_env.enable_objects()
 
         # problem_env.disable_objects()
         # for obj in objects:
@@ -142,8 +148,32 @@ class OneArmPaPState(PaPState):
         before = CustomStateSaver(problem_env.env)
         for obj in objects:
             for r in regions:
-                if (obj, r) in self.pap_params:
-                    pickp, placep = self.pap_params[(obj, r)]
+                if len(self.pap_params[(obj, r)]) > 0:
+                    def count_collides(papp):
+                        before = CustomStateSaver(problem_env.env)
+                        pickp, placep = papp
+
+                        pick_op = Operator(
+                            operator_type='one_arm_pick',
+                            discrete_parameters={'object': problem_env.env.GetKinBody(obj)},
+                            continuous_parameters=pickp
+                        )
+                        place_op = Operator(
+                            operator_type='one_arm_place',
+                            discrete_parameters={'object': problem_env.env.GetKinBody(obj),
+                                                 'region': problem_env.regions[r]},
+                            continuous_parameters=placep
+                        )
+
+                        pick_op.execute()
+                        pick_collisions = sum(problem_env.env.CheckCollision(o) for o in problem_env.objects)
+                        place_op.execute()
+                        place_collisions = sum(problem_env.env.CheckCollision(o) for o in problem_env.objects)
+
+                        before.Restore()
+                        return pick_collisions + place_collisions
+                    papp = min(self.pap_params[(obj, r)], key=lambda papp: count_collides(papp))
+                    pickp, placep = papp
                     pick_op = Operator(
                         operator_type='one_arm_pick',
                         discrete_parameters={'object': problem_env.env.GetKinBody(obj)},
@@ -168,7 +198,7 @@ class OneArmPaPState(PaPState):
                             self.problem_env.env.GetKinBody(obj)):
                         self.nocollision_place_op[(obj, r)] = pick_op, place_op
                         before.Restore()
-                        break
+                        continue
 
                     collisions = {
                         o for o in objects
