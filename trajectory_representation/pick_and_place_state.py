@@ -48,9 +48,17 @@ class PaPState(State):
         if prm_vertices is None or prm_edges is None:
             prm_vertices, prm_edges = pickle.load(open('./prm.pkl', 'rb'))
 
+        is_robot_holding = len(self.problem_env.robot.GetGrabbed()) > 0
+
         def in_collision(q, obj):
             set_robot_config(q, self.problem_env.robot)
-            col = self.problem_env.env.CheckCollision(self.problem_env.robot, obj)
+            if is_robot_holding:
+                # openrave bug: when the object is held, it won't check the held_obj and given object collision unless
+                #               collision on robot is first checked.
+                col = self.problem_env.env.CheckCollision(self.problem_env.robot)
+                col = self.problem_env.env.CheckCollision(self.problem_env.robot, obj)
+            else:
+                col = self.problem_env.env.CheckCollision(self.problem_env.robot, obj)
             return col
 
         obj_name_to_pose = {

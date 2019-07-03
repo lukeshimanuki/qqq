@@ -43,6 +43,9 @@ class ShortestPathPaPState(PaPState):
             else:
                 self.collides, self.current_collides = self.update_collisions_at_prm_vertices(parent_state.collides)
 
+            self.holding_collides = None
+            self.current_holding_collides = None
+
             # hold an object and check collisions
             if planner == 'mcts':
                 self.holding_collides = None
@@ -54,6 +57,9 @@ class ShortestPathPaPState(PaPState):
                 else:
                     self.holding_collides, self.current_holding_collides \
                         = self.update_collisions_at_prm_vertices(parent_state.holding_collides)
+                import pdb;pdb.set_trace()
+                # Check if, while holding, this config is in collision: np.array([ 1.13287863, -4.72498756, -2.53161845])
+                # target_q = np.array([1.13287863, -4.72498756, -2.53161845])
                 saver.Restore()
         else:
             self.holding_collides = None
@@ -151,8 +157,11 @@ class ShortestPathPaPState(PaPState):
                     path = [get_body_xytheta(self.problem_env.robot).squeeze()]
                     self.reachable_regions_while_holding.append((obj, region_name))
                 else:
-                    path, status = motion_planner.get_motion_plan(region,
-                                                                  cached_collisions=self.collides)
+                    if self.holding_collides is not None:
+                        path, status = motion_planner.get_motion_plan(region, cached_collisions=self.holding_collides)
+                    else:
+                        path, status = motion_planner.get_motion_plan(region,
+                                                                      cached_collisions=self.collides)
                     if status == 'HasSolution':
                         self.reachable_regions_while_holding.append((obj, region_name))
                     else:
