@@ -49,33 +49,25 @@ class OneArmPaPState(PaPState):
         self.pap_params = {}
         self.pick_params = {}
         self.place_params = {}
+        problem_env.disable_objects()
         for obj in objects:
             self.pick_params[obj] = []
             for r in regions:
                 print(obj, r)
                 if obj in goal_entities and r in goal_entities:
                     num_tries = 1
-                    num_iters = 5
-                    num_nocollision_tries = 5
-                    num_nocollision_iters = 1
-                    problem_env.disable_objects()
+                    num_iters = 30
                 elif obj not in goal_entities and r in goal_entities:
                     num_iters = 0
-                    num_tries = 0
-                    num_nocollision_iters = 0
                 else:
                     num_tries = 1
-                    num_iters = 1
-                    num_nocollision_tries = 1
-                    num_nocollision_iters = 1
-                    problem_env.enable_objects()
+                    num_iters = 10
 
                 if parent_state is not None and obj != moved_obj:
                     status = 'HasSolution'
                     self.pap_params[(obj,r)]  = parent_state.pap_params[(obj, r)]
                 else:
                     self.pap_params[(obj, r)] = []
-
 
                 papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place',
                                                           discrete_parameters={
@@ -87,15 +79,9 @@ class OneArmPaPState(PaPState):
                         self.pap_params[(obj, r)].append((pick_params, place_params))
                         self.pick_params[obj].append(pick_params)
                         print('success')
-                for _ in range(num_nocollision_iters):
-                    problem_env.enable_objects()
-                    pick_params, place_params, status = papg.sample_next_point(num_nocollision_tries)
-                    if status == 'HasSolution':
-                        self.pap_params[(obj, r)].append((pick_params, place_params))
-                        self.pick_params[obj].append(pick_params)
-                        print('success no collision')
 
                     self.place_params[(obj, r)] = []
+        print([o.IsEnabled() for o in problem_env.objects])
         problem_env.enable_objects()
 
         # problem_env.disable_objects()
