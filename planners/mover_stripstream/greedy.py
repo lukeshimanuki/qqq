@@ -261,7 +261,7 @@ def get_problem(mover):
             else:
                 raise NotImplementedError
 
-            action_queue.put((heuristic(state, action), float('nan'), action, initnode))
+            action_queue.put((heuristic(state, action), float('nan'), action, initnode)) # initial q
     iter = 0
     while True:
         if time.time() - tt > config.timelimit:
@@ -496,6 +496,9 @@ def get_problem(mover):
                     for r in ('home_region', 'loading_region'):
                         newaction = Operator('two_arm_pick_two_arm_place',
                                              {'two_arm_place_object': o, 'two_arm_place_region': r})
+                        if o not in goal and r in goal:
+                            # you cannot place non-goal object in the goal region
+                            continue
                         action_queue.put(
                             (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
 
@@ -564,6 +567,7 @@ def get_problem(mover):
                     for r in mover.entity_names:
                         if 'region' not in r:
                             continue
+
                         newaction = Operator('one_arm_pick_one_arm_place',
                                              {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
                         action_queue.put(
@@ -643,7 +647,6 @@ def generate_training_data_single():
     solution_file_name = solution_file_dir + solution_file_name
 
     is_problem_solved_before = os.path.isfile(solution_file_name)
-
     if is_problem_solved_before and not config.plan:
         with open(solution_file_name, 'rb') as f:
             trajectory = pickle.load(f)
@@ -668,7 +671,10 @@ def generate_training_data_single():
 
         with open(solution_file_name, 'wb') as f:
             pickle.dump(trajectory, f)
+    print 'Time: %.2f Success: %d Plan length: %d Num nodes: %d' % (tottime, success, trajectory.metrics['plan_length'],
+                                                                trajectory.metrics['num_nodes'])
 
+    """
     print("time: {}".format(','.join(str(trajectory.metrics[m]) for m in [
         'n_objs_pack',
         'tottime',
@@ -676,6 +682,9 @@ def generate_training_data_single():
         'plan_length',
         'num_nodes',
     ])))
+    """
+
+
 
     print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
