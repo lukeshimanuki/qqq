@@ -124,7 +124,7 @@ def main():
 
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d/test_purpose/no_gnn/no_goal_obj_same_region/num_goals/' % n_objs
     test_files = os.listdir(test_dir)
-    get_metrics(test_dir, test_files, n_objs)
+    #get_metrics(test_dir, test_files, n_objs)
 
     n_train = 5000
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
@@ -142,7 +142,7 @@ def main():
     test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d' \
                '/test_purpose/no_goal_obj_same_region/num_goals/num_train_5000/' % n_objs
     test_files = os.listdir(test_dir)
-    #get_metrics(test_dir, test_files, n_objs, n_train)
+    get_metrics(test_dir, test_files, n_objs, n_train)
 
 if __name__ == '__main__':
     main()

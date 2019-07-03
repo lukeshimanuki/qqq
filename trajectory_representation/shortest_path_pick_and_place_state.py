@@ -57,7 +57,6 @@ class ShortestPathPaPState(PaPState):
                 else:
                     self.holding_collides, self.current_holding_collides \
                         = self.update_collisions_at_prm_vertices(parent_state.holding_collides)
-                import pdb;pdb.set_trace()
                 # Check if, while holding, this config is in collision: np.array([ 1.13287863, -4.72498756, -2.53161845])
                 # target_q = np.array([1.13287863, -4.72498756, -2.53161845])
                 saver.Restore()

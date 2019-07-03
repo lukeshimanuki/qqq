@@ -1,10 +1,10 @@
 num_train = 5000
-n_objs_pack = 8
+n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 loss = 'largemargin'
-algorithm = 'greedy'
-domain = 'two_arm_mover'
+algorithm = 'hpn'
+domain = 'one_arm_mover'
 
 if n_objs_pack == 8:
     pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
