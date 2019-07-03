@@ -43,7 +43,7 @@ def print_plan_time(statfile, max_time):
     successes[plantimes > max_time] = False
     plantimes[plantimes > max_time] = max_time
 
-    #plantimes[~successes] = max_time
+    plantimes[~successes] = max_time
     print "Success rate", np.mean(successes)
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
@@ -52,7 +52,7 @@ def print_plan_time(statfile, max_time):
 
 def plot_success_vs_time(n_objs):
     if n_objs == 8:
-        max_time = n_objs * 62.5
+        max_time = 300*n_objs
     elif n_objs == 1:
         max_time = 300
     else:
@@ -122,7 +122,7 @@ def plot_learning_curve():
 
 
 def main():
-    plot_success_vs_time(1)
+    plot_success_vs_time(8)
     # plot_learning_curve()
     pass
 
