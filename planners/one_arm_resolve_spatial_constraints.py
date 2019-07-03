@@ -40,22 +40,30 @@ class OneArmResolveSpatialConstraints:
     def sample_op_instance(self, curr_obj, region, swept_volume, n_iter):
         op = Operator(operator_type='one_arm_pick_one_arm_place',
                       discrete_parameters={'object': curr_obj, 'region': region})
-        target_object = op.discrete_parameters['object']
         generator = OneArmPaPUniformGenerator(op, self.problem_env, swept_volume)
-        #print "Sampling paps for ", target_object
         pick_cont_param, place_cont_param, status = generator.sample_next_point(max_ik_attempts=n_iter)
         op.continuous_parameters = {'pick': pick_cont_param, 'place': place_cont_param}
         return op, status
 
     def find_pick_and_place(self, curr_obj, region, swept_volume):
+
+        self.problem_env.enable_objects_in_region('entire_region')
         stime = time.time()
         print "Sampling paps for ", curr_obj
         op, status = self.sample_op_instance(curr_obj, region, swept_volume, 10)
-        print "Pap sampling time ", time.time() - stime
+        print "Find PaP time, full", time.time() - stime
         if status == 'HasSolution':
             return op, status
         else:
-            return None, status
+            self.problem_env.disable_objects_in_region('entire_region')
+            curr_obj.Enable(True)
+            stime = time.time()
+            op, status = self.sample_op_instance(curr_obj, region, swept_volume, 5)
+            print "Find PaP, disabled", time.time() - stime
+            if status == 'HasSolution':
+                return op, status
+            else:
+                return None, status
 
     def search(self, object_to_move, parent_swept_volumes, obstacles_to_remove, objects_moved_before, plan,
                stime=None, timelimit=None):
@@ -103,15 +111,11 @@ class OneArmResolveSpatialConstraints:
 
         # Get PaP
         self.problem_env.set_exception_objs_when_disabling_objects_in_region(objects_moved_before)
-        self.problem_env.disable_objects_in_region('entire_region')
-        object_to_move.Enable(True)
 
         pap, status = self.find_pick_and_place(object_to_move, target_region, swept_volumes)
         if status != 'HasSolution':
             print "Failed to sample pap, giving up on branch"
             return False, "NoSolution"
-        #if status == 'HasSolution' and object_to_move == self.problem_env.env.GetKinBody('c_obst6'):
-        #    import pdb;pdb.set_trace()
 
         pap = attach_q_goal_as_low_level_motion(pap)
         swept_volumes.add_pap_swept_volume(pap)

@@ -123,7 +123,7 @@ class PlaceSweptVolume(SweptVolume):
 
     def is_collision_in_all_volumes(self, obj_being_moved):
         for op_instance in self.op_instances:
-            print "Checking place collisions"
+            #print "Checking place collisions"
             assert len(self.problem_env.robot.GetGrabbed()) == 0
             obj_touched_before = op_instance.discrete_parameters['object']
 
@@ -135,7 +135,7 @@ class PlaceSweptVolume(SweptVolume):
             pick_param = associated_pick.continuous_parameters
             # utils.two_arm_pick_object(obj_touched_before, pick_param)
             associated_pick.execute()
-            print "Number of place swept volumes = ", len(self.op_instances)
+            #print "Number of place swept volumes = ", len(self.op_instances)
 
             if self.is_collision_in_single_volume(op_instance.low_level_motion, obj_being_moved):
                 if op_instance.type.find('one_arm') != -1:
