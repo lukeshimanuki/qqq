@@ -144,12 +144,23 @@ def main():
 
     if parameters.v:
         environment.env.SetViewer('qtcoin')
+    utils.set_color(goal_entities[0], [1,0,0])
+    root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
+    fdir = root + 'greedy_results_on_mover_domain/' \
+                  'domain_%s/' \
+                  'n_objs_pack_%d/' \
+                  'test_purpose/' % ('two_arm_mover', 1)
+    fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_dql/num_train_%d/' % 5000
 
+    pidx = 20044
+    fname = fdir+'pidx_%d_planner_seed_4_train_seed_3_domain_two_arm_mover.pkl' % parameters.pidx
+    plan = pickle.load(open(fname,'r')).actions
+    print len(plan)
+    import pdb;pdb.set_trace()
     if parameters.use_learned_q:
         learned_q_functions = load_learned_q_functions(parameters, environment.entity_names)
     else:
         learned_q_functions = None
-
     np.random.seed(parameters.planner_seed)
     random.seed(parameters.planner_seed)
 

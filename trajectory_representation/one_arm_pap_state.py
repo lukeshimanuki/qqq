@@ -249,8 +249,8 @@ class OneArmPaPState(PaPState):
                 elif obj not in self.goal_entities and r in self.goal_entities:
                     num_iters = 0
                 else:
-                    num_tries = 50
-                    num_iters = 3
+                    num_tries = 10
+                    num_iters = 30
 
                 if self.parent_state is not None and obj != moved_obj:
                     self.pap_params[(obj, r)] = parent_state.pap_params[(obj, r)]
@@ -272,9 +272,8 @@ class OneArmPaPState(PaPState):
                         print('success')
 
                     self.place_params[(obj, r)] = []
-                #if obj in self.goal_entities and r in self.goal_entities:
-                #    print self.pap_params[(obj, r)]
-                #    import pdb;pdb.set_trace()
+                if obj in self.goal_entities and r in self.goal_entities:
+                    print self.pap_params[(obj, r)]
         self.problem_env.enable_objects()
 
     def get_nodes(self):
