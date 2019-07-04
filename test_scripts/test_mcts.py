@@ -144,6 +144,7 @@ def main():
 
     if parameters.v:
         environment.env.SetViewer('qtcoin')
+    """
     utils.set_color(goal_entities[0], [1,0,0])
     root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
     fdir = root + 'greedy_results_on_mover_domain/' \
@@ -157,6 +158,7 @@ def main():
     plan = pickle.load(open(fname,'r')).actions
     print len(plan)
     import pdb;pdb.set_trace()
+    """
     if parameters.use_learned_q:
         learned_q_functions = load_learned_q_functions(parameters, environment.entity_names)
     else:

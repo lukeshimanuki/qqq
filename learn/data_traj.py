@@ -68,6 +68,7 @@ def get_edges(state, region_nodes, entity_names):
                 edge_feature = np.hstack([region_nodes[r], ar_binary_edge, br_binary_edge, ab_binary_edge,
                                           ba_binary_edge, ternary_edge1, ternary_edge2])
                 edges[aidx, bidx, ridx, :] = edge_feature
+                print r, ridx
     return edges
 
 
@@ -100,7 +101,15 @@ def get_actions(op_skeleton, entity_names):
     elif op_skeleton.type == 'one_arm_pick_one_arm_place':
         object_idx = name_to_idx[op_skeleton.discrete_parameters['object'].GetName()]
         region_name = op_skeleton.discrete_parameters['region'].name
-        region_idx = region_name_to_idx[region_name]
+        #region_idx = region_name_to_idx[region_name]
+        if region_name == 'rectangular_packing_box1_region':
+            region_idx = 1
+        elif region_name == 'center_shelf_region':
+            region_idx = 2
+        elif region_name == 'center_top_shelf_region':
+            region_idx = 0
+        else:
+            raise NotImplementedError
 
         n_regions = len(regions)
         n_entities = len(entity_names)

@@ -272,8 +272,8 @@ class OneArmPaPState(PaPState):
                         print('success')
 
                     self.place_params[(obj, r)] = []
-                if obj in self.goal_entities and r in self.goal_entities:
-                    print self.pap_params[(obj, r)]
+                #if obj in self.goal_entities and r in self.goal_entities:
+                #    print self.pap_params[(obj, r)]
         self.problem_env.enable_objects()
 
     def get_nodes(self):
@@ -315,6 +315,7 @@ class OneArmPaPState(PaPState):
         else:
             is_entity_reachable = False
 
+        is_entity_reachable = True
         return [
             0,  # l
             0,  # w
@@ -333,10 +334,14 @@ class OneArmPaPState(PaPState):
         if a in self.problem_env.regions or b in self.problem_env.regions or r not in self.problem_env.regions:
             is_b_in_way_of_reaching_r_while_holding_a = False
         else:
-            is_b_in_way_of_reaching_r_while_holding_a = a in self.nocollision_pick_op \
+            """
+            is_b_in_way_of_reaching_r_while_holding_a = False
+                                                        a in self.nocollision_pick_op \
                                                         and (a, r) not in self.nocollision_place_op \
                                                         and (a, r) in self.collision_place_op and \
                                                         b in self.collision_place_op[(a, r)][1]
+            """
+        is_b_in_way_of_reaching_r_while_holding_a = False
 
         return [is_b_in_way_of_reaching_r_while_holding_a]
 
@@ -344,7 +349,12 @@ class OneArmPaPState(PaPState):
         if a in self.problem_env.regions or b not in self.problem_env.regions:
             is_place_in_b_reachable_while_holding_a = False
         else:
-            is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op
+            if 'region' in b and 'region' not in a:
+                obj_a = self.problem_env.env.GetKinBody(a)
+                if self.problem_env.regions[b].contains(obj_a.ComputeAABB()):
+                    is_place_in_b_reachable_while_holding_a = True
+                else:
+                    is_place_in_b_reachable_while_holding_a = True  #(a, b) in self.nocollision_place_op
 
         if a in self.problem_env.regions or b in self.problem_env.regions:
             is_a_in_pick_path_of_b = False
@@ -360,6 +370,14 @@ class OneArmPaPState(PaPState):
 
     def make_pklable(self):
         PaPState.make_pklable(self)
+        for k in self.collision_pick_op.values(): k[0].make_pklable()
+        for k in self.nocollision_pick_op.values(): k.make_pklable()
+        for k in self.collision_place_op.values(): k[0].make_pklable()
+        for k in self.nocollision_place_op.values():
+            k[0].make_pklable()
+            k[1].make_pklable()
+
+
         self.objects = None
 
     def make_plannable(self, problem_env):
