@@ -3,7 +3,7 @@ import numpy as np
 import random
 import copy
 
-from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta
+from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta, set_robot_config
 from mover_library import utils
 from manipulation.bodies.bodies import set_color
 from generators.uniform import UniformGenerator
@@ -125,7 +125,8 @@ class OneArmPaPUniformGenerator:
 
             self.pick_op.continuous_parameters = place_params
             self.target_obj.SetTransform(place_tf)
-            self.pick_op.execute()
+            #self.pick_op.execute()
+            set_robot_config(self.pick_op.continuous_parameters['q_goal'][-3:])
 
             place_pose = self.place_generator.sample_from_uniform()
 
@@ -157,7 +158,8 @@ class OneArmPaPUniformGenerator:
             self.pick_op.continuous_parameters = pick_params # is reference and will be changed lader
             self.target_obj.SetTransform(pick_tf)
             #assert_region(pick_region)
-            self.pick_op.execute()
+            #self.pick_op.execute()
+            set_robot_config(self.pick_op.continuous_parameters['q_goal'][-3:])
 
             pick_base_pose = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, old_pose, pick_region)
             pick_params['q_goal'][-3:] = pick_base_pose
