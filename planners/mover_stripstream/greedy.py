@@ -221,7 +221,7 @@ def get_problem(mover):
     for a in actions:
         hval = compute_heuristic(state,a,pap_model,mover)
         action_queue.put((hval, float('nan'), a, initnode))  # initial q
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
 
     iter = 0
     # beginning of the planner
@@ -243,8 +243,8 @@ def get_problem(mover):
         curr_hval, _, action, node = action_queue.get()
         state = node.state
 
-        #print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
-        #print("{}".format(action.discrete_parameters.values()))
+        print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
+        print("{}".format(action.discrete_parameters.values()))
 
         if node.depth >= 2 and action.type == 'two_arm_pick' and node.parent.action.discrete_parameters['object'] == \
                 action.discrete_parameters['object']:  # and plan[-1][1] == r:
@@ -366,7 +366,7 @@ def get_problem(mover):
                     for newaction in newactions:
                         hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
                         action_queue.put((hval, float('nan'), newaction, newnode))
-                    import pdb;pdb.set_trace()
+                    #import pdb;pdb.set_trace()
 
             if not success:
                 print('failed to execute action')
