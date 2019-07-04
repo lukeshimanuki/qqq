@@ -2,7 +2,7 @@ from generators.uniform import UniformGenerator
 from manipulation.bodies.bodies import set_color
 from mover_library import utils
 from mover_library.utils import CustomStateSaver, get_body_xytheta, set_robot_config, set_obj_xytheta, visualize_path, \
-    one_arm_pick_object
+    one_arm_pick_object, set_point
 from pick_and_place_state import PaPState
 from planners.subplanners.motion_planner import BaseMotionPlanner
 from predicates.in_region import InRegion
@@ -11,9 +11,12 @@ from predicates.pick_in_way import PickInWay
 from predicates.place_in_way import PlaceInWay
 from trajectory_representation.operator import Operator
 from generators.one_arm_pap_uniform_generator import OneArmPaPUniformGenerator
+from generators.feasibility_checkers.one_arm_pick_feasibility_checker import OneArmPickFeasibilityChecker
 from trajectory_representation.state import State
+import numpy as np
 import pickle
 import copy
+import os
 
 
 class OneArmPaPState(PaPState):
@@ -30,6 +33,64 @@ class OneArmPaPState(PaPState):
             for r in problem_env.entity_names
             if 'region' in r
         }
+
+        # cache ik solutions
+        ikcachename = './ikcache.pkl'
+        if parent_state is not None:
+            self.iksolutions = parent_state.iksolutions
+        elif os.path.isfile(ikcachename):
+            self.iksolutions = pickle.load(open(ikcachename, 'r'))
+        else:
+            before = CustomStateSaver(problem_env.env)
+            utils.open_gripper()
+
+            for o in problem_env.env.GetBodies()[2:]:
+                o.Enable(False)
+            self.iksolutions = {}
+            for o,obj in objects.items():
+                print(o)
+                self.iksolutions[o] = {r: [] for r in regions}
+                pick_op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': obj})
+                pick_generator = UniformGenerator(pick_op, problem_env)
+                pick_feasibility_checker = OneArmPickFeasibilityChecker(problem_env)
+                for _ in range(10000):
+                    pick_params = pick_generator.sample_from_uniform()
+                    iks = []
+                    for r,region in regions.items():
+                        place_op = Operator(operator_type='one_arm_place',
+                                                                  discrete_parameters={
+                                                                      'object': obj,
+                                                                      'region': region})
+                        place_generator = UniformGenerator(place_op, problem_env)
+
+                        obj_pose = place_generator.sample_from_uniform()
+                        set_obj_xytheta(obj_pose, obj)
+                        set_point(obj, np.hstack([obj_pose[0:2], region.z + 0.001]))
+
+                        params, status = pick_feasibility_checker.check_feasibility(pick_op, pick_params)
+
+                        if status == 'HasSolution':
+                            iks.append((obj.GetTransform(), params))
+                        else:
+                            break
+
+                    if len(iks) == len(regions):
+                        for r, ik in zip(regions, iks):
+                            self.iksolutions[o][r].append(ik)
+
+                    if all(len(self.iksolutions[o][r]) >= 1000 for r in regions):
+                        break
+
+                print([len(self.iksolutions[o][r]) for r in regions])
+
+            for o in problem_env.env.GetBodies()[2:]:
+                o.Enable(True)
+
+            before.Restore()
+
+            pickle.dump(self.iksolutions, open(ikcachename, 'w'))
+
+            import pdb; pdb.set_trace()
 
         self.pick_used = {}
         self.place_used = {}
@@ -54,14 +115,17 @@ class OneArmPaPState(PaPState):
             self.pick_params[obj] = []
             for r in regions:
                 print(obj, r)
+
+                current_region = problem_env.get_region_containing(obj).name
+
                 if obj in goal_entities and r in goal_entities:
-                    num_tries = 1
-                    num_iters = 30
+                    num_tries = 10
+                    num_iters = 10
                 elif obj not in goal_entities and r in goal_entities:
                     num_iters = 0
                 else:
-                    num_tries = 1
-                    num_iters = 10
+                    num_tries = 10
+                    num_iters = 3
 
                 if parent_state is not None and obj != moved_obj:
                     status = 'HasSolution'
@@ -72,7 +136,7 @@ class OneArmPaPState(PaPState):
                 papg = OneArmPaPUniformGenerator(Operator(operator_type='one_arm_pick_one_arm_place',
                                                           discrete_parameters={
                                                               'object': problem_env.env.GetKinBody(obj),
-                                                              'region': problem_env.regions[r]}), problem_env)
+                                                              'region': problem_env.regions[r]}), problem_env, cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
                 for _ in range(num_iters - len(self.pap_params[(obj, r)])):
                     pick_params, place_params, status = papg.sample_next_point(num_tries)
                     if status == 'HasSolution':
@@ -81,7 +145,6 @@ class OneArmPaPState(PaPState):
                         print('success')
 
                     self.place_params[(obj, r)] = []
-        print([o.IsEnabled() for o in problem_env.objects])
         problem_env.enable_objects()
 
         # problem_env.disable_objects()

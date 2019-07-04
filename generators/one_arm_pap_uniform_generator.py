@@ -1,6 +1,9 @@
 import numpy as np
 
-from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters
+import random
+import copy
+
+from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta
 from mover_library import utils
 from generators.uniform import UniformGenerator
 from trajectory_representation.operator import Operator
@@ -11,8 +14,9 @@ from feasibility_checkers.one_arm_place_feasibility_checker import OneArmPlaceFe
 
 
 class OneArmPaPUniformGenerator:
-    def __init__(self, operator_skeleton, problem_env, swept_volume_constraint=None):
+    def __init__(self, operator_skeleton, problem_env, swept_volume_constraint=None, cached_picks=None):
         self.problem_env = problem_env
+        self.cached_picks = cached_picks
         target_region = None
         if 'region' in operator_skeleton.discrete_parameters:
             target_region = operator_skeleton.discrete_parameters['region']
@@ -102,6 +106,62 @@ class OneArmPaPUniformGenerator:
         robot_config = self.robot.GetDOFValues()
 
         assert len(self.robot.GetGrabbed()) == 0
+
+        if self.cached_picks is not None:
+            (pick_tf, pick_params), (place_tf, place_params) = copy.deepcopy(random.choice(zip(*self.cached_picks)))
+
+            old_tf = self.target_obj.GetTransform()
+
+            self.target_obj.SetTransform(place_tf)
+            place_pose = get_body_xytheta(self.target_obj)[0]
+
+            place_params['operator_name'] = 'one_arm_place'
+            place_params['object_pose'] = place_pose
+            place_params['action_parameters'] = place_pose
+            place_params['base_pose'] = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, place_pose, self.place_op.discrete_parameters['region'])
+
+            self.pick_op.continuous_parameters = pick_params
+            self.place_op.continuous_parameters = place_params
+
+            bad = False
+            self.target_obj.SetTransform(old_tf)
+
+            self.pick_op.execute()
+
+            if self.problem_env.env.CheckCollision(self.problem_env.robot):
+                bad = True
+
+            self.place_op.execute()
+
+            if self.problem_env.env.CheckCollision(self.problem_env.robot) or self.problem_env.env.CheckCollision(self.target_obj):
+                bad = True
+
+            if not self.place_op.discrete_parameters['region'].contains(self.target_obj.ComputeAABB()):
+                bad = True
+
+            #place_action = {
+            #    'operator_name': 'one_arm_place',
+            #    'q_goal': np.hstack([grasp_config, new_base_pose]),
+            #    'base_pose': new_base_pose,
+            #    'object_pose': place_parameters,
+            #    'action_parameters': obj_pose,
+            #    'g_config': grasp_config,
+            #    'grasp_params': grasp_params,
+            #}
+
+            #pick_action = {
+            #    'operator_name': operator_skeleton.type,
+            #    'q_goal': np.hstack([grasp_config, pick_base_pose]),
+            #    'grasp_params': grasp_params,
+            #    'g_config': grasp_config,
+            #    'action_parameters': pick_parameters,
+            #}
+
+            self.target_obj.SetTransform(old_tf)
+            if bad:
+                return None, None, 'InfeasibleIK'
+            else:
+                return pick_params, place_params, 'HasSolution'
 
         # sample pick
         pick_cont_params = None
