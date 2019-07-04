@@ -67,7 +67,7 @@ def get_plan_times(test_dir, test_files, t_limit):
     print "Success rate %.3f" % np.mean(successes)
 
 
-def save_summary(stat_summary, test_dir, n_data, n_objs):
+def get_summary_stat_file_name(test_dir, n_data, n_objs):
 
     if test_dir.find('hpn') != -1:
         fname = 'hpn_n_objs_%d.pkl' % n_objs
@@ -87,8 +87,10 @@ def save_summary(stat_summary, test_dir, n_data, n_objs):
     if test_dir.find('one_arm') != -1:
         fname = 'one_arm_' + fname
 
-    pickle.dump(stat_summary, open('./plotters/stats/' + fname, 'wb'))
+    if test_dir.find('dql') != -1:
+        fname = 'dql_' + fname
 
+    return fname
 
 
 def get_metrics(test_dir, test_files, n_objs, n_data=None):
@@ -109,36 +111,44 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         fsuccess = get_success(test_dir, stat)
         fnodes = get_num_nodes(test_dir, stat)
         pidxs.append(pidx)
-        if pidx == 20022:
-            import pdb;pdb.set_trace()
         if fsuccess:
             plan_length = get_plan_length(test_dir, stat)
+            plan_lengths.append(plan_length)
         time_taken.append(ftime_taken)
         successes.append(fsuccess)
         num_nodes.append(fnodes)
-        plan_lengths.append(plan_length)
 
     stat_summary = {'pidxs': pidxs, 'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
-    save_summary(stat_summary, test_dir, n_data, n_objs)
+    fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
+    pickle.dump(stat_summary, open('./plotters/stats/' + fname, 'wb'))
 
 
-def get_dir(algo, n_objs, domain='two_arm_mover'):
-    root = '/home/beomjoon/cloud_results/'
+def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
+    root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
     if algo == 'hpn':
         fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
         fdir += "/%d/test_purpose/" % n_objs
-    elif algo == 'greedy':
-        fdir = root + 'greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d/test_purpose/no_goal_obj_same_region/num_goals/' \
-                      '/num_train_5000/' % (domain, n_objs)
+    elif algo.find('greedy') != -1:
+        fdir = root + 'greedy_results_on_mover_domain/' \
+                      'domain_%s/' \
+                      'n_objs_pack_%d/' \
+                      'test_purpose/' % (domain, n_objs)
+        if algo.find('no_gnn') != -1:
+            fdir += 'no_gnn/no_goal_obj_same_region/num_goals/'
+        elif algo.find('dql') == -1:
+            fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_largemargin/num_train_%d/' % n_train
+        else:
+            fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_dql/num_train_%d/' % n_train
+    else:
+        raise NotImplementedError
+
     return fdir, os.listdir(fdir)
 
 
 def main():
     n_objs = 1
-    n_train = 5000
-    test_dir, test_files = get_dir('hpn', n_objs)
-    #test_dir, test_files = get_dir('greedy', n_objs)
-
+    n_train = 1000
+    test_dir, test_files = get_dir('greedy_dql', n_objs, n_train)
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 

@@ -4,31 +4,17 @@ import os
 import numpy as np
 import copy
 
+import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from make_plan_stat_data_lighter import get_summary_stat_file_name, get_dir
 
-def load_data(algo, n_objs, domain=None, n_data=0):
-    if algo == 'hpn':
-        fname = 'hpn_n_objs_' + str(n_objs) + '.pkl'
-    elif algo == 'greedy':
-        fname = 'greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
-    elif algo == 'greedy_num_goals':
-        fname = 'greedy_num_goals_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
-    elif algo == 'greedy_helps_goal':
-        fname = 'greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
-    elif algo == 'greedy_no_gnn':
-        fname = 'greedy_n_objs_%d_no_gnn.pkl' % n_objs
-    elif algo == 'greedy_no_gnn_num_goals':
-        fname = 'greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs
-    elif algo == 'greedy_no_h':
-        fname = 'greedy_n_objs_%d_no_h.pkl' % n_objs
-    else:
-        raise NotImplementedError
 
-    if domain is not None:
-        fname = domain + "_" + fname
-
+def load_data(algo, n_objs, n_data=5000, domain='two_arm_mover'):
+    test_dir, _ = get_dir(algo, n_objs, n_train=n_data, domain=domain)
+    fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
+    print fname
     return pickle.load(open('./plotters/stats/' + fname, 'r'))
 
 
@@ -53,9 +39,10 @@ def print_plan_time(statfile, max_time):
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
     print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
+    print "=="
 
 
-def plot_success_vs_time(n_objs):
+def plot_success_vs_time(n_objs, n_data=5000):
     if n_objs == 8:
         max_time = 2400  # 300*n_objs
     elif n_objs == 1:
@@ -64,26 +51,13 @@ def plot_success_vs_time(n_objs):
         raise NotImplementedError
 
     hpn = load_data('hpn', n_objs)
-    # greedy = load_data('greedy', n_objs, n_data=5000)
-    greedy_helps_goal = load_data('greedy_num_goals', n_objs, n_data=5000)
-    # noh = load_data('greedy_no_h', n_objs)
-    """
-
-    print "=="
-    print "gnn"
-    print_plan_time(greedy, max_time)
-    print "=="
-    """
-    print "hpn"
     print_plan_time(hpn, max_time)
-    print '=='
-    print "gnn num goals"
-    print_plan_time(greedy_helps_goal, max_time)
-    print "=="
-    print "no gnn"
-    nognn = load_data('greedy_no_gnn_num_goals', n_objs)
+    greedy = load_data('greedy', n_objs, n_data=n_data)
+    print_plan_time(greedy, max_time)
+    greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
+    print_plan_time(greedy_dql, max_time)
+    nognn = load_data('greedy_no_gnn', n_objs)
     print_plan_time(nognn, max_time)
-    print "=="
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -123,7 +97,6 @@ def plot_learning_curve():
     plt.plot(data_ranges, rates, label='GreedyQ', color=[1, 0, 0], marker='o')
     plt.xticks(data_ranges)
     savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
-
 
 
 def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
@@ -170,8 +143,11 @@ def plot_scatter_plot(n_objs):
 
 def main():
     # plot_learning_curve()
-    plot_success_vs_time(1)
-    plot_scatter_plot(1)
+    n_objs = int(sys.argv[1])
+    n_data = int(sys.argv[2])
+
+    plot_success_vs_time(n_objs, n_data)
+    #plot_scatter_plot(1)
     pass
 
 
