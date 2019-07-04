@@ -29,6 +29,7 @@ class OneArmPlaceFeasibilityChecker(PlaceFeasibilityChecker, OneArmPickFeasibili
                                        theta=grasp_params[0],
                                        obj=obj,
                                        robot=self.robot)
+        # todo place the tool at grasp
         grasp_config, grasp = solveIKs(self.env, self.robot, grasps)
         return grasp_config
 

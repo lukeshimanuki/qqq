@@ -40,6 +40,7 @@ def print_plan_time(statfile, max_time):
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
     print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
     print "=="
+    return np.mean(successes)
 
 
 def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
@@ -76,27 +77,31 @@ def plot_learning_curve():
     time_limit = 300
     n_objs = 1
 
-    hpn = load_data('hpn', n_objs)
+    hpn = load_data('hpn', n_objs, 'two_arm_mover')
 
     hpn_times = np.array(hpn['times'])
     hpn_successes = np.array(hpn['successes'])
     hpn_successes[hpn_times > time_limit] = False
     hpn_rate = np.mean(hpn_successes)
 
-    data_ranges = [50, 100, 1000, 3000, 4000, 5000]
+    data_ranges = [100, 1000, 3000, 5000]
     rates = []
+    dqn_rates = []
     for n_data in data_ranges:
-        greedy = load_data('greedy', 1, n_data)
-        greedy_times = np.array(greedy['times'])
-        greedy_successes = np.array(greedy['successes'])
-        overlimit_idxs = greedy_times > time_limit
-        greedy_successes[overlimit_idxs] = False
-        rates.append(np.mean(greedy_successes))
+        greedy = load_data('greedy', 1, 'two_arm_mover', n_data)
+        greedy_dqn = load_data('greedy_dql', 1, 'two_arm_mover', n_data)
+        greedy_rate = print_plan_time(greedy, time_limit)
+        dqn_rate = print_plan_time(greedy_dqn, time_limit)
 
-    plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
-    plt.plot(data_ranges, rates, label='GreedyQ', color=[1, 0, 0], marker='o')
+        rates.append(greedy_rate)
+        dqn_rates.append(dqn_rate)
+
+    #plt.errorbar(data_ranges, [hpn_rate] * len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
+    plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='RSC', color=[0, 0, 1], marker='o')
+    plt.plot(data_ranges, rates, label='GreedyLM', color=[1, 0, 0], marker='o')
+    plt.plot(data_ranges, dqn_rates, label='GreedyDQN', color=[0, 0.5, 0], marker='o')
     plt.xticks(data_ranges)
-    savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
+    savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve')
 
 
 def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
@@ -134,11 +139,17 @@ def plot_scatter_plot(n_objs,domain):
     stat = load_data('hpn', n_objs, domain)
     idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
 
+    stat = load_data('greedy_dql', 1, 'two_arm_mover', n_data=5000)
+    idxs, dqn_times, dqn_ci = get_avg_time_per_pidx(stat, max_time)
+
+    import pdb;pdb.set_trace()
     plt.figure(figsize=(20, 3))
     idxs = range(len(idxs))
-    plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='r', label='RSC')
-    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyLM')
+    plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='blue', label='RSC')
+    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='r', label='GreedyLM')
+    plt.errorbar(idxs, dqn_times, dqn_ci, fmt='o', color=[0,0.5,0], label='GreedyDQN')
     plt.margins(x=0.01)
+    plt.xticks(idxs[::2])
 
     savefig("Problem instances", "Average times", './plotters/scatter')
 
@@ -148,8 +159,9 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
-    #plot_scatter_plot(1, domain='two_arm_mover')
+    #plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
+    plot_scatter_plot(1, domain='two_arm_mover')
+    #plot_learning_curve()
     pass
 
 

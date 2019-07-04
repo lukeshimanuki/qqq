@@ -14,6 +14,7 @@ class PaPState(State):
         self.problem_env = problem_env
         self.parent_state = parent_state  # used to update the node features
         self.goal_entities = goal_entities
+        self.object_names = None
 
         # raw variables
         self.robot_pose = get_body_xytheta(problem_env.robot)
@@ -166,7 +167,7 @@ class PaPState(State):
 
     def get_entities_in_place_way(self, entity, region):
         inway = []
-        for obj_name in self.problem_env.object_names:
+        for obj_name in self.object_names:
             if self.ternary_edges[(entity, obj_name, region)][0]:
                 inway.append(obj_name)
         return inway
