@@ -51,11 +51,14 @@ def get_actions(mover, goal, config):
         if 'region' in o:
             continue
         for r in mover.entity_names:
-            if 'region' not in r or 'entire' in r:
+            if 'region' not in r:
                 continue
             if o not in goal and r in goal:
                 # you cannot place non-goal object in the goal region
                 continue
+            if 'entire' in r: #and config.domain == 'two_arm_mover':
+                continue
+
             if config.domain == 'two_arm_mover':
                 action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
                 # following two lines are for legacy reasons, will fix later
@@ -72,29 +75,34 @@ def get_actions(mover, goal, config):
     return actions
 
 
-def compute_heuristic(state, action):
-    o = action.discrete_parameters['two_arm_place_object']
-    r = action.discrete_parameters['two_arm_place_region']
+def compute_heuristic(state, action, pap_model, problem_env):
+    is_two_arm_domain = 'two_arm_place_object' in action.discrete_parameters
+    if is_two_arm_domain:
+        o = action.discrete_parameters['two_arm_place_object']
+        r = action.discrete_parameters['two_arm_place_region']
+    else:
+        o = action.discrete_parameters['object'].GetName()
+        r = action.discrete_parameters['region'].name
     nodes, edges, actions, _ = extract_individual_example(state, action)
     nodes = nodes[..., 6:]
 
-    object_is_goal = state.nodes[o][8]
     region_is_goal = state.nodes[r][8]
-    number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
-                         i != o and state.nodes[r][8]) + int(region_is_goal)
-    # this translates to: number of objects that would be in goal if the action was executed
-    # This would be the dual of number of remaining objects after the action was executed, which would be
-    # the more traditional heuristic function. The negative sign helps with that.
-    redundant = state.binary_edges[(o, r)][0]
-    helps_goal = object_is_goal and region_is_goal and not redundant
+    number_in_goal = 0
 
-    redundant = 0
-    unhelpful = 0
-    # number_in_goal = 0
-    helps_goal = 0
+    for i in state.nodes:
+        if i == o:
+            continue
+        for r in problem_env.regions:
+            if r in state.nodes:
+                is_r_goal_region = state.nodes[r][8]
+                if is_r_goal_region:
+                    is_i_in_r = state.binary_edges[(i, r)][0]
+                    if is_r_goal_region:
+                        number_in_goal += is_i_in_r
+    number_in_goal += int(region_is_goal)
 
     if config.dont_use_gnn:
-        return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
+        return -number_in_goal
     elif config.dont_use_h:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
                                                             actions[None, ...])
@@ -102,7 +110,15 @@ def compute_heuristic(state, action):
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
                                                             actions[None, ...])
-        return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
+        obj_name = action.discrete_parameters['object'].GetName()
+        region_name = action.discrete_parameters['region'].name
+        is_reachable = state.is_entity_reachable(obj_name)
+        is_placeable = state.binary_edges[(obj_name, region_name)][2]
+        is_goal = obj_name in state.goal_entities
+        print "%15s %50s reachable %d placeable_in_region %d isgoal %d gnn %.4f num_in_goal %d " \
+              % (obj_name, region_name, is_reachable, is_placeable, is_goal, gnn_pred, number_in_goal)
+
+        return -number_in_goal + gnn_pred
 
 
 def get_problem(mover):
@@ -127,7 +143,7 @@ def get_problem(mover):
     pstats.Stats(pr).sort_stats('tottime').print_stats(30)
     pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
 
-    state.make_pklable()
+    #state.make_pklable()
 
     mconfig_type = collections.namedtuple('mconfig_type',
                                           'operator n_msg_passing n_layers num_fc_layers n_hidden no_goal_nodes top_k optimizer lr use_mse batch_size seed num_train val_portion num_test mse_weight diff_weight_msg_passing same_vertex_model weight_initializer loss')
@@ -173,66 +189,6 @@ def get_problem(mover):
         pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names, n_regions)
     pap_model.load_weights()
 
-    def heuristic(state, action):
-        if action.type == 'two_arm_pick_two_arm_place':
-            o = action.discrete_parameters['two_arm_place_object']
-            r = action.discrete_parameters['two_arm_place_region']
-            nodes, edges, actions, _ = extract_individual_example(state, action)
-            nodes = nodes[..., 6:]
-
-            object_is_goal = state.nodes[o][8]
-            region_is_goal = state.nodes[r][8]
-            number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
-                                 i != o and state.nodes[r][8]) + int(region_is_goal)
-            # this translates to: number of objects that would be in goal if the action was executed
-            # This would be the dual of number of remaining objects after the action was executed, which would be
-            # the more traditional heuristic function. The negative sign helps with that.
-            redundant = state.binary_edges[(o, r)][0]
-            helps_goal = object_is_goal and region_is_goal and not redundant
-
-            redundant = 0
-            unhelpful = 0
-            # number_in_goal = 0
-            helps_goal = 0
-
-            if config.dont_use_gnn:
-                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
-            elif config.dont_use_h:
-                gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                                    actions[None, ...])
-                return gnn_pred
-            else:
-                gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                                    actions[None, ...])
-                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
-
-        elif action.type == 'one_arm_pick_one_arm_place':
-            o = action.discrete_parameters['object'].GetName()
-            r = action.discrete_parameters['region'].name
-            nodes, edges, actions, _ = extract_individual_example(state, action)
-            nodes = nodes[..., 6:]
-
-            object_is_goal = state.nodes[o][8]
-            region_is_goal = state.nodes[r][8]
-            number_in_goal = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in mover.regions if
-                                 i != o and r in state.nodes and state.nodes[r][8]) + int(region_is_goal)
-            redundant = state.binary_edges[(o, r)][0]
-            helps_goal = object_is_goal and region_is_goal and not redundant
-            unhelpful = object_is_goal and not region_is_goal
-
-            if config.dont_use_gnn:
-                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful
-            elif config.dont_use_h:
-                gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                                    actions[None, ...])
-                return gnn_pred
-            else:
-                gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                                    actions[None, ...])
-                return 1 * redundant - number_in_goal - 2 * helps_goal + 2 * unhelpful + gnn_pred
-        else:
-            raise NotImplementedError
-
     mover.reset_to_init_state_stripstream()
     if config.visualize_plan:
         mover.env.SetViewer('qtcoin')
@@ -263,7 +219,9 @@ def get_problem(mover):
     initial_state = state
     actions = get_actions(mover, goal, config)
     for a in actions:
-        action_queue.put((heuristic(state, a), float('nan'), a, initnode))  # initial q
+        hval = compute_heuristic(state,a,pap_model,mover)
+        action_queue.put((hval, float('nan'), a, initnode))  # initial q
+    import pdb;pdb.set_trace()
 
     iter = 0
     # beginning of the planner
@@ -280,13 +238,13 @@ def get_problem(mover):
         if action_queue.empty():
             actions = get_actions(mover, goal, config)
             for a in actions:
-                action_queue.put((heuristic(initial_state, a), float('nan'), a, initnode))  # initial q
+                action_queue.put((compute_heuristic(initial_state, a, pap_model, mover), float('nan'), a, initnode))  # initial q
 
         curr_hval, _, action, node = action_queue.get()
         state = node.state
 
-        print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
-        print("{}".format(action.discrete_parameters.values()))
+        #print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
+        #print("{}".format(action.discrete_parameters.values()))
 
         if node.depth >= 2 and action.type == 'two_arm_pick' and node.parent.action.discrete_parameters['object'] == \
                 action.discrete_parameters['object']:  # and plan[-1][1] == r:
@@ -319,7 +277,7 @@ def get_problem(mover):
             if is_goal_achieved:
                 print("found successful plan: {}".format(n_objs_pack))
                 trajectory = Trajectory(mover.seed, mover.seed)
-                plan = list(node.backtrack())[::-1]
+                plan = list(node.backtrack())[::-1] # plan of length 0 is possible I think
                 trajectory.states = [nd.state for nd in plan]
                 trajectory.actions = [nd.action for nd in plan[1:]] + [action]
                 trajectory.rewards = [nd.reward for nd in plan[1:]] + [0]
@@ -335,7 +293,7 @@ def get_problem(mover):
                 newactions = get_actions(mover, goal, config)
                 print "Old h value", curr_hval
                 for newaction in newactions:
-                    hval = heuristic(newstate, newaction) - 1. * newnode.depth
+                    hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
                     print "New state h value %.4f for %s %s" % (
                     hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
@@ -368,10 +326,8 @@ def get_problem(mover):
                 success = True
 
                 newstate = statecls(mover, goal, node.state, action)
-                newstate.make_pklable()
+                #newstate.make_pklable()
                 newnode = Node(node, action, newstate)
-
-
 
                 if all(
                         mover.regions['rectangular_packing_box1_region'].contains(mover.env.GetKinBody(o).ComputeAABB())
@@ -400,20 +356,17 @@ def get_problem(mover):
                     trajectory.seed = mover.seed
                     print(trajectory)
                     return trajectory, iter
-
-                for o in mover.entity_names:
-                    if 'region' in o:
-                        continue
-                    if o == action.discrete_parameters['object'].GetName():
-                        continue
-                    for r in mover.entity_names:
-                        if 'region' not in r:
-                            continue
-
-                        newaction = Operator('one_arm_pick_one_arm_place',
-                                             {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
-                        action_queue.put(
-                            (heuristic(newstate, newaction) - 1. * newnode.depth, float('nan'), newaction, newnode))
+                else:
+                    newstate = statecls(mover, goal, node.state, action)
+                    print "New state computed"
+                    #newstate.make_pklable()
+                    newnode = Node(node, action, newstate)
+                    newactions = get_actions(mover, goal, config)
+                    print "Old h value", curr_hval
+                    for newaction in newactions:
+                        hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
+                        action_queue.put((hval, float('nan'), newaction, newnode))
+                    import pdb;pdb.set_trace()
 
             if not success:
                 print('failed to execute action')
