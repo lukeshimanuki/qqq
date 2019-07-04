@@ -527,6 +527,127 @@ def generate_training_data_single():
 
     print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
+    mover.reset_to_init_state_stripstream()
+    if not config.dontsimulate:
+        if config.visualize_sim:
+            mover.env.SetViewer('qtcoin')
+            set_viewer_options(mover.env)
+
+            raw_input('Start?')
+        handles = []
+        for step_idx, action in enumerate(trajectory.actions):
+            if action.type == 'two_arm_pick_two_arm_place':
+                def check_collisions(q=None):
+                    if q is not None:
+                        set_robot_config(q, mover.robot)
+                    collision = False
+                    if mover.env.CheckCollision(mover.robot):
+                        collision = True
+                    for obj in mover.objects:
+                        if mover.env.CheckCollision(obj):
+                            collision = True
+                    if collision:
+                        print('collision')
+                        if config.visualize_sim:
+                            raw_input('Continue after collision?')
+
+                check_collisions()
+                o = action.discrete_parameters['two_arm_place_object']
+                pick_params, place_params = action.continuous_parameters
+
+                full_path = [get_body_xytheta(mover.robot)[0]] + pick_params['path'] + [pick_params['base_pose']] + \
+                            place_params['path'] + [place_params['base_pose']]
+                for i, (q1, q2) in enumerate(zip(full_path[:-1], full_path[1:])):
+                    if np.linalg.norm(np.squeeze(q1)[:2] - np.squeeze(q2)[:2]) > 1:
+                        print(i, q1, q2)
+                        import pdb;
+                        pdb.set_trace()
+
+                pickq = pick_params['base_pose']
+                pickt = pick_params['path']
+                check_collisions(pickq)
+                for q in pickt:
+                    check_collisions(q)
+                obj = mover.env.GetKinBody(o)
+                if len(pickt) > 0:
+                    for q1, q2 in zip(pickt[:-1], pickt[1:]):
+                        handles.append(
+                            draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+                # set_robot_config(pickq, mover.robot)
+                # if config.visualize_sim:
+                #	raw_input('Continue?')
+                # set_obj_xytheta([1000,1000,0], obj)
+                two_arm_pick_object(obj, pick_params)
+                if config.visualize_sim:
+                    raw_input('Place?')
+
+                o = action.discrete_parameters['two_arm_place_object']
+                r = action.discrete_parameters['two_arm_place_region']
+                placeq = place_params['base_pose']
+                placep = place_params['object_pose']
+                placet = place_params['path']
+                check_collisions(placeq)
+                for q in placet:
+                    check_collisions(q)
+                obj = mover.env.GetKinBody(o)
+                if len(placet) > 0:
+                    for q1, q2 in zip(placet[:-1], placet[1:]):
+                        handles.append(
+                            draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+                # set_robot_config(placeq, mover.robot)
+                # if config.visualize_sim:
+                #	raw_input('Continue?')
+                # set_obj_xytheta(placep, obj)
+                two_arm_place_object(place_params)
+                if config.visualize_sim:
+                    raw_input('Continue?')
+
+                check_collisions()
+
+            elif action.type == 'one_arm_pick_one_arm_place':
+                def check_collisions(q=None):
+                    if q is not None:
+                        set_robot_config(q, mover.robot)
+                    collision = False
+                    if mover.env.CheckCollision(mover.robot):
+                        collision = True
+                    for obj in mover.objects:
+                        if mover.env.CheckCollision(obj):
+                            collision = True
+                    if collision:
+                        print('collision')
+                        if config.visualize_sim:
+                            raw_input('Continue after collision?')
+
+                check_collisions()
+                pick_params = action.continuous_parameters['pick']
+                place_params = action.continuous_parameters['place']
+
+                one_arm_pick_object(mover.env.GetKinBody(action.discrete_parameters['object']), pick_params)
+
+                check_collisions()
+
+                if config.visualize_sim:
+                    raw_input('Place?')
+
+                one_arm_place_object(place_params)
+
+                check_collisions()
+
+                if config.visualize_sim:
+                    raw_input('Continue?')
+            else:
+                raise NotImplementedError
+
+        n_objs_pack = config.n_objs_pack
+
+        if all(mover.regions['home_region'].contains_point(get_body_xytheta(o)[0].tolist()[:2] + [1]) for o in
+               mover.objects[:n_objs_pack]):
+            print("successful plan length: {}".format(len(trajectory.actions)))
+        else:
+            print('failed to find plan')
+        if config.visualize_sim:
+            raw_input('Continue?')
     return
 
 
