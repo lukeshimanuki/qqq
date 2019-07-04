@@ -4,27 +4,18 @@ import os
 import numpy as np
 import copy
 
+import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from make_plan_stat_data_lighter import get_summary_stat_file_name, get_dir
 
-def load_data(algo, n_objs, n_data=0):
-    if algo == 'hpn':
-        return pickle.load(open('./plotters/stats/hpn_n_objs_' + str(n_objs) + '.pkl', 'r'))
-    elif algo == 'greedy':
-        return pickle.load(open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
-    elif algo == 'greedy_num_goals':
-        return pickle.load(open('./plotters/stats/greedy_num_goals_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
-    elif algo == 'greedy_helps_goal':
-        return pickle.load(open('./plotters/stats/greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'r'))
-    elif algo == 'greedy_no_gnn':
-        return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'r'))
-    elif algo == 'greedy_no_gnn_num_goals':
-        return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs, 'r'))
-    elif algo == 'greedy_no_h':
-        return pickle.load(open('./plotters/stats/greedy_n_objs_%d_no_h.pkl' % n_objs, 'r'))
-    else:
-        raise NotImplementedError
+
+def load_data(algo, n_objs, n_data=5000, domain='two_arm_mover'):
+    test_dir, _ = get_dir(algo, n_objs, n_train=n_data, domain=domain)
+    fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
+    print fname
+    return pickle.load(open('./plotters/stats/' + fname, 'r'))
 
 
 def get_success_rate_at(time_data, success_data, interval):
@@ -48,38 +39,26 @@ def print_plan_time(statfile, max_time):
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
     print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
+    print "=="
 
 
-def plot_success_vs_time(n_objs):
+def plot_success_vs_time(n_objs, n_data=5000):
     if n_objs == 8:
-        max_time = 300*n_objs
+        max_time = 2400  # 300*n_objs
     elif n_objs == 1:
         max_time = 300
     else:
         raise NotImplementedError
 
-
     hpn = load_data('hpn', n_objs)
-    #greedy = load_data('greedy', n_objs, n_data=5000)
-    greedy_helps_goal = load_data('greedy_num_goals', n_objs, n_data=5000)
-    #noh = load_data('greedy_no_h', n_objs)
-    """
-
-    print "=="
-    print "gnn"
-    print_plan_time(greedy, max_time)
-    print "=="
-    """
-    print "hpn"
     print_plan_time(hpn, max_time)
-    print '=='
-    print "gnn num goals"
-    print_plan_time(greedy_helps_goal, max_time)
-    print "=="
-    print "no gnn"
-    nognn = load_data('greedy_no_gnn_num_goals', n_objs)
+    greedy = load_data('greedy', n_objs, n_data=n_data)
+    print_plan_time(greedy, max_time)
+    #greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
+    #print_plan_time(greedy_dql, max_time)
+    nognn = load_data('greedy_no_gnn', n_objs)
     print_plan_time(nognn, max_time)
-    print "=="
+
 
 def savefig(xlabel, ylabel, fname=''):
     plt.legend(loc='best', prop={'size': 13})
@@ -87,8 +66,10 @@ def savefig(xlabel, ylabel, fname=''):
     plt.ylabel(ylabel, fontsize=14, fontweight='bold')
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
+
     print 'Saving figure ', fname + '.png'
-    plt.savefig(fname + '.png', dpi=100, format='png')
+    plt.tight_layout()
+    plt.savefig(fname + '.png', dpi=100)
 
 
 def plot_learning_curve():
@@ -117,13 +98,56 @@ def plot_learning_curve():
     plt.xticks(data_ranges)
     savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve.png')
 
-    import pdb;
-    pdb.set_trace()
+
+def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
+    plan_times = {}
+    nfail = 0
+    for pidx, plantime in zip(stat['pidxs'], stat['times']):
+        if pidx < 20000:
+            continue
+        if pidx in plan_times:
+            if plantime >= max_time:
+                nfail += 1
+                plantime = max_time
+            plan_times[pidx].append(plantime)
+        else:
+            plan_times[pidx] = []
+    for r in range(20000, 20100):
+        if r not in plan_times:
+            plan_times[r] = [-100]
+    return plan_times
+
+
+def get_avg_time_per_pidx(stat, max_time):
+    stattimes = get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time)
+    avg_times = [np.mean(v) for v in stattimes.values()]
+    CI = [np.std(v) * 1.96 / np.sqrt(len(v)) for v in stattimes.values()]
+    return avg_times, CI
+
+
+def plot_scatter_plot(n_objs):
+    max_time = n_objs * 300
+
+    stat = load_data('hpn', n_objs)
+    hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
+
+    stat = load_data('greedy_num_goals', n_objs, n_data=5000)
+    greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
+
+    pidxs = range(100)
+    plt.errorbar(pidxs, hpn_times, hpn_ci, fmt='o', color='r', label='RSC')
+    plt.errorbar(pidxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyQ')
+    savefig("Problem instances", "Average times", './plotters/scatter')
+
 
 
 def main():
-    plot_success_vs_time(8)
     # plot_learning_curve()
+    n_objs = int(sys.argv[1])
+    n_data = int(sys.argv[2])
+
+    plot_success_vs_time(n_objs, n_data)
+    #plot_scatter_plot(1)
     pass
 
 

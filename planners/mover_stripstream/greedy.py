@@ -475,7 +475,7 @@ def generate_training_data_single():
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
                             + '/test_purpose/no_goal_obj_same_region/num_goals/' \
-                            + '/num_train_' + str(config.num_train) + '/'
+                            + '/loss_' +str(config.loss)  + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
@@ -501,6 +501,7 @@ def generate_training_data_single():
         if not success:
             trajectory = Trajectory(mover.seed, mover.seed)
         trajectory.states = [s.get_predicate_evaluations() for s in trajectory.states]
+        trajectory.state_prime = None
         trajectory.metrics = {
             'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,

@@ -62,14 +62,13 @@ class GreedySearch:
         number_in_goal1 = sum(state.binary_edges[(i, r)][0] for i in state.nodes for r in self.problem_env.regions if
                              i != o and state.nodes[r][8]) + int(region_is_goal)
 
-        # shouldn't this count the number of goal objects?
         number_in_goal = 0
         for i in state.nodes:
             for r in self.problem_env.regions:
-                i_in_r = state.binary_edges[(i, r)][0]
+                is_i_in_r = state.binary_edges[(i, r)][0]
                 is_r_goal_region = state.nodes[r][8]
                 if i != o and is_r_goal_region:
-                    number_in_goal += i_in_r
+                    number_in_goal += is_i_in_r
         number_in_goal += int(region_is_goal)
         assert number_in_goal == number_in_goal1
 
