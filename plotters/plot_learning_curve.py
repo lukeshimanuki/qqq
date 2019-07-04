@@ -54,8 +54,8 @@ def plot_success_vs_time(n_objs, n_data=5000):
     print_plan_time(hpn, max_time)
     greedy = load_data('greedy', n_objs, n_data=n_data)
     print_plan_time(greedy, max_time)
-    greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
-    print_plan_time(greedy_dql, max_time)
+    #greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
+    #print_plan_time(greedy_dql, max_time)
     nognn = load_data('greedy_no_gnn', n_objs)
     print_plan_time(nognn, max_time)
 

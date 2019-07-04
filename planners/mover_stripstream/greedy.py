@@ -501,6 +501,7 @@ def generate_training_data_single():
         if not success:
             trajectory = Trajectory(mover.seed, mover.seed)
         trajectory.states = [s.get_predicate_evaluations() for s in trajectory.states]
+        trajectory.state_prime = None
         trajectory.metrics = {
             'n_objs_pack': config.n_objs_pack,
             'tottime': tottime,
