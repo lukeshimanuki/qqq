@@ -110,18 +110,47 @@ class OneArmPaPUniformGenerator:
         if self.cached_picks is not None:
             (pick_tf, pick_params), (place_tf, place_params) = copy.deepcopy(random.choice(zip(*self.cached_picks)))
 
+            pick_region = self.problem_env.get_region_containing(self.target_obj)
+            place_region = self.place_op.discrete_parameters['region']
+
+            pick_params = copy.deepcopy(pick_params)
+            place_params = copy.deepcopy(place_params)
+
+            assert pick_params['operator_name'] == 'one_arm_pick'
+            assert place_params['operator_name'] == 'one_arm_pick'
+
             old_tf = self.target_obj.GetTransform()
+            old_pose = get_body_xytheta(self.target_obj).squeeze()
 
+            self.pick_op.continuous_parameters = place_params
             self.target_obj.SetTransform(place_tf)
-            place_pose = get_body_xytheta(self.target_obj)[0]
+            self.pick_op.execute()
 
+            place_pose = self.place_generator.sample_from_uniform()
+
+            place_base_pose = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, place_pose, place_region)
             place_params['operator_name'] = 'one_arm_place'
             place_params['object_pose'] = place_pose
             place_params['action_parameters'] = place_pose
-            place_params['base_pose'] = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, place_pose, self.place_op.discrete_parameters['region'])
-
-            self.pick_op.continuous_parameters = pick_params
+            place_params['base_pose'] = place_base_pose
+            place_params['q_goal'][-3:] = place_base_pose
             self.place_op.continuous_parameters = place_params
+
+            self.pick_op.continuous_parameters = pick_params # is reference and will be changed lader
+            self.target_obj.SetTransform(pick_tf)
+            self.pick_op.execute()
+
+            pick_base_pose = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, old_pose, pick_region)
+            pick_params['q_goal'][-3:] = pick_base_pose
+
+            #self.target_obj.SetTransform(pick_tf)
+            #self.pick_op.execute()
+            #tf = np.dot(np.dot(old_tf, np.linalg.pinv(pick_tf)), self.problem_env.robot.GetTransform())
+            #self.place_op.execute()
+            #self.target_obj.SetTransform(old_tf)
+            #self.problem_env.robot.SetTransform(tf)
+            #pick_base_pose = get_body_xytheta(self.problem_env.robot).squeeze()
+            #pick_params['q_goal'][-3:] = pick_base_pose
 
             bad = False
             self.target_obj.SetTransform(old_tf)
@@ -158,6 +187,10 @@ class OneArmPaPUniformGenerator:
             #}
 
             self.target_obj.SetTransform(old_tf)
+
+            assert pick_params['operator_name'] == 'one_arm_pick'
+            assert place_params['operator_name'] == 'one_arm_place'
+
             if bad:
                 return None, None, 'InfeasibleIK'
             else:

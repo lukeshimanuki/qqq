@@ -120,6 +120,10 @@ def get_problem(mover):
     else:
         raise NotImplementedError
 
+    if config.visualize_plan:
+        mover.env.SetViewer('qtcoin')
+        set_viewer_options(mover.env)
+
     pr = cProfile.Profile()
     pr.enable()
     state = statecls(mover, goal)
@@ -234,10 +238,6 @@ def get_problem(mover):
             raise NotImplementedError
 
     mover.reset_to_init_state_stripstream()
-    if config.visualize_plan:
-        mover.env.SetViewer('qtcoin')
-        set_viewer_options(mover.env)
-
     depth_limit = 60
 
     class Node(object):
@@ -605,10 +605,10 @@ def generate_training_data_single():
                 #   raw_input('Continue?')
                 # set_obj_xytheta(placep, obj)
                 two_arm_place_object(place_params)
+                check_collisions()
+
                 if config.visualize_sim:
                     raw_input('Continue?')
-
-                check_collisions()
 
             elif action.type == 'one_arm_pick_one_arm_place':
                 def check_collisions(q=None):
@@ -640,6 +640,8 @@ def generate_training_data_single():
 
                 check_collisions()
 
+                if config.visualize_sim:
+                    raw_input('Continue?')
             else:
                 raise NotImplementedError
 
@@ -657,7 +659,7 @@ def generate_training_data_single():
         else:
             print('failed to find plan')
         if config.visualize_sim:
-            raw_input('Continue?')
+            raw_input('Finish?')
 
     return
 

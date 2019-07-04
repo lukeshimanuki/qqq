@@ -119,13 +119,13 @@ class OneArmPaPState(PaPState):
                 current_region = problem_env.get_region_containing(obj).name
 
                 if obj in goal_entities and r in goal_entities:
-                    num_tries = 10
-                    num_iters = 10
+                    num_tries = 3
+                    num_iters = 300
                 elif obj not in goal_entities and r in goal_entities:
                     num_iters = 0
                 else:
                     num_tries = 10
-                    num_iters = 3
+                    num_iters = 30
 
                 if parent_state is not None and obj != moved_obj:
                     status = 'HasSolution'
