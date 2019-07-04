@@ -22,7 +22,7 @@ import os
 class OneArmPaPState(PaPState):
     def __init__(self, problem_env, goal_entities, parent_state=None, parent_action=None, paps_used_in_data=None):
         PaPState.__init__(self, problem_env, goal_entities, parent_state=None, parent_action=None)
-
+        self.name = 'one_arm_mover'
         self.objects = objects = {
             o: problem_env.env.GetKinBody(o)
             for o in problem_env.entity_names
@@ -59,7 +59,7 @@ class OneArmPaPState(PaPState):
                 moved_obj = parent_action.discrete_parameters['object'].GetName()
         else:
             moved_obj = None
-
+        """
         self.pap_params = {}
         self.pick_params = {}
         self.place_params = {}
@@ -77,6 +77,7 @@ class OneArmPaPState(PaPState):
             sum([o in self.collision_pick_op for o in objects]), sum([o in self.nocollision_pick_op for o in objects]),
             sum([(o, r) in self.collision_place_op for o in objects for r in regions]),
             sum([(o, r) in self.nocollision_place_op for o in objects for r in regions]))
+        """
 
         # predicates
         self.pick_in_way = PickInWay(self.problem_env)
@@ -309,13 +310,17 @@ class OneArmPaPState(PaPState):
         isobj = entity not in self.problem_env.regions
         obj = self.problem_env.env.GetKinBody(entity) if isobj else None
         pose = get_body_xytheta(obj)[0] if isobj else None
-
+        """
         if isobj:
             is_entity_reachable = entity in self.nocollision_pick_op
         else:
             is_entity_reachable = False
+        """
 
-        is_entity_reachable = True
+        if entity in self.goal_entities:
+            is_entity_reachable = True
+        else:
+            is_entity_reachable = False
         return [
             0,  # l
             0,  # w
@@ -355,12 +360,15 @@ class OneArmPaPState(PaPState):
                     is_place_in_b_reachable_while_holding_a = True
                 else:
                     is_place_in_b_reachable_while_holding_a = True  #(a, b) in self.nocollision_place_op
-
+        """
         if a in self.problem_env.regions or b in self.problem_env.regions:
             is_a_in_pick_path_of_b = False
         else:
             is_a_in_pick_path_of_b = b not in self.nocollision_pick_op and b in self.collision_pick_op and a in \
                                      self.collision_pick_op[b][1]
+        """
+
+        is_a_in_pick_path_of_b = False
 
         return [
             self.in_region(a, b),

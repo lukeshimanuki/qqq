@@ -83,6 +83,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
     else:
         o = action.discrete_parameters['object'].GetName()
         r = action.discrete_parameters['region'].name
+
     nodes, edges, actions, _ = extract_individual_example(state, action)
     nodes = nodes[..., 6:]
 
@@ -117,8 +118,9 @@ def compute_heuristic(state, action, pap_model, problem_env):
             is_placeable = state.binary_edges[(obj_name, region_name)][2]
             is_goal = state.nodes[obj_name][-3]
             isgoal_region = state.nodes[region_name][-3]
-            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d gnn %.4f num_in_goal %d " \
-                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, gnn_pred, number_in_goal)
+            is_in_region = state.binary_edges[(obj_name, region_name)][0]
+            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d " \
+                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal)
         #print gnn_pred
 
         return -number_in_goal + gnn_pred
@@ -190,6 +192,7 @@ def get_problem(mover):
     with tf.variable_scope('pap'):
         pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names, n_regions)
     pap_model.load_weights()
+    print pap_model.weight_file_name
 
     mover.reset_to_init_state_stripstream()
     depth_limit = 60
@@ -216,11 +219,13 @@ def get_problem(mover):
 
     #pr = cProfile.Profile()
     #pr.enable()
-    state = statecls(mover, goal)
+    #state = statecls(mover, goal)
+
     #pr.disable()
     #pstats.Stats(pr).sort_stats('tottime').print_stats(30)
     #pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
-    import pdb;pdb.set_trace()
+    #state = pickle.load(open('tmp.pkl', 'r'))
+    state = statecls(mover, goal)
     actions = get_actions(mover, goal, config)
     for a in actions: hval = compute_heuristic(state,a,pap_model,mover)
         #action_queue.put((hval, float('nan'), a, initnode))  # initial q
@@ -233,6 +238,8 @@ def get_problem(mover):
     utils.set_color(goal_obj, [1,0,0] )
 
     import pdb;pdb.set_trace()
+    state.make_pklable()
+    pickle.dump(state, open('tmp.pkl','wb'))
     initnode = Node(None, None, state)
     initial_state = state
     import pdb;pdb.set_trace()
