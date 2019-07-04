@@ -11,7 +11,7 @@ import seaborn as sns
 from make_plan_stat_data_lighter import get_summary_stat_file_name, get_dir
 
 
-def load_data(algo, n_objs, n_data=5000, domain='two_arm_mover'):
+def load_data(algo, n_objs, domain, n_data=5000):
     test_dir, _ = get_dir(algo, n_objs, n_train=n_data, domain=domain)
     fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
     print fname
@@ -42,7 +42,7 @@ def print_plan_time(statfile, max_time):
     print "=="
 
 
-def plot_success_vs_time(n_objs, n_data=5000):
+def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
     if n_objs == 8:
         max_time = 2400  # 300*n_objs
     elif n_objs == 1:
@@ -50,13 +50,13 @@ def plot_success_vs_time(n_objs, n_data=5000):
     else:
         raise NotImplementedError
 
-    # hpn = load_data('hpn', n_objs)
-    # print_plan_time(hpn, max_time)
-    greedy = load_data('greedy', n_objs, n_data=n_data)
+    hpn = load_data('hpn', n_objs, domain)
+    print_plan_time(hpn, max_time)
+    greedy = load_data('greedy', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy, max_time)
-    nognn = load_data('greedy_no_gnn', n_objs)
+    nognn = load_data('greedy_no_gnn', n_objs, domain=domain)
     print_plan_time(nognn, max_time)
-    greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
+    greedy_dql = load_data('greedy_dql', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy_dql, max_time)
 
 
@@ -125,21 +125,20 @@ def get_avg_time_per_pidx(stat, max_time):
     return stattimes.keys(), avg_times, CI
 
 
-def plot_scatter_plot(n_objs):
+def plot_scatter_plot(n_objs,domain):
     max_time = n_objs * 300
 
-    stat = load_data('greedy_num_goals', n_objs, n_data=5000)
+    stat = load_data('greedy_num_goals', n_objs, n_data=5000, domain=domain)
     idxs, greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
 
-    stat = load_data('hpn', n_objs)
+    stat = load_data('hpn', n_objs, domain)
     idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
 
-
-
-    plt.figure(figsize=(20,3))
+    plt.figure(figsize=(20, 3))
     idxs = range(len(idxs))
     plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='r', label='RSC')
-    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyQ')
+    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyLM')
+    plt.margins(x=0.01)
 
     savefig("Problem instances", "Average times", './plotters/scatter')
 
@@ -149,8 +148,8 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    # plot_success_vs_time(n_objs, n_data)
-    plot_scatter_plot(1)
+    plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
+    #plot_scatter_plot(1, domain='two_arm_mover')
     pass
 
 

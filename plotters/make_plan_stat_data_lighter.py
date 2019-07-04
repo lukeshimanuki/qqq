@@ -1,6 +1,8 @@
 import pickle
 import os
 import numpy as np
+import sys
+import socket
 
 
 def get_time_taken(test_dir, stat):
@@ -124,6 +126,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
+
     root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
     if algo == 'hpn':
         fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
@@ -142,14 +145,14 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
             fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_dql/num_train_%d/' % n_train
     else:
         raise NotImplementedError
-
     return fdir, os.listdir(fdir)
 
 
 def main():
-    n_objs = 1
-    n_train = 5000
-    test_dir, test_files = get_dir('hpn', n_objs, n_train)
+    n_objs = int(sys.argv[1])
+    n_train = int(sys.argv[2])
+    algo = sys.argv[3]
+    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 
