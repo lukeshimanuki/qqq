@@ -47,7 +47,7 @@ class OneArmMover(Mover):
         if type(obj) == str or type(obj) == unicode:
             obj = self.env.GetKinBody(obj)
 
-        for shelf_region in self.shelf_regions.values():
+        for shelf_region in sorted(self.shelf_regions.values(), key=lambda r: 'top' not in r.name):
             if shelf_region.contains(obj.ComputeAABB()):
                 return shelf_region
 
