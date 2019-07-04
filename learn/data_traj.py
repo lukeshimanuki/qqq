@@ -114,7 +114,6 @@ def get_actions(op_skeleton, entity_names):
 
 def extract_individual_example(state, op_instance, remaining_steps=0):
     entity_names = list(state.nodes.keys())[::-1]
-
     nodes = []
     region_nodes = {}
     for name in entity_names:
@@ -122,10 +121,13 @@ def extract_individual_example(state, op_instance, remaining_steps=0):
         nodes.append(onehot)
         if name.find('region') != -1 and name.find('entire') ==-1:
             region_nodes[name] = onehot
-    nodes = np.vstack(nodes)
 
+    nodes = np.vstack(nodes)
     edges = get_edges(state, region_nodes, entity_names)
     actions = get_actions(op_instance, entity_names)
+
+    o = op_instance.discrete_parameters['object'].GetName()
+    r = op_instance.discrete_parameters['region'].name
 
     costs = remaining_steps
     return nodes, edges, actions, costs

@@ -25,6 +25,8 @@ class OneArmMover(Mover):
         self.name = 'one_arm_mover'
         self.init_saver = utils.CustomStateSaver(self.env)
 
+        self.object_names = self.entity_names
+
         # fix incorrectly named regions
         self.regions = {
             region.name: region

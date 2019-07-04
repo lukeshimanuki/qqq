@@ -9,7 +9,7 @@ from mcts_tree import MCTSTree
 # from mcts_utils import make_action_hashable, is_action_hashable
 from generators.uniform import UniformGenerator, PaPUniformGenerator
 from trajectory_representation.shortest_path_pick_and_place_state import ShortestPathPaPState
-
+from trajectory_representation.one_arm_pap_state import OneArmPaPState
 ## openrave helper libraries
 from mover_library import utils
 import numpy as np
@@ -120,13 +120,10 @@ class MCTS:
                         parent_state = parent_node.state
                     # where is the parent state?
                     if self.environment.name.find('one_arm') != -1:
-                        state = None
-                        """
                         state = OneArmPaPState(self.environment,
                                                parent_state=parent_state,
                                                parent_action=parent_action,
                                                goal_entities=self.goal_entities)
-                        """
                     else:
                         state = ShortestPathPaPState(self.environment,
                                                      parent_state=parent_state,
@@ -309,7 +306,6 @@ class MCTS:
     def choose_action(self, curr_node):
         if curr_node.is_operator_skeleton_node:
             print "Skeleton node"
-
             if curr_node.state is None:
                 action = curr_node.perform_ucb_over_actions()
             else:
