@@ -114,7 +114,7 @@ class OneArmPaPState(PaPState):
         for obj in objects:
             self.pick_params[obj] = []
             for r in regions:
-                print(obj, r)
+                #print(obj, r)
 
                 current_region = problem_env.get_region_containing(obj).name
 
@@ -142,7 +142,7 @@ class OneArmPaPState(PaPState):
                     if status == 'HasSolution':
                         self.pap_params[(obj, r)].append((pick_params, place_params))
                         self.pick_params[obj].append(pick_params)
-                        print('success')
+                        #print('success')
 
                     self.place_params[(obj, r)] = []
         problem_env.enable_objects()
@@ -259,6 +259,8 @@ class OneArmPaPState(PaPState):
                             self.problem_env.robot) and not self.problem_env.env.CheckCollision(
                             self.problem_env.env.GetKinBody(obj)):
                         self.nocollision_place_op[(obj, r)] = pick_op, place_op
+                        if obj in goal_entities and r in goal_entities:
+                            print('successful goal pap')
                         before.Restore()
                         continue
 

@@ -28,7 +28,7 @@ import openravepy
 from generators.uniform import UniformGenerator, PaPUniformGenerator
 
 from mover_library import utils
-from manipulation.primitives.display import set_viewer_options, draw_line, draw_point
+from manipulation.primitives.display import set_viewer_options, draw_line, draw_point, draw_line
 from manipulation.primitives.savers import DynamicEnvironmentStateSaver
 
 from learn.data_traj import extract_individual_example
@@ -319,10 +319,10 @@ def get_problem(mover):
             if is_goal_achieved:
                 print("found successful plan: {}".format(n_objs_pack))
                 trajectory = Trajectory(mover.seed, mover.seed)
-                plan = list(newnode.backtrack())[::-1]
+                plan = list(node.backtrack())[::-1]
                 trajectory.states = [nd.state for nd in plan]
-                trajectory.actions = [nd.action for nd in plan[1:]]
-                trajectory.rewards = [nd.reward for nd in plan[1:]]
+                trajectory.actions = [nd.action for nd in plan[1:]] + [action]
+                trajectory.rewards = [nd.reward for nd in plan[1:]] + [0]
                 trajectory.state_prime = [nd.state for nd in plan[1:]]
                 trajectory.seed = mover.seed
                 print(trajectory)
@@ -343,6 +343,8 @@ def get_problem(mover):
             utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
 
         elif action.type == 'one_arm_pick_one_arm_place':
+            success = False
+
             obj = action.discrete_parameters['object']
             region = action.discrete_parameters['region']
             o = obj.GetName()
@@ -527,6 +529,9 @@ def generate_training_data_single():
 
     print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
+    def draw_robot_line(env, q1, q2):
+        return draw_line(env, list(q1)[:2] + [.5], list(q2)[:2] + [.5], color=(0,0,0,1), width=3.)
+
     mover.reset_to_init_state_stripstream()
     if not config.dontsimulate:
         if config.visualize_sim:
@@ -553,18 +558,19 @@ def generate_training_data_single():
 
                 check_collisions()
                 o = action.discrete_parameters['two_arm_place_object']
-                pick_params, place_params = action.continuous_parameters
+                pick_params = action.continuous_parameters['pick']
+                place_params = action.continuous_parameters['place']
 
-                full_path = [get_body_xytheta(mover.robot)[0]] + pick_params['path'] + [pick_params['base_pose']] + \
-                            place_params['path'] + [place_params['base_pose']]
+                full_path = [get_body_xytheta(mover.robot)[0]] + pick_params['motion'] + [pick_params['q_goal']] + \
+                            place_params['motion'] + [place_params['q_goal']]
                 for i, (q1, q2) in enumerate(zip(full_path[:-1], full_path[1:])):
                     if np.linalg.norm(np.squeeze(q1)[:2] - np.squeeze(q2)[:2]) > 1:
                         print(i, q1, q2)
                         import pdb;
                         pdb.set_trace()
 
-                pickq = pick_params['base_pose']
-                pickt = pick_params['path']
+                pickq = pick_params['q_goal']
+                pickt = pick_params['motion']
                 check_collisions(pickq)
                 for q in pickt:
                     check_collisions(q)
@@ -572,10 +578,10 @@ def generate_training_data_single():
                 if len(pickt) > 0:
                     for q1, q2 in zip(pickt[:-1], pickt[1:]):
                         handles.append(
-                            draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+                            draw_robot_line(mover.env, q1.squeeze(), q2.squeeze()))
                 # set_robot_config(pickq, mover.robot)
                 # if config.visualize_sim:
-                #	raw_input('Continue?')
+                #   raw_input('Continue?')
                 # set_obj_xytheta([1000,1000,0], obj)
                 two_arm_pick_object(obj, pick_params)
                 if config.visualize_sim:
@@ -583,9 +589,9 @@ def generate_training_data_single():
 
                 o = action.discrete_parameters['two_arm_place_object']
                 r = action.discrete_parameters['two_arm_place_region']
-                placeq = place_params['base_pose']
+                placeq = place_params['q_goal']
                 placep = place_params['object_pose']
-                placet = place_params['path']
+                placet = place_params['motion']
                 check_collisions(placeq)
                 for q in placet:
                     check_collisions(q)
@@ -593,10 +599,10 @@ def generate_training_data_single():
                 if len(placet) > 0:
                     for q1, q2 in zip(placet[:-1], placet[1:]):
                         handles.append(
-                            draw_edge(mover.env, q1.squeeze(), q2.squeeze(), z=0.25, color=(0, 0, 0, 1), width=1.5))
+                            draw_robot_line(mover.env, q1.squeeze(), q2.squeeze()))
                 # set_robot_config(placeq, mover.robot)
                 # if config.visualize_sim:
-                #	raw_input('Continue?')
+                #   raw_input('Continue?')
                 # set_obj_xytheta(placep, obj)
                 two_arm_place_object(place_params)
                 if config.visualize_sim:
@@ -634,20 +640,25 @@ def generate_training_data_single():
 
                 check_collisions()
 
-                if config.visualize_sim:
-                    raw_input('Continue?')
             else:
                 raise NotImplementedError
 
         n_objs_pack = config.n_objs_pack
+        if config.domain == 'two_arm_mover':
+            goal_region = 'home_region'
+        elif config.domain == 'one_arm_mover':
+            goal_region = 'rectangular_packing_box1_region'
+        else:
+            raise NotImplementedError
 
-        if all(mover.regions['home_region'].contains_point(get_body_xytheta(o)[0].tolist()[:2] + [1]) for o in
+        if all(mover.regions[goal_region].contains(o.ComputeAABB()) for o in
                mover.objects[:n_objs_pack]):
             print("successful plan length: {}".format(len(trajectory.actions)))
         else:
             print('failed to find plan')
         if config.visualize_sim:
             raw_input('Continue?')
+
     return
 
 
