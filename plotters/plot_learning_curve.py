@@ -50,14 +50,14 @@ def plot_success_vs_time(n_objs, n_data=5000):
     else:
         raise NotImplementedError
 
-    hpn = load_data('hpn', n_objs)
-    print_plan_time(hpn, max_time)
+    # hpn = load_data('hpn', n_objs)
+    # print_plan_time(hpn, max_time)
     greedy = load_data('greedy', n_objs, n_data=n_data)
     print_plan_time(greedy, max_time)
-    #greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
-    #print_plan_time(greedy_dql, max_time)
     nognn = load_data('greedy_no_gnn', n_objs)
     print_plan_time(nognn, max_time)
+    greedy_dql = load_data('greedy_dql', n_objs, n_data=n_data)
+    print_plan_time(greedy_dql, max_time)
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -105,6 +105,9 @@ def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
     for pidx, plantime in zip(stat['pidxs'], stat['times']):
         if pidx < 20000:
             continue
+        if pidx == 20011 or pidx == 20023 or pidx == 20024 or pidx == 20049 or pidx == 20059 or pidx == 20094 or pidx == 20097:
+            # we don't have data for these - fill them in later
+            continue
         if pidx in plan_times:
             if plantime >= max_time:
                 nfail += 1
@@ -112,9 +115,6 @@ def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
             plan_times[pidx].append(plantime)
         else:
             plan_times[pidx] = []
-    for r in range(20000, 20100):
-        if r not in plan_times:
-            plan_times[r] = [-100]
     return plan_times
 
 
@@ -122,23 +122,26 @@ def get_avg_time_per_pidx(stat, max_time):
     stattimes = get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time)
     avg_times = [np.mean(v) for v in stattimes.values()]
     CI = [np.std(v) * 1.96 / np.sqrt(len(v)) for v in stattimes.values()]
-    return avg_times, CI
+    return stattimes.keys(), avg_times, CI
 
 
 def plot_scatter_plot(n_objs):
     max_time = n_objs * 300
 
-    stat = load_data('hpn', n_objs)
-    hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
-
     stat = load_data('greedy_num_goals', n_objs, n_data=5000)
-    greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
+    idxs, greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
 
-    pidxs = range(100)
-    plt.errorbar(pidxs, hpn_times, hpn_ci, fmt='o', color='r', label='RSC')
-    plt.errorbar(pidxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyQ')
+    stat = load_data('hpn', n_objs)
+    idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
+
+
+
+    plt.figure(figsize=(20,3))
+    idxs = range(len(idxs))
+    plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='r', label='RSC')
+    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='blue', label='GreedyQ')
+
     savefig("Problem instances", "Average times", './plotters/scatter')
-
 
 
 def main():
@@ -146,8 +149,8 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data)
-    #plot_scatter_plot(1)
+    # plot_success_vs_time(n_objs, n_data)
+    plot_scatter_plot(1)
     pass
 
 
