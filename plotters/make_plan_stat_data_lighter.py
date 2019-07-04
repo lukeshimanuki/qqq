@@ -68,23 +68,27 @@ def get_plan_times(test_dir, test_files, t_limit):
 
 
 def save_summary(stat_summary, test_dir, n_data, n_objs):
+
     if test_dir.find('hpn') != -1:
-        pickle.dump(stat_summary, open('./plotters/stats/hpn_n_objs_%d.pkl' % n_objs, 'wb'))
+        fname = 'hpn_n_objs_%d.pkl' % n_objs
     elif test_dir.find('greedy') != -1:
-        if test_dir.find('no_h') != -1:
-            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_h.pkl' % n_objs, 'wb'))
-        elif test_dir.find('no_gnn') != -1:
+        if test_dir.find('no_gnn') != -1:
             if test_dir.find('num_goals') != -1:
-                pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs, 'wb'))
+                fname = 'greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs
             else:
-                pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_no_gnn.pkl' % n_objs, 'wb'))
-        elif test_dir.find('helps_goal') != -1:
-            pickle.dump(stat_summary, open('./plotters/stats/greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
-        elif test_dir.find('num_goals') != -1:
-            pickle.dump(stat_summary,
-                        open('./plotters/stats/greedy_num_goals_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
+                fname = 'greedy_n_objs_%d_no_gnn.pkl' % n_objs
         else:
-            pickle.dump(stat_summary, open('./plotters/stats/greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data), 'wb'))
+            if test_dir.find('helps_goal') != -1:
+                fname = 'greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
+            elif test_dir.find('num_goals') != -1:
+                fname = 'greedy_num_goals_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
+            else:
+                fname = 'greedy_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
+    if test_dir.find('one_arm') != -1:
+        fname = 'one_arm_' + fname
+
+    pickle.dump(stat_summary, open('./plotters/stats/' + fname, 'wb'))
+
 
 
 def get_metrics(test_dir, test_files, n_objs, n_data=None):
@@ -92,6 +96,7 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
     time_taken = []
     num_nodes = []
     plan_lengths = []
+    pidxs = []
 
     for fidx, filename in enumerate(test_files):
         print "%d / %d" % (fidx, len(test_files))
@@ -103,6 +108,9 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         ftime_taken = get_time_taken(test_dir, stat)
         fsuccess = get_success(test_dir, stat)
         fnodes = get_num_nodes(test_dir, stat)
+        pidxs.append(pidx)
+        if pidx == 20022:
+            import pdb;pdb.set_trace()
         if fsuccess:
             plan_length = get_plan_length(test_dir, stat)
         time_taken.append(ftime_taken)
@@ -110,39 +118,29 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         num_nodes.append(fnodes)
         plan_lengths.append(plan_length)
 
-    stat_summary = {'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
+    stat_summary = {'pidxs': pidxs, 'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
     save_summary(stat_summary, test_dir, n_data, n_objs)
 
 
+def get_dir(algo, n_objs, domain='two_arm_mover'):
+    root = '/home/beomjoon/cloud_results/'
+    if algo == 'hpn':
+        fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
+        fdir += "/%d/test_purpose/" % n_objs
+    elif algo == 'greedy':
+        fdir = root + 'greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d/test_purpose/no_goal_obj_same_region/num_goals/' \
+                      '/num_train_5000/' % (domain, n_objs)
+    return fdir, os.listdir(fdir)
+
+
 def main():
-    n_objs = 8
-
-    test_dir = '/home/beomjoon/cloud_results/prm_mcr_hpn_results_on_mover_domain/%d/test_purpose/' % n_objs
-    #test_files = os.listdir(test_dir)
-    #get_metrics(test_dir, test_files, n_objs)
-
-
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d/test_purpose/no_gnn/no_goal_obj_same_region/num_goals/' % n_objs
-    #test_files = os.listdir(test_dir)
-    #get_metrics(test_dir, test_files, n_objs)
-
+    n_objs = 1
     n_train = 5000
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
-               'test_purpose/num_train_%d/' % (n_objs, n_train)
-    #test_files = os.listdir(test_dir)
-    #get_metrics(test_dir, test_files, n_objs, n_train)
+    test_dir, test_files = get_dir('hpn', n_objs)
+    #test_dir, test_files = get_dir('greedy', n_objs)
 
-    n_train = 5000
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/n_objs_pack_%d/' \
-               'test_purpose/no_h/num_train_%d/' % (n_objs, n_train)
-    #test_files = os.listdir(test_dir)
-    #get_metrics(test_dir, test_files, n_objs, n_train)
-
-    n_train = 5000
-    test_dir = '/home/beomjoon/cloud_results/greedy_results_on_mover_domain/domain_two_arm_mover/n_objs_pack_%d' \
-               '/test_purpose/no_goal_obj_same_region/num_goals/num_train_5000/' % n_objs
-    test_files = os.listdir(test_dir)
     get_metrics(test_dir, test_files, n_objs, n_train)
+
 
 if __name__ == '__main__':
     main()
