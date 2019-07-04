@@ -107,7 +107,6 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
             continue
 
         stat = pickle.load(open(test_dir + filename, 'r'))
-        import pdb;pdb.set_trace()
         ftime_taken = get_time_taken(test_dir, stat)
         fsuccess = get_success(test_dir, stat)
         fnodes = get_num_nodes(test_dir, stat)
@@ -128,6 +127,7 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
     root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
     if algo == 'hpn':
         fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
+        fdir += domain
         fdir += "/%d/test_purpose/" % n_objs
     elif algo.find('greedy') != -1:
         fdir = root + 'greedy_results_on_mover_domain/' \
@@ -147,9 +147,9 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
 
 
 def main():
-    n_objs = 8
+    n_objs = 1
     n_train = 5000
-    test_dir, test_files = get_dir('greedy', n_objs, n_train)
+    test_dir, test_files = get_dir('hpn', n_objs, n_train)
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 
