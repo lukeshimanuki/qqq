@@ -244,8 +244,8 @@ class OneArmPaPState(PaPState):
                 current_region = self.problem_env.get_region_containing(obj).name
 
                 if obj in self.goal_entities and r in self.goal_entities:
-                    num_tries = 1
-                    num_iters = 1000
+                    num_tries = 40
+                    num_iters = 30
                 elif obj not in self.goal_entities and r in self.goal_entities:
                     num_iters = 0
                 else:

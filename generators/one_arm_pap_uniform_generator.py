@@ -3,7 +3,7 @@ import numpy as np
 import random
 import copy
 
-from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta, set_robot_config
+from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta, set_robot_config, release_obj
 from mover_library import utils
 from manipulation.bodies.bodies import set_color
 from generators.uniform import UniformGenerator
@@ -132,6 +132,10 @@ class OneArmPaPUniformGenerator:
 
             place_base_pose = self.place_feasibility_checker.place_object_and_robot_at_new_pose(self.target_obj, place_pose, place_region)
 
+            if self.problem_env.env.CheckCollision(self.problem_env.robot) or self.problem_env.env.CheckCollision(self.target_obj):
+                self.target_obj.SetTransform(old_tf)
+                return None, None, 'InfeasibleIK'
+
             def assert_region(region):
                 try:
                     assert self.problem_env.get_region_containing(self.target_obj).name == region.name
@@ -182,15 +186,19 @@ class OneArmPaPUniformGenerator:
             #assert_region(pick_region)
 
             if self.problem_env.env.CheckCollision(self.problem_env.robot):
-                bad = True
+                release_obj()
+                self.target_obj.SetTransform(old_tf)
+                return None, None, 'InfeasibleIK'
 
             self.place_op.execute()
 
             if self.problem_env.env.CheckCollision(self.problem_env.robot) or self.problem_env.env.CheckCollision(self.target_obj):
-                bad = True
+                self.target_obj.SetTransform(old_tf)
+                return None, None, 'InfeasibleIK'
 
             if not self.place_op.discrete_parameters['region'].contains(self.target_obj.ComputeAABB()):
-                bad = True
+                self.target_obj.SetTransform(old_tf)
+                return None, None, 'InfeasibleIK'
 
             #assert_region(place_region)
 
@@ -217,10 +225,7 @@ class OneArmPaPUniformGenerator:
             #assert pick_params['operator_name'] == 'one_arm_pick'
             #assert place_params['operator_name'] == 'one_arm_place'
 
-            if bad:
-                return None, None, 'InfeasibleIK'
-            else:
-                return pick_params, place_params, 'HasSolution'
+            return pick_params, place_params, 'HasSolution'
 
         # sample pick
         pick_cont_params = None

@@ -325,9 +325,8 @@ def get_problem(mover):
 
                 success = True
 
-                newstate = statecls(mover, goal, node.state, action)
                 #newstate.make_pklable()
-                newnode = Node(node, action, newstate)
+                #newnode = Node(node, action, newstate)
 
                 if all(
                         mover.regions['rectangular_packing_box1_region'].contains(mover.env.GetKinBody(o).ComputeAABB())
@@ -335,7 +334,7 @@ def get_problem(mover):
                 ):
                     print("found successful plan: {}".format(n_objs_pack))
                     trajectory = Trajectory(mover.seed, mover.seed)
-                    plan = list(newnode.backtrack())[::-1]
+                    plan = list(node.backtrack())[::-1]
                     trajectory.states = [nd.state for nd in plan]
                     for s in trajectory.states:
                         s.pap_params = None
@@ -345,7 +344,7 @@ def get_problem(mover):
                         s.collision_pick_op = None
                         s.nocollision_place_op = None
                         s.collision_place_op = None
-                    trajectory.actions = [nd.action for nd in plan[1:]]
+                    trajectory.actions = [nd.action for nd in plan[1:]] + [action]
                     for op in trajectory.actions:
                         op.discrete_parameters = {
                             key: value.name if 'region' in key else value.GetName()
@@ -357,7 +356,12 @@ def get_problem(mover):
                     print(trajectory)
                     return trajectory, iter
                 else:
+                    pr = cProfile.Profile()
+                    pr.enable()
                     newstate = statecls(mover, goal, node.state, action)
+                    pr.disable()
+                    pstats.Stats(pr).sort_stats('tottime').print_stats(30)
+                    pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
                     print "New state computed"
                     #newstate.make_pklable()
                     newnode = Node(node, action, newstate)
