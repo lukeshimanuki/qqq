@@ -161,9 +161,9 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    #plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
+    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
     #plot_scatter_plot(1, domain='two_arm_mover')
-    plot_learning_curve()
+    #plot_learning_curve()
     pass
 
 

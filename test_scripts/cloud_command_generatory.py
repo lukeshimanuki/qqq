@@ -1,5 +1,5 @@
-num_train = 3000
-n_objs_pack = 8
+num_train = 100
+n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 loss = 'dql'

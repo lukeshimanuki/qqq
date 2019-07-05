@@ -78,20 +78,20 @@ def get_actions(mover, goal, config):
 def compute_heuristic(state, action, pap_model, problem_env):
     is_two_arm_domain = 'two_arm_place_object' in action.discrete_parameters
     if is_two_arm_domain:
-        target_obj = action.discrete_parameters['two_arm_place_object']
-        target_region = action.discrete_parameters['two_arm_place_region']
+        o = action.discrete_parameters['two_arm_place_object']
+        r = action.discrete_parameters['two_arm_place_region']
     else:
-        target_obj = action.discrete_parameters['object'].GetName()
-        target_region = action.discrete_parameters['region'].name
+        o = action.discrete_parameters['object'].GetName()
+        r = action.discrete_parameters['region'].name
 
     nodes, edges, actions, _ = extract_individual_example(state, action)
-
     nodes = nodes[..., 6:]
 
-    region_is_goal = state.nodes[target_region][8]
+    region_is_goal = state.nodes[r][8]
     number_in_goal = 0
+
     for i in state.nodes:
-        if i == target_obj:
+        if i == o:
             continue
         for r in problem_env.regions:
             if r in state.nodes:
@@ -109,12 +109,11 @@ def compute_heuristic(state, action, pap_model, problem_env):
                                                             actions[None, ...])
         return gnn_pred
     else:
-        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
-        if True: #not is_two_arm_domain:
-            #obj_name = action.discrete_parameters['object'].GetName()
-            #region_name = action.discrete_parameters['region'].name
-            obj_name = target_obj
-            region_name = target_region
+        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
+                                                            actions[None, ...])
+        if not is_two_arm_domain:
+            obj_name = action.discrete_parameters['object'].GetName()
+            region_name = action.discrete_parameters['region'].name
             is_reachable = state.nodes[obj_name][-2] #state.is_entity_reachable(obj_name)
             is_placeable = state.binary_edges[(obj_name, region_name)][2]
             is_goal = state.nodes[obj_name][-3]
@@ -122,8 +121,9 @@ def compute_heuristic(state, action, pap_model, problem_env):
             is_in_region = state.binary_edges[(obj_name, region_name)][0]
             print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d " \
                   % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal)
-        return -number_in_goal + gnn_pred
+        #print gnn_pred
 
+        return -number_in_goal + gnn_pred
 
 def get_problem(mover):
     tt = time.time()
@@ -144,7 +144,12 @@ def get_problem(mover):
         mover.env.SetViewer('qtcoin')
         set_viewer_options(mover.env)
 
-
+    pr = cProfile.Profile()
+    pr.enable()
+    state = statecls(mover, goal)
+    pr.disable()
+    pstats.Stats(pr).sort_stats('tottime').print_stats(30)
+    pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
 
     #state.make_pklable()
 
@@ -191,7 +196,6 @@ def get_problem(mover):
     with tf.variable_scope('pap'):
         pap_model = PaPGNN(num_entities, num_node_features, num_edge_features, pap_mconfig, entity_names, n_regions)
     pap_model.load_weights()
-    print pap_model.weight_file_name
 
     mover.reset_to_init_state_stripstream()
     depth_limit = 60
@@ -215,34 +219,13 @@ def get_problem(mover):
                 node = node.parent
 
     action_queue = Queue.PriorityQueue()  # (heuristic, nan, operator skeleton, state. trajectory)
-
-    #pr = cProfile.Profile()
-    #pr.enable()
-    #state = statecls(mover, goal)
-
-    #pr.disable()
-    #pstats.Stats(pr).sort_stats('tottime').print_stats(30)
-    #pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
-    #state = pickle.load(open('tmp.pkl', 'r'))
-    state = statecls(mover, goal)
-    actions = get_actions(mover, goal, config)
-    for a in actions: hval = compute_heuristic(state,a,pap_model,mover)
-        #action_queue.put((hval, float('nan'), a, initnode))  # initial q
-    import pdb;pdb.set_trace()
-    state.problem_env = mover
-    goal_obj = 'c_obst1'
-    goal_region = 'rectangular_packing_box1_region'
-    print state.get_entities_in_pick_way(goal_obj)
-    print state.get_entities_in_place_way(goal_obj, goal_region)
-    utils.set_color('c_obst5', [0, 0, 0])
-    utils.set_color(goal_obj, [1,0,0] )
-
-    import pdb;pdb.set_trace()
-    state.make_pklable()
-    pickle.dump(state, open('tmp.pkl','wb'))
     initnode = Node(None, None, state)
     initial_state = state
-    import pdb;pdb.set_trace()
+    actions = get_actions(mover, goal, config)
+    for a in actions:
+        hval = compute_heuristic(state,a,pap_model,mover)
+        action_queue.put((hval, float('nan'), a, initnode))  # initial q
+    #import pdb;pdb.set_trace()
 
     iter = 0
     # beginning of the planner
