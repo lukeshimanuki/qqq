@@ -6,7 +6,7 @@ from problem_environments.mover_problem import MoverProblem
 from trajectory_representation.operator import Operator
 
 from mover_library.utils import two_arm_pick_object, two_arm_place_object, set_robot_config, get_body_xytheta, \
-    visualize_path, CustomStateSaver
+    visualize_path, CustomStateSaver, set_obj_xytheta
 from mover_library.operator_utils.grasp_utils import solveTwoArmIKs, compute_two_arm_grasp
 
 OBJECT_ORIGINAL_COLOR = (0, 0, 0)
@@ -15,12 +15,16 @@ TARGET_OBJ_COLOR = (1, 0, 0)
 
 
 class Mover(ProblemEnvironment):
-    def __init__(self, problem_idx):
+    def __init__(self, problem_idx, nonmonotonic=False):
         ProblemEnvironment.__init__(self, problem_idx)
         problem = MoverProblem(self.env)
         self.problem_config = problem.get_problem_config()
         self.robot = self.env.GetRobots()[0]
         self.objects = self.problem_config['packing_boxes']
+
+        if nonmonotonic:
+            self.set_nonmonotonic()
+
         self.object_init_poses = {o.GetName(): get_body_xytheta(o).squeeze() for o in self.objects}
         self.initial_robot_base_pose = get_body_xytheta(self.robot)
         self.regions = {'entire_region': self.problem_config['entire_region'],
@@ -44,6 +48,30 @@ class Mover(ProblemEnvironment):
         self.two_arm_pick_continuous_constraint = None
         self.two_arm_place_continuous_constraint = None
         self.objects_to_check_collision = None
+
+    def set_nonmonotonic(self):
+        #from manipulation.primitives.display import set_viewer_options
+        #from mover_library.utils import set_color
+        #self.env.SetViewer('qtcoin')
+        #set_viewer_options(self.env)
+
+        #set_color(self.objects[0], [1,1,1])
+
+        poses = [
+            [2.3, -6.5, 0],
+            [3.9, -6.2, 0],
+            [1.5, -6.3, 0],
+            [3.9, -5.5, 0],
+            [0.8, -5.5, 0],
+            [3.2, -6.2, 0],
+            [1.5, -5.5, 0],
+            [3.2, -5.5, 0],
+        ]
+
+        for obj, pose in zip(self.objects, poses):
+            set_obj_xytheta(pose, obj)
+
+        #import pdb; pdb.set_trace()
 
     def set_exception_objs_when_disabling_objects_in_region(self, p):
         self.objects_to_check_collision = p

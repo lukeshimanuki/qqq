@@ -406,7 +406,7 @@ def generate_training_data_single():
     np.random.seed(config.pidx)
     random.seed(config.pidx)
     if config.domain == 'two_arm_mover':
-        mover = Mover(config.pidx)
+        mover = Mover(config.pidx, config.nonmonotonic)
     elif config.domain == 'one_arm_mover':
         mover = OneArmMover(config.pidx)
     else:
@@ -649,6 +649,7 @@ if __name__ == '__main__':
     parser.add_argument('-dont_use_h', action='store_true', default=False)
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-domain', type=str, default='two_arm_mover')
+    parser.add_argument('-nonmonotonic', action='store_true', default=False)
 
     config = parser.parse_args()
     generate_training_data_single()
