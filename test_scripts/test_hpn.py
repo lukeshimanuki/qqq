@@ -92,6 +92,7 @@ def find_plan_for_obj(obj_name, target_op_inst, environment, stime, timelimit):
                                         goal_region_name='home_region',
                                         misc_region_name='loading_region')
         plan = None
+
     plan_found = False
     status = 'NoSolution'
     while not plan_found and rsc.get_num_nodes() < 100 and time.time() - stime < timelimit:
@@ -191,7 +192,7 @@ def main():
 
     stime = time.time()
 
-    goal_object_names, plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
+    goal_object_names, high_level_plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
 
     total_n_nodes = 0
     total_plan = []
@@ -201,7 +202,7 @@ def main():
     timelimit = parameters.timelimit
     while total_n_nodes < 1000 and total_time_taken < timelimit:
         goal_obj_name = goal_object_names[idx]
-        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, plan[idx], environment, stime, timelimit)
+        plan, n_nodes, status = find_plan_for_obj(goal_obj_name, high_level_plan[idx], environment, stime, timelimit)
         total_n_nodes += n_nodes
         total_time_taken = time.time() - stime
         print goal_obj_name, goal_object_names, total_n_nodes
