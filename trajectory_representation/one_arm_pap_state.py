@@ -290,18 +290,16 @@ class OneArmPaPState(PaPState):
                 else:
                     self.pap_params[(obj, r)] = []
 
-
                 op_skel = Operator(operator_type='one_arm_pick_one_arm_place',
                                    discrete_parameters={'object': self.problem_env.env.GetKinBody(obj),
                                                         'region': self.problem_env.regions[r]})
-
 
                 # It easily samples without cached iks?
                 papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,
                                                  cached_picks=(self.iksolutions[current_region], self.iksolutions[r]))
 
                 # check existing solutions
-                if (obj,r) in self.pap_params:
+                if (obj, r) in self.pap_params:
                     nocollision = False
                     self.problem_env.enable_objects()
                     for pick_params, place_params in self.pap_params[(obj,r)]:

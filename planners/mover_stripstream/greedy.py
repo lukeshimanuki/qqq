@@ -128,6 +128,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
 
         return -number_in_goal + gnn_pred
 
+
 def compute_hcount(state, action, pap_model, problem_env):
     objects_to_move = set()
     queue = Queue.Queue()
@@ -148,6 +149,7 @@ def compute_hcount(state, action, pap_model, problem_env):
         objects_to_move -= {a_obj}
 
     return -len(objects_to_move)
+
 
 def get_problem(mover):
     tt = time.time()
