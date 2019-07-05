@@ -92,8 +92,9 @@ class OneArmPaPState(PaPState):
         before = CustomStateSaver(self.problem_env.env)
         utils.open_gripper()
 
-        for o in self.problem_env.env.GetBodies()[2:]:
-            o.Enable(False)
+        #for o in self.problem_env.env.GetBodies()[2:]:
+        #    o.Enable(False)
+        self.problem_env.disable_objects()
         self.iksolutions = {}
         for o, obj in self.objects.items():
             print(o)
@@ -111,15 +112,19 @@ class OneArmPaPState(PaPState):
                                             'region': region})
                     place_generator = UniformGenerator(place_op, self.problem_env)
 
-                    obj_pose = place_generator.sample_from_uniform()
-                    set_obj_xytheta(obj_pose, obj)
-                    set_point(obj, np.hstack([obj_pose[0:2], region.z + 0.001]))
+                    status = 'NoSolution'
+                    for _ in range(10):
+                        obj_pose = place_generator.sample_from_uniform()
+                        set_obj_xytheta(obj_pose, obj)
+                        set_point(obj, np.hstack([obj_pose[0:2], region.z + 0.001]))
 
-                    params, status = pick_feasibility_checker.check_feasibility(pick_op, pick_params)
+                        params, status = pick_feasibility_checker.check_feasibility(pick_op, pick_params)
 
-                    if status == 'HasSolution':
-                        iks.append((obj.GetTransform(), params))
-                    else:
+                        if status == 'HasSolution':
+                            iks.append((obj.GetTransform(), params))
+                            break
+
+                    if status == 'NoSolution':
                         break
 
                 if len(iks) == len(self.regions):
@@ -131,8 +136,9 @@ class OneArmPaPState(PaPState):
 
             print([len(self.iksolutions[o][r]) for r in self.regions])
 
-        for o in self.problem_env.env.GetBodies()[2:]:
-            o.Enable(True)
+        #for o in self.problem_env.env.GetBodies()[2:]:
+        #    o.Enable(True)
+        self.problem_env.enable_objects()
 
         before.Restore()
 
@@ -201,7 +207,7 @@ class OneArmPaPState(PaPState):
                             and not self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
                         self.nocollision_place_op[(obj, r)] = pick_op, place_op
                         if obj in self.goal_entities and r in self.goal_entities:
-                            print('successful goal pap')
+                            print('successful goal place')
                         before.Restore()
                         continue
 
@@ -242,22 +248,39 @@ class OneArmPaPState(PaPState):
     def initialize_pap_pick_place_params(self, moved_obj, parent_state):
         self.problem_env.disable_objects()
         stime=time.time()
+        sorted_objects = sorted(self.objects, key=lambda o: o not in self.goal_entities)
+        sorted_regions = sorted(self.regions, key=lambda r: r not in self.goal_entities)
+        all_goals_are_reachable = True
+
         for obj in self.objects:
             self.pick_params[obj] = []
             for r in self.regions:
+                self.pap_params[(obj, r)] = []
                 self.place_params[(obj, r)] = []
+
+        for obj in sorted_objects:
+            if all_goals_are_reachable and obj not in self.goal_entities:
+                break
+
+            obj_object = self.problem_env.env.GetKinBody(obj)
+            old_tf = obj_object.GetTransform()
+            pick_op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': obj_object})
+
+            for r in sorted_regions:
                 print(obj, r)
+
+                place_op = Operator(operator_type='one_arm_place', discrete_parameters={'object': obj_object, 'region': self.problem_env.regions[r]})
 
                 current_region = self.problem_env.get_region_containing(obj).name
 
                 if obj in self.goal_entities and r in self.goal_entities:
-                    num_tries = 40
-                    num_iters = 30
+                    num_tries = 20
+                    num_iters = 50
                 elif obj not in self.goal_entities and r in self.goal_entities:
                     num_iters = 0
                 else:
-                    num_tries = 10
-                    num_iters = 30
+                    num_tries = 5
+                    num_iters = 10
 
                 if self.parent_state is not None and obj != moved_obj:
                     self.pap_params[(obj, r)] = parent_state.pap_params[(obj, r)]
@@ -274,15 +297,65 @@ class OneArmPaPState(PaPState):
                 papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,
                                                  cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
 
+                # check existing solutions
+                if (obj,r) in self.pap_params:
+                    nocollision = False
+                    self.problem_env.enable_objects()
+                    for pick_params, place_params in self.pap_params[(obj,r)]:
+                        collision = False
+                        pick_op.continuous_parameters = pick_params
+                        pick_op.execute()
+                        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+                            collision = True
+                        place_op.continuous_parameters = place_params
+                        place_op.execute()
+                        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+                            collision = True
+                        if self.problem_env.env.CheckCollision(obj_object):
+                            collision = True
+                        obj_object.SetTransform(old_tf)
+                        if not collision:
+                            nocollision = True
+                            break
+                    self.problem_env.disable_objects()
+                    if nocollision:
+                        # we already have a nocollision solution
+                        print('already have nocollision', obj, r)
+                        continue
 
                 # I think num_iters is the number of paps for each object
+                nocollision = False
                 for _ in range(num_iters - len(self.pap_params[(obj, r)])):
                     pick_params, place_params, status = papg.sample_next_point(num_tries)
-                    if status == 'HasSolution':
+                    if 'HasSolution' in status:
                         self.pap_params[(obj, r)].append((pick_params, place_params))
                         self.pick_params[obj].append(pick_params)
+
                         print('success')
 
+                        self.problem_env.enable_objects()
+                        collision = False
+                        pick_op.continuous_parameters = pick_params
+                        pick_op.execute()
+                        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+                            collision = True
+                        place_op.continuous_parameters = place_params
+                        place_op.execute()
+                        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+                            collision = True
+                        if self.problem_env.env.CheckCollision(obj_object):
+                            collision = True
+                        obj_object.SetTransform(old_tf)
+                        self.problem_env.disable_objects()
+                        if not collision:
+                            nocollision = True
+                            print('found nocollision', obj, r)
+                            break
+                if not nocollision and obj in self.goal_entities and r in self.goal_entities:
+                    all_goals_are_reachable = False
+
+                #if obj in self.goal_entities and r in self.goal_entities:
+                #    print self.pap_params[(obj, r)]
         print time.time()-stime
         self.problem_env.enable_objects()
 
@@ -403,8 +476,14 @@ class OneArmPaPState(PaPState):
                 else:
                     is_a_in_pick_path_of_b = False
 
+        if 'region' in b and 'region' not in a:
+            is_a_in_b = self.problem_env.get_region_containing(self.problem_env.env.GetKinBody(a)).name == b
+        else:
+            is_a_in_b = False
+
         return [
-            self.in_region(a, b),
+            #self.in_region(a, b),
+            is_a_in_b,
             is_a_in_pick_path_of_b,
             is_place_in_b_reachable_while_holding_a
         ]

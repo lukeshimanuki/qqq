@@ -119,8 +119,9 @@ def compute_heuristic(state, action, pap_model, problem_env):
             is_goal = state.nodes[obj_name][-3]
             isgoal_region = state.nodes[region_name][-3]
             is_in_region = state.binary_edges[(obj_name, region_name)][0]
-            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d " \
-                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal)
+            in_way_of_goal_pick = any(state.binary_edges[(obj_name, other_name)][1] for other_name in state.goal_entities)
+            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d in_way_of_goal_pick %d" \
+                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal, in_way_of_goal_pick)
         #print gnn_pred
 
         return -number_in_goal + gnn_pred
