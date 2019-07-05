@@ -8,7 +8,13 @@ from mover_library import utils
 
 import numpy as np
 import time
+import pickle
+import os
 
+
+# h_add = Q for unsat goal * number of unsatisfied
+# h_max = max over all Q
+# h_hsp  = InWayHeuristic * Q
 
 def attach_q_goal_as_low_level_motion(target_op_inst):
     target_op_inst.low_level_motion = {}
@@ -22,6 +28,20 @@ class OneArmResolveSpatialConstraints:
         self.objects_moved_before = []
         self.plan = []
         self.objects_in_collision = []
+        self.objects = objects = {
+            o: problem_env.env.GetKinBody(o)
+            for o in problem_env.entity_names
+            if 'region' not in o
+        }
+        self.regions = regions = {
+            r: problem_env.regions[r]
+            for r in problem_env.entity_names
+            if 'region' in r
+        }
+        self.goal_entities = [goal_object_name, goal_region_name]
+        self.object_names = [o for o in problem_env.entity_names if 'region' not in o]
+        self.region_names = [o for o in problem_env.entity_names if 'region' in o]
+
         self.problem_env = problem_env
         self.goal_object = self.problem_env.env.GetKinBody(goal_object_name)
         self.goal_region = self.problem_env.regions[goal_region_name]
@@ -34,14 +54,50 @@ class OneArmResolveSpatialConstraints:
         self.number_of_places = 0
         self.number_of_nodes = 0
 
+        ikcachename = './ikcache.pkl'
+        self.iksolutions = {}
+        if os.path.isfile(ikcachename):
+            self.iksolutions = pickle.load(open(ikcachename, 'r'))
+
+        self.pap_params = {}
+        self.pick_params = {}
+        self.place_params = {}
+
+        for obj in self.objects:
+            self.pick_params[obj] = []
+            for r in self.regions:
+                self.pap_params[(obj, r)] = []
+                self.place_params[(obj, r)] = []
+
+        # self.initialize_pap_pick_place_params(moved_obj=None, parent_state=None)
+
+        self.nocollision_pick_op = {}
+        self.collision_pick_op = {}
+        # self.determine_collision_and_collision_free_picks()
+
+        self.nocollision_place_op = {}
+        self.collision_place_op = {}
+        # self.determine_collision_and_collision_free_places()
+
     def get_num_nodes(self):
         return self.number_of_nodes
 
     def sample_op_instance(self, curr_obj, region, swept_volume, n_iter):
         op = Operator(operator_type='one_arm_pick_one_arm_place',
                       discrete_parameters={'object': curr_obj, 'region': region})
-        generator = OneArmPaPUniformGenerator(op, self.problem_env, swept_volume)
-        pick_cont_param, place_cont_param, status = generator.sample_next_point(max_ik_attempts=n_iter)
+
+        # use the following:
+        # papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,
+        #                                  cached_picks=(self.iksolutions[current_region], self.iksolutions[r]))
+        pick_cont_param, place_cont_param = self.get_pap_pick_place_params(curr_obj.GetName(), region.name)
+
+        #generator = OneArmPaPUniformGenerator(op, self.problem_env, swept_volume)
+        #pick_cont_param, place_cont_param, status = generator.sample_next_point(max_ik_attempts=n_iter)
+
+        if pick_cont_param is not None:
+            status = 'HasSolution'
+        else:
+            status = 'NoSolution'
         op.continuous_parameters = {'pick': pick_cont_param, 'place': place_cont_param}
         return op, status
 
@@ -83,11 +139,6 @@ class OneArmResolveSpatialConstraints:
         set_color(object_to_move, [1, 0, 0])
         utils.set_color(plan[-1].discrete_parameters['object'], [0, 0, 1])
 
-        # Debugging purpose
-        #color_before = get_color(object_to_move)
-        #set_color(object_to_move, [1, 0, 0])
-        # End of debugging purpose
-
         # Initialize data necessary for this recursion level
         swept_volumes = PickAndPlaceSweptVolume(self.problem_env, parent_swept_volumes)
         objects_moved_before = [o for o in objects_moved_before]
@@ -105,7 +156,7 @@ class OneArmResolveSpatialConstraints:
             not_in_box = obj_curr_region.name.find('box') == -1
             if not_in_box:
                 # randomly choose one of the shelf regions
-                target_region = self.problem_env.shelf_regions.values()[np.random.randint(2)]
+                target_region = self.problem_env.shelf_regions.values()[0]
             else:
                 target_region = obj_curr_region
 
@@ -126,7 +177,6 @@ class OneArmResolveSpatialConstraints:
         prev = obstacles_to_remove
         obstacles_to_remove = objects_in_collision_for_pap + [o for o in obstacles_to_remove
                                                               if o not in objects_in_collision_for_pap]
-
 
         # O_{FUC} update
         objects_moved_before.append(object_to_move)
@@ -168,3 +218,65 @@ class OneArmResolveSpatialConstraints:
 
     def reset(self):
         self.problem_env.objects_to_check_collision = None
+
+    def get_pap_pick_place_params(self, obj, region):
+        stime = time.time()
+        r = region
+        print(obj, r)
+        current_region = self.problem_env.get_region_containing(obj).name
+
+        # check existing solutions
+        pick_op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': obj})
+
+        place_op = Operator(operator_type='one_arm_place', discrete_parameters={'object': obj,
+                                                                                'region':
+                                                                                 self.problem_env.regions[r]})
+        obj_kinbody = self.problem_env.env.GetKinBody(obj)
+        if len(self.pap_params[(obj, r)]) > 0:
+            for pick_params, place_params in self.pap_params[(obj, r)]:
+                pick_op.continuous_parameters = pick_params
+                place_op.continuous_parameters = place_params
+                if not self.check_collision_in_pap(pick_op, place_op, obj_kinbody):
+                    return pick_params, place_params
+
+        op_skel = Operator(operator_type='one_arm_pick_one_arm_place',
+                           discrete_parameters={'object': self.problem_env.env.GetKinBody(obj),
+                                                'region': self.problem_env.regions[r]})
+        papg = OneArmPaPUniformGenerator(op_skel, self.problem_env, cached_picks=(self.iksolutions[current_region],
+                                                                                  self.iksolutions[r]))
+
+        num_tries= 20
+        num_iters = 50
+        for _ in range(num_iters):
+            pick_params, place_params, status = papg.sample_next_point(num_tries)
+            if 'HasSolution' in status:
+                self.pap_params[(obj, r)].append((pick_params, place_params))
+                self.pick_params[obj].append(pick_params)
+
+                print('success')
+                pick_op.continuous_parameters = pick_params
+                place_op.continuous_parameters = place_params
+                collision = self.check_collision_in_pap(pick_op, place_op, obj_kinbody)
+
+                if not collision:
+                    print('found nocollision', obj, r)
+                    return pick_params, place_params
+                    break
+
+        print time.time() - stime
+        return None, None
+
+    def check_collision_in_pap(self, pick_op, place_op, obj_object):
+        old_tf = obj_object.GetTransform()
+        collision = False
+        pick_op.execute()
+        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+            collision = True
+        place_op.execute()
+        if self.problem_env.env.CheckCollision(self.problem_env.robot):
+            collision = True
+        if self.problem_env.env.CheckCollision(obj_object):
+            collision = True
+        obj_object.SetTransform(old_tf)
+        return collision
+
