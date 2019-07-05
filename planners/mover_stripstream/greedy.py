@@ -136,7 +136,14 @@ def get_problem(mover):
         statecls = ShortestPathPaPState
         goal = ['home_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
     elif config.domain == 'one_arm_mover':
-        statecls = OneArmPaPState
+        def create_one_arm_pap_state(*args, **kwargs):
+            while True:
+                state = OneArmPaPState(*args, **kwargs)
+                if len(state.nocollision_place_op) > 0:
+                    return state
+                else:
+                    print('failed to find any paps, trying again')
+        statecls = create_one_arm_pap_state
         goal = ['rectangular_packing_box1_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
     else:
         raise NotImplementedError
