@@ -207,7 +207,7 @@ class OneArmPaPState(PaPState):
                             and not self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
                         self.nocollision_place_op[(obj, r)] = pick_op, place_op
                         if obj in self.goal_entities and r in self.goal_entities:
-                            print('successful goal pap')
+                            print('successful goal place')
                         before.Restore()
                         continue
 
