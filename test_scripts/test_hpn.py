@@ -189,7 +189,7 @@ def main():
 
     # from manipulation.bodies.bodies import set_color
     # set_color(environment.env.GetKinBody(goal_object_names[0]), [1, 0, 0])
-
+    import pdb;pdb.set_trace()
     stime = time.time()
 
     goal_object_names, high_level_plan = find_plan_without_reachability(environment, goal_object_names)  # finds the plan
