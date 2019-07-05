@@ -141,11 +141,19 @@ def compute_hcount(state, action, pap_model, problem_env):
         if o not in objects_to_move:
             objects_to_move.add(o)
             for o2 in problem_env.entity_names:
-                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in state.goal_entities if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
+                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in state.goal_entities
+                                                        if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
                     queue.put(o2)
 
-    a_obj = action.discrete_parameters['two_arm_place_object']
-    if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or action.discrete_parameters['two_arm_place_region'] in state.goal_entities):
+
+    if 'two_arm' in problem_env.name:
+        a_obj = action.discrete_parameters['two_arm_place_object']
+        a_region = action.discrete_parameters['two_arm_place_region']
+    else:
+        a_obj = action.discrete_parameters['object'].GetName()
+        a_region = action.discrete_parameters['region'].name
+
+    if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or a_region in state.goal_entities):
         objects_to_move -= {a_obj}
 
     return -len(objects_to_move)
