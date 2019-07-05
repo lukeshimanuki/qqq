@@ -96,7 +96,10 @@ class OneArmPaPState(PaPState):
         #    o.Enable(False)
         self.problem_env.disable_objects()
         self.iksolutions = {}
-        for o, obj in self.objects.items():
+        o = u'c_obst0'
+        obj = self.problem_env.env.GetKinBody(o)
+        if True:
+        #for o, obj in self.objects.items():
             print(o)
             self.iksolutions[o] = {r: [] for r in self.regions}
             pick_op = Operator(operator_type='one_arm_pick', discrete_parameters={'object': obj})
@@ -135,6 +138,7 @@ class OneArmPaPState(PaPState):
                     break
 
             print([len(self.iksolutions[o][r]) for r in self.regions])
+        self.iksolutions = self.iksolutions[o]
 
         #for o in self.problem_env.env.GetBodies()[2:]:
         #    o.Enable(True)
@@ -294,7 +298,7 @@ class OneArmPaPState(PaPState):
 
                 # It easily samples without cached iks?
                 papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,
-                                                 cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
+                                                 cached_picks=(self.iksolutions[current_region], self.iksolutions[r]))
 
                 # check existing solutions
                 if (obj,r) in self.pap_params:
