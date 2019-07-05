@@ -92,8 +92,9 @@ class OneArmPaPState(PaPState):
         before = CustomStateSaver(self.problem_env.env)
         utils.open_gripper()
 
-        for o in self.problem_env.env.GetBodies()[2:]:
-            o.Enable(False)
+        #for o in self.problem_env.env.GetBodies()[2:]:
+        #    o.Enable(False)
+        self.problem_env.disable_objects()
         self.iksolutions = {}
         for o, obj in self.objects.items():
             print(o)
@@ -111,15 +112,19 @@ class OneArmPaPState(PaPState):
                                             'region': region})
                     place_generator = UniformGenerator(place_op, self.problem_env)
 
-                    obj_pose = place_generator.sample_from_uniform()
-                    set_obj_xytheta(obj_pose, obj)
-                    set_point(obj, np.hstack([obj_pose[0:2], region.z + 0.001]))
+                    status = 'NoSolution'
+                    for _ in range(10):
+                        obj_pose = place_generator.sample_from_uniform()
+                        set_obj_xytheta(obj_pose, obj)
+                        set_point(obj, np.hstack([obj_pose[0:2], region.z + 0.001]))
 
-                    params, status = pick_feasibility_checker.check_feasibility(pick_op, pick_params)
+                        params, status = pick_feasibility_checker.check_feasibility(pick_op, pick_params)
 
-                    if status == 'HasSolution':
-                        iks.append((obj.GetTransform(), params))
-                    else:
+                        if status == 'HasSolution':
+                            iks.append((obj.GetTransform(), params))
+                            break
+
+                    if status == 'NoSolution':
                         break
 
                 if len(iks) == len(self.regions):
@@ -131,8 +136,9 @@ class OneArmPaPState(PaPState):
 
             print([len(self.iksolutions[o][r]) for r in self.regions])
 
-        for o in self.problem_env.env.GetBodies()[2:]:
-            o.Enable(True)
+        #for o in self.problem_env.env.GetBodies()[2:]:
+        #    o.Enable(True)
+        self.problem_env.enable_objects()
 
         before.Restore()
 
@@ -262,13 +268,13 @@ class OneArmPaPState(PaPState):
                 current_region = self.problem_env.get_region_containing(obj).name
 
                 if obj in self.goal_entities and r in self.goal_entities:
-                    num_tries = 1
-                    num_iters = 800
+                    num_tries = 20
+                    num_iters = 50
                 elif obj not in self.goal_entities and r in self.goal_entities:
                     num_iters = 0
                 else:
-                    num_tries = 1
-                    num_iters = 120
+                    num_tries = 5
+                    num_iters = 10
 
                 if self.parent_state is not None and obj != moved_obj:
                     self.pap_params[(obj, r)] = parent_state.pap_params[(obj, r)]
