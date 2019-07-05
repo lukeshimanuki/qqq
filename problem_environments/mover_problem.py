@@ -225,15 +225,14 @@ def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_nam
                         transparency=OBST_TRANSPARENCY),
                (table_x + .225, table_y + obst_x, 0),
                stacked_obj_name)
-    if name_idx == 2:
-        place_body(env,
-                   box_body(env,
-                            width, obst_width - 0.05, top_wall_width,
-                            name='top_wall_' + str(name_idx),
-                            color=OBST_COLOR,
-                            transparency=OBST_TRANSPARENCY),
-                   (table_x + 0, table_y + obst_x, 0),
-                   'back_wall_' + str(name_idx))
+    place_body(env,
+               box_body(env,
+                        width, obst_width - 0.05, top_wall_width,
+                        name='top_wall_' + str(name_idx),
+                        color=OBST_COLOR,
+                        transparency=OBST_TRANSPARENCY),
+               (table_x + 0, table_y + obst_x, 0),
+               'back_wall_' + str(name_idx))
 
     if name_idx == 1:
         place_body(env,
@@ -248,8 +247,8 @@ def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_nam
         region = create_region(env, 'place_region_' + str(name_idx),
                                ((-1.0, 1.0), (-0.85, 0.85)),
                                'bottom_wall_' + str(name_idx), color=np.array((0, 0, 0, .5)))
-        viewer()
-        region.draw(env)
+        #viewer()
+        #region.draw(env)
         return region
 
 # remove region name entity_names

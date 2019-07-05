@@ -187,13 +187,10 @@ class OneArmPaPState(PaPState):
                     )
                     pick_op.execute()
 
-                    """
-                    if self.problem_env.env.CheckCollision(
-                            self.problem_env.robot) or self.problem_env.env.CheckCollision(
-                        self.problem_env.env.GetKinBody(obj)):
-                        before.Restore()
-                        continue
-                    """
+                    # pap gets placed in nocollision if both pick and place have no collision
+                    # otherwise it gets placed in collision, along with objects that collide with the place config (but not the pick config)
+
+                    pick_collision = self.problem_env.env.CheckCollision(self.problem_env.robot)
 
                     place_op = Operator(
                         operator_type='one_arm_place',
@@ -203,11 +200,13 @@ class OneArmPaPState(PaPState):
                     )
                     place_op.execute()
 
-                    if not self.problem_env.env.CheckCollision(self.problem_env.robot) \
-                            and not self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj)):
+                    place_collision = self.problem_env.env.CheckCollision(self.problem_env.robot) \
+                            or self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(obj))
+
+                    if not pick_collision and not place_collision:
                         self.nocollision_place_op[(obj, r)] = pick_op, place_op
                         if obj in self.goal_entities and r in self.goal_entities:
-                            print('successful goal place')
+                            print('successful goal pap')
                         before.Restore()
                         continue
 
@@ -459,7 +458,7 @@ class OneArmPaPState(PaPState):
             if b_already_contains_a:
                 is_place_in_b_reachable_while_holding_a = True
             else:
-                is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op
+                is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op or (a,b) in self.collision_place_op and len(self.collision_place_op[(a,b)][1]) == 0
             print 'is_place_in_%s_reachable_while_holding_%s: %d' % (b, a, is_place_in_b_reachable_while_holding_a)
         else:
             is_place_in_b_reachable_while_holding_a = False
