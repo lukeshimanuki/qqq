@@ -4,6 +4,7 @@ from trajectory_representation.operator import Operator
 from manipulation.regions import AARegion
 from mover_library import utils
 
+
 class OneArmMover(Mover):
     def __init__(self, problem_idx):
         Mover.__init__(self, problem_idx)
@@ -21,7 +22,8 @@ class OneArmMover(Mover):
         self.shelf_regions = self.problem_config['shelf_regions']
         self.target_box_region = self.regions['rectangular_packing_box1_region']
         self.regions.update(self.shelf_regions)
-        self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region', 'center_top_shelf_region', 'center_shelf_region']
+        self.entity_names = [obj.GetName() for obj in self.objects] + ['rectangular_packing_box1_region',
+                                                                       'center_shelf_region']
         self.name = 'one_arm_mover'
         self.init_saver = utils.CustomStateSaver(self.env)
 

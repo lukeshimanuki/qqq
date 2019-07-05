@@ -225,30 +225,34 @@ def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_nam
                         transparency=OBST_TRANSPARENCY),
                (table_x + .225, table_y + obst_x, 0),
                stacked_obj_name)
-    place_body(env,
-               box_body(env,
-                        width, obst_width - 0.05, top_wall_width,
-                        name='top_wall_' + str(name_idx),
-                        color=OBST_COLOR,
-                        transparency=OBST_TRANSPARENCY),
-               (table_x + 0, table_y + obst_x, 0),
-               'back_wall_' + str(name_idx))
-    place_body(env,
-               box_body(env,
-                        width, obst_width - 0.05, bottom_wall_width,
-                        name='bottom_wall_' + str(name_idx),
-                        color=OBST_COLOR,
-                        transparency=0.5),
-               (table_x + 0, table_y + obst_x, 0),
-               stacked_obj_name)
+    if name_idx == 2:
+        place_body(env,
+                   box_body(env,
+                            width, obst_width - 0.05, top_wall_width,
+                            name='top_wall_' + str(name_idx),
+                            color=OBST_COLOR,
+                            transparency=OBST_TRANSPARENCY),
+                   (table_x + 0, table_y + obst_x, 0),
+                   'back_wall_' + str(name_idx))
 
-    region = create_region(env, 'place_region_' + str(name_idx),
-                           ((-1.0, 1.0), (-0.85, 0.85)),
-                           'bottom_wall_' + str(name_idx), color=np.array((0, 0, 0, .5)))
-    #viewer()
-    region.draw(env)
-    return region
+    if name_idx == 1:
+        place_body(env,
+                   box_body(env,
+                            width, obst_width - 0.05, bottom_wall_width,
+                            name='bottom_wall_' + str(name_idx),
+                            color=OBST_COLOR,
+                            transparency=0.5),
+                   (table_x + 0, table_y + obst_x, 0),
+                   stacked_obj_name)
+    if name_idx == 1:
+        region = create_region(env, 'place_region_' + str(name_idx),
+                               ((-1.0, 1.0), (-0.85, 0.85)),
+                               'bottom_wall_' + str(name_idx), color=np.array((0, 0, 0, .5)))
+        viewer()
+        region.draw(env)
+        return region
 
+# remove region name entity_names
 
 def set_fixed_object_poses(env, x_lim, y_lim):
     objects = [env.GetKinBody('shelf1'), env.GetKinBody('shelf2'), env.GetKinBody('computer_table'),
@@ -302,7 +306,8 @@ def create_shelves(env, shelf_shapes, shelf_xs, table_name):
     # regions = {'center': center_region, 'center_top': center_top_region,
     #           'left': left_region, 'left_top': left_top_region}
     #           'right': right_region, 'right_top': right_top_region}
-    regions = {'center': center_region, 'center_top': center_top_region}
+    #regions = {'center': center_region, 'center_top': center_top_region}
+    regions = {'center': center_region}
     return regions
 
 
@@ -331,8 +336,8 @@ def create_shelf_objs(env, obj_shapes):
     #                                  n_objs=n_objs, env=env)
     center_objs = create_box_bodies(obj_shapes['c_obj_shapes'], color='blue', name='c_obst', n_objs=N_OBJS,
                                     env=env)
-    center_top_objs = create_box_bodies(obj_shapes['ctop_obj_shapes'], color='blue', name='ctop_obst', n_objs=N_OBJS,
-                                        env=env)
+    #center_top_objs = create_box_bodies(obj_shapes['ctop_obj_shapes'], color='blue', name='ctop_obst', n_objs=N_OBJS,
+    #                                    env=env)
     # right_objs = create_box_bodies(obj_shapes['r_obj_shapes'], color='red', name='r_obst',
     #                               n_objs=n_objs, env=env)
     # right_top_objs = create_box_bodies(obj_shapes['rtop_obj_shapes'], color='red', name='rtop_obst',
@@ -340,7 +345,8 @@ def create_shelf_objs(env, obj_shapes):
     # objects = {  # 'left': left_objs, 'left_top': left_top_objs,
     #    'center': center_objs, 'center_top': center_top_objs,
     #    'right': right_objs, 'right_top': right_top_objs}
-    objects = {'center': center_objs, 'center_top': center_top_objs}
+    #objects = {'center': center_objs, 'center_top': center_top_objs}
+    objects = {'center': center_objs}
     return objects
 
 
@@ -362,15 +368,15 @@ def generate_poses_and_place_shelf_objs(objects, regions, env):
     """
     center_objs = objects['center']
     center_region = regions['center']
-    center_top_objs = objects['center_top']
-    center_top_region = regions['center_top']
+    #center_top_objs = objects['center_top']
+    #center_top_region = regions['center_top']
 
     # place_objs_in_region(left_objs, left_region, env)
     # place_objs_in_region(left_top_objs, left_top_region, env)
     # place_objs_in_region(right_objs, right_region, env)
     # place_objs_in_region(right_top_objs, right_top_region, env)
     place_objs_in_region(center_objs, center_region, env)
-    place_objs_in_region(center_top_objs, center_top_region, env)
+    #place_objs_in_region(center_top_objs, center_top_region, env)
 
     obj_poses = {obj.GetName(): get_pose(obj) for obj_list in objects.values() for obj in obj_list}
     return obj_poses
