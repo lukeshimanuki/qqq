@@ -186,8 +186,8 @@ def get_problem(mover):
         num_entities = 11
         n_regions = 2
     elif config.domain == 'one_arm_mover':
-        num_entities = 17
-        n_regions = 3
+        num_entities = 9
+        n_regions = 2
     else:
         raise NotImplementedError
     num_node_features = 10

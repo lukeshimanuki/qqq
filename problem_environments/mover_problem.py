@@ -248,8 +248,8 @@ def create_shelf(env, obst_x, obst_width, obst_height, name_idx, stacked_obj_nam
         region = create_region(env, 'place_region_' + str(name_idx),
                                ((-1.0, 1.0), (-0.85, 0.85)),
                                'bottom_wall_' + str(name_idx), color=np.array((0, 0, 0, .5)))
-        viewer()
-        region.draw(env)
+        #viewer()
+        #region.draw(env)
         return region
 
 # remove region name entity_names
