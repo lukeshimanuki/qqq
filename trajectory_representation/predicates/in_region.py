@@ -20,8 +20,8 @@ class InRegion(BinaryPredicate):
                 if 'top_shelf_region' in b.name:
                     is_a_in_b = b.contains(self.problem_env.env.GetKinBody(a).ComputeAABB())
                 else:
-                    # if b is not top shelf region but top shelf contains a
                     if self.problem_env.regions['center_top_shelf_region'].contains(self.problem_env.env.GetKinBody(a).ComputeAABB()):
+                        # if b is not top shelf region but top shelf contains a
                         is_a_in_b = False
                     else:
                         is_a_in_b = b.contains(self.problem_env.env.GetKinBody(a).ComputeAABB())
@@ -29,3 +29,4 @@ class InRegion(BinaryPredicate):
             return is_a_in_b
         else:
             return False
+

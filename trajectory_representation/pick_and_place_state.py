@@ -151,6 +151,8 @@ class PaPState(State):
         inway = []
         entity_names = self.problem_env.object_names + self.problem_env.region_names
         for obj_name in entity_names:
+            if (entity, obj_name) not in self.binary_edges:
+                continue
             if self.binary_edges[(entity, obj_name)][1]:
                 inway.append(obj_name)
         return inway
@@ -161,6 +163,8 @@ class PaPState(State):
             if region_name == 'entire_region':
                 continue
             for obj_name in self.problem_env.object_names:
+                if (obj_name, entity, region_name) not in self.ternary_edges:
+                    continue
                 if self.ternary_edges[(obj_name, entity, region_name)][0]:
                     inway.append((obj_name, region_name))
         return inway

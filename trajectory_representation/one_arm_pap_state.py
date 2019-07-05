@@ -271,8 +271,8 @@ class OneArmPaPState(PaPState):
 
 
                 # It easily samples without cached iks?
-                papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,)
-                                                 #cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
+                papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,
+                                                 cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
 
 
                 # I think num_iters is the number of paps for each object
@@ -283,13 +283,7 @@ class OneArmPaPState(PaPState):
                         self.pick_params[obj].append(pick_params)
                         print('success')
 
-
-                # if obj in self.goal_entities and r in self.goal_entities:
-                #    print self.pap_params[(obj, r)]
-                #if obj == 'c_obst0' and r=='rectangular_packing_box1_region':
-                #    import pdb;pdb.set_trace()
         print time.time()-stime
-        import pdb;pdb.set_trace()
         self.problem_env.enable_objects()
 
     def get_nodes(self):
@@ -359,7 +353,8 @@ class OneArmPaPState(PaPState):
             is_r_region = 'region' in r
             is_a_object = 'region' not in a
             if is_r_region and is_a_object:
-                r_already_contains_a = self.regions[r].contains(self.objects[a].ComputeAABB())
+                # todo take the lower and top region into account into account
+                r_already_contains_a = self.in_region(a, r)
                 if r_already_contains_a:
                     is_b_in_way_of_reaching_r_while_holding_a = False
                 elif key in self.nocollision_place_op:
@@ -368,28 +363,45 @@ class OneArmPaPState(PaPState):
                     if (a, r) in self.nocollision_place_op:
                         is_b_in_way_of_reaching_r_while_holding_a = False
                     else:
-                        try:
+                        if (a, r) in self.collision_place_op:
                             is_b_in_way_of_reaching_r_while_holding_a = b in self.collision_place_op[(a, r)][1]
-                        except:
-                            import pdb;pdb.set_trace()
+                        else:
+                            # This is what's different from two-arm case. If we don't have a place in the region,
+                            # then b cannot be in the way. In the two-arm case, we find the minimum constraint path,
+                            # which always has the path.
+                            is_b_in_way_of_reaching_r_while_holding_a = False
             else:
                 is_b_in_way_of_reaching_r_while_holding_a = False
 
         return [is_b_in_way_of_reaching_r_while_holding_a]
 
     def get_binary_edge_features(self, a, b):
-        is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op
-
         is_a_obj = 'region' not in a
         is_b_region = 'region' in b
 
+        # is_place_in_b_reachable_while_holding_a eval
+        if is_b_region and is_a_obj:
+            # todo take the lower and top region into account into account
+            b_already_contains_a = self.in_region(a, b) #self.regions[b].contains(self.objects[a].ComputeAABB())
+            if b_already_contains_a:
+                is_place_in_b_reachable_while_holding_a = True
+            else:
+                is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op
+            print 'is_place_in_%s_reachable_while_holding_%s: %d' % (b, a, is_place_in_b_reachable_while_holding_a)
+        else:
+            is_place_in_b_reachable_while_holding_a = False
+
+        # is_a_in_pick_path_of_b eval
         if not is_a_obj or a == b or is_b_region:
             is_a_in_pick_path_of_b = False
         else:
             if b in self.nocollision_pick_op:
                 is_a_in_pick_path_of_b = False
             else:
-                is_a_in_pick_path_of_b = a in self.collision_pick_op[b][1]
+                if b in self.collision_pick_op:
+                    is_a_in_pick_path_of_b = a in self.collision_pick_op[b][1]
+                else:
+                    is_a_in_pick_path_of_b = False
 
         return [
             self.in_region(a, b),
