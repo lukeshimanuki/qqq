@@ -78,20 +78,20 @@ def get_actions(mover, goal, config):
 def compute_heuristic(state, action, pap_model, problem_env):
     is_two_arm_domain = 'two_arm_place_object' in action.discrete_parameters
     if is_two_arm_domain:
-        o = action.discrete_parameters['two_arm_place_object']
-        r = action.discrete_parameters['two_arm_place_region']
+        target_obj = action.discrete_parameters['two_arm_place_object']
+        target_region = action.discrete_parameters['two_arm_place_region']
     else:
-        o = action.discrete_parameters['object'].GetName()
-        r = action.discrete_parameters['region'].name
+        target_obj = action.discrete_parameters['object'].GetName()
+        target_region = action.discrete_parameters['region'].name
 
     nodes, edges, actions, _ = extract_individual_example(state, action)
+
     nodes = nodes[..., 6:]
 
-    region_is_goal = state.nodes[r][8]
+    region_is_goal = state.nodes[target_region][8]
     number_in_goal = 0
-
     for i in state.nodes:
-        if i == o:
+        if i == target_obj:
             continue
         for r in problem_env.regions:
             if r in state.nodes:
@@ -109,11 +109,12 @@ def compute_heuristic(state, action, pap_model, problem_env):
                                                             actions[None, ...])
         return gnn_pred
     else:
-        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                            actions[None, ...])
-        if not is_two_arm_domain:
-            obj_name = action.discrete_parameters['object'].GetName()
-            region_name = action.discrete_parameters['region'].name
+        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
+        if True: #not is_two_arm_domain:
+            #obj_name = action.discrete_parameters['object'].GetName()
+            #region_name = action.discrete_parameters['region'].name
+            obj_name = target_obj
+            region_name = target_region
             is_reachable = state.nodes[obj_name][-2] #state.is_entity_reachable(obj_name)
             is_placeable = state.binary_edges[(obj_name, region_name)][2]
             is_goal = state.nodes[obj_name][-3]
@@ -121,8 +122,6 @@ def compute_heuristic(state, action, pap_model, problem_env):
             is_in_region = state.binary_edges[(obj_name, region_name)][0]
             print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d " \
                   % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal)
-        #print gnn_pred
-
         return -number_in_goal + gnn_pred
 
 
@@ -229,6 +228,7 @@ def get_problem(mover):
     actions = get_actions(mover, goal, config)
     for a in actions: hval = compute_heuristic(state,a,pap_model,mover)
         #action_queue.put((hval, float('nan'), a, initnode))  # initial q
+    import pdb;pdb.set_trace()
     state.problem_env = mover
     goal_obj = 'c_obst1'
     goal_region = 'rectangular_packing_box1_region'

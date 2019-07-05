@@ -126,8 +126,6 @@ def extract_individual_example(state, op_instance, remaining_steps=0):
     edges = get_edges(state, region_nodes, entity_names)
     actions = get_actions(op_instance, entity_names)
 
-    o = op_instance.discrete_parameters['object'].GetName()
-    r = op_instance.discrete_parameters['region'].name
 
     costs = remaining_steps
     return nodes, edges, actions, costs

@@ -17,6 +17,7 @@ import numpy as np
 import pickle
 import copy
 import os
+import time
 
 
 class OneArmPaPState(PaPState):
@@ -59,7 +60,6 @@ class OneArmPaPState(PaPState):
                 moved_obj = parent_action.discrete_parameters['object'].GetName()
         else:
             moved_obj = None
-        """
         self.pap_params = {}
         self.pick_params = {}
         self.place_params = {}
@@ -77,7 +77,6 @@ class OneArmPaPState(PaPState):
             sum([o in self.collision_pick_op for o in objects]), sum([o in self.nocollision_pick_op for o in objects]),
             sum([(o, r) in self.collision_place_op for o in objects for r in regions]),
             sum([(o, r) in self.nocollision_place_op for o in objects for r in regions]))
-        """
 
         # predicates
         self.pick_in_way = PickInWay(self.problem_env)
@@ -146,6 +145,8 @@ class OneArmPaPState(PaPState):
         before = CustomStateSaver(self.problem_env.env)
         for obj in self.objects:
             for r in self.regions:
+                print obj
+
                 if len(self.pap_params[(obj, r)]) > 0:
                     def count_collides(papp):
                         before = CustomStateSaver(self.problem_env.env)
@@ -170,7 +171,6 @@ class OneArmPaPState(PaPState):
 
                         before.Restore()
                         return pick_collisions + place_collisions
-
                     # chooses the one with minimal collisions
                     papp = min(self.pap_params[(obj, r)], key=lambda papp: count_collides(papp))
                     pickp, placep = papp
@@ -180,11 +180,15 @@ class OneArmPaPState(PaPState):
                         continuous_parameters=pickp
                     )
                     pick_op.execute()
+
+                    """
                     if self.problem_env.env.CheckCollision(
                             self.problem_env.robot) or self.problem_env.env.CheckCollision(
                         self.problem_env.env.GetKinBody(obj)):
                         before.Restore()
                         continue
+                    """
+
                     place_op = Operator(
                         operator_type='one_arm_place',
                         discrete_parameters={'object': self.problem_env.env.GetKinBody(obj),
@@ -205,8 +209,8 @@ class OneArmPaPState(PaPState):
                         o for o in self.objects
                         if self.problem_env.env.CheckCollision(self.problem_env.env.GetKinBody(o))
                     }
-                    if (obj, r) not in self.collision_place_op or len(collisions) < len(
-                            self.collision_place_op[(obj, r)][1]):
+                    if (obj, r) not in self.collision_place_op or len(collisions) < \
+                            len(self.collision_place_op[(obj, r)][1]):
                         self.collision_place_op[(obj, r)] = place_op, collisions
 
                     before.Restore()
@@ -237,9 +241,11 @@ class OneArmPaPState(PaPState):
 
     def initialize_pap_pick_place_params(self, moved_obj, parent_state):
         self.problem_env.disable_objects()
+        stime=time.time()
         for obj in self.objects:
             self.pick_params[obj] = []
             for r in self.regions:
+                self.place_params[(obj, r)] = []
                 print(obj, r)
 
                 current_region = self.problem_env.get_region_containing(obj).name
@@ -258,11 +264,16 @@ class OneArmPaPState(PaPState):
                 else:
                     self.pap_params[(obj, r)] = []
 
+
                 op_skel = Operator(operator_type='one_arm_pick_one_arm_place',
-                                   discrete_parameters={'object': self.problem_env.env.GetKinBody(obj), 'region': self.problem_env.regions[r]})
-                papg = OneArmPaPUniformGenerator(op_skel,
-                                                 self.problem_env,
-                                                 cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
+                                   discrete_parameters={'object': self.problem_env.env.GetKinBody(obj),
+                                                        'region': self.problem_env.regions[r]})
+
+
+                # It easily samples without cached iks?
+                papg = OneArmPaPUniformGenerator(op_skel, self.problem_env,)
+                                                 #cached_picks=(self.iksolutions[obj][current_region], self.iksolutions[obj][r]))
+
 
                 # I think num_iters is the number of paps for each object
                 for _ in range(num_iters - len(self.pap_params[(obj, r)])):
@@ -272,9 +283,13 @@ class OneArmPaPState(PaPState):
                         self.pick_params[obj].append(pick_params)
                         print('success')
 
-                    self.place_params[(obj, r)] = []
-                #if obj in self.goal_entities and r in self.goal_entities:
+
+                # if obj in self.goal_entities and r in self.goal_entities:
                 #    print self.pap_params[(obj, r)]
+                #if obj == 'c_obst0' and r=='rectangular_packing_box1_region':
+                #    import pdb;pdb.set_trace()
+        print time.time()-stime
+        import pdb;pdb.set_trace()
         self.problem_env.enable_objects()
 
     def get_nodes(self):
@@ -310,17 +325,12 @@ class OneArmPaPState(PaPState):
         isobj = entity not in self.problem_env.regions
         obj = self.problem_env.env.GetKinBody(entity) if isobj else None
         pose = get_body_xytheta(obj)[0] if isobj else None
-        """
+
         if isobj:
             is_entity_reachable = entity in self.nocollision_pick_op
         else:
             is_entity_reachable = False
-        """
 
-        if entity in self.goal_entities:
-            is_entity_reachable = True
-        else:
-            is_entity_reachable = False
         return [
             0,  # l
             0,  # w
@@ -336,39 +346,50 @@ class OneArmPaPState(PaPState):
         ]
 
     def get_ternary_edge_features(self, a, b, r):
-        if a in self.problem_env.regions or b in self.problem_env.regions or r not in self.problem_env.regions:
-            is_b_in_way_of_reaching_r_while_holding_a = False
+        """
+        is_b_in_way_of_reaching_r_while_holding_a = a in self.nocollision_pick_op \
+                                                    and (a, r) not in self.nocollision_place_op \
+                                                    and (a, r) in self.collision_place_op and \
+                                                    b in self.collision_place_op[(a, r)][1]
+        """
+        if (a, b, r) in self.parent_ternary_predicates:
+            return self.parent_ternary_predicates[(a, b, r)]
         else:
-            """
-            is_b_in_way_of_reaching_r_while_holding_a = False
-                                                        a in self.nocollision_pick_op \
-                                                        and (a, r) not in self.nocollision_place_op \
-                                                        and (a, r) in self.collision_place_op and \
-                                                        b in self.collision_place_op[(a, r)][1]
-            """
-        is_b_in_way_of_reaching_r_while_holding_a = False
+            key = (a, r)
+            is_r_region = 'region' in r
+            is_a_object = 'region' not in a
+            if is_r_region and is_a_object:
+                r_already_contains_a = self.regions[r].contains(self.objects[a].ComputeAABB())
+                if r_already_contains_a:
+                    is_b_in_way_of_reaching_r_while_holding_a = False
+                elif key in self.nocollision_place_op:
+                    is_b_in_way_of_reaching_r_while_holding_a = False
+                else:
+                    if (a, r) in self.nocollision_place_op:
+                        is_b_in_way_of_reaching_r_while_holding_a = False
+                    else:
+                        try:
+                            is_b_in_way_of_reaching_r_while_holding_a = b in self.collision_place_op[(a, r)][1]
+                        except:
+                            import pdb;pdb.set_trace()
+            else:
+                is_b_in_way_of_reaching_r_while_holding_a = False
 
         return [is_b_in_way_of_reaching_r_while_holding_a]
 
     def get_binary_edge_features(self, a, b):
-        if a in self.problem_env.regions or b not in self.problem_env.regions:
-            is_place_in_b_reachable_while_holding_a = False
-        else:
-            if 'region' in b and 'region' not in a:
-                obj_a = self.problem_env.env.GetKinBody(a)
-                if self.problem_env.regions[b].contains(obj_a.ComputeAABB()):
-                    is_place_in_b_reachable_while_holding_a = True
-                else:
-                    is_place_in_b_reachable_while_holding_a = True  #(a, b) in self.nocollision_place_op
-        """
-        if a in self.problem_env.regions or b in self.problem_env.regions:
+        is_place_in_b_reachable_while_holding_a = (a, b) in self.nocollision_place_op
+
+        is_a_obj = 'region' not in a
+        is_b_region = 'region' in b
+
+        if not is_a_obj or a == b or is_b_region:
             is_a_in_pick_path_of_b = False
         else:
-            is_a_in_pick_path_of_b = b not in self.nocollision_pick_op and b in self.collision_pick_op and a in \
-                                     self.collision_pick_op[b][1]
-        """
-
-        is_a_in_pick_path_of_b = False
+            if b in self.nocollision_pick_op:
+                is_a_in_pick_path_of_b = False
+            else:
+                is_a_in_pick_path_of_b = a in self.collision_pick_op[b][1]
 
         return [
             self.in_region(a, b),
@@ -384,7 +405,6 @@ class OneArmPaPState(PaPState):
         for k in self.nocollision_place_op.values():
             k[0].make_pklable()
             k[1].make_pklable()
-
 
         self.objects = None
 

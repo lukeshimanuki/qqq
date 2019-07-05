@@ -119,7 +119,6 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         time_taken.append(ftime_taken)
         successes.append(fsuccess)
         num_nodes.append(fnodes)
-
     stat_summary = {'pidxs': pidxs, 'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
     fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
     pickle.dump(stat_summary, open('./plotters/stats/' + fname, 'wb'))
@@ -149,11 +148,14 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
 
 
 def main():
-    n_objs = int(sys.argv[1])
-    n_train = int(sys.argv[2])
-    algo = sys.argv[3]
-    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
-    get_metrics(test_dir, test_files, n_objs, n_train)
+    #n_objs = int(sys.argv[1])
+    #n_train = int(sys.argv[2])
+    #algo = sys.argv[3]
+    n_objs=1
+    for algo in ['greedy', 'greedy_dql']:
+        for n_train in [100, 1000, 3000, 5000]:
+            test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
+            get_metrics(test_dir, test_files, n_objs, n_train)
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ from make_plan_stat_data_lighter import get_summary_stat_file_name, get_dir
 def load_data(algo, n_objs, domain, n_data=5000):
     test_dir, _ = get_dir(algo, n_objs, n_train=n_data, domain=domain)
     fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
-    print fname
+    #print fname
     return pickle.load(open('./plotters/stats/' + fname, 'r'))
 
 
@@ -26,7 +26,7 @@ def get_success_rate_at(time_data, success_data, interval):
     return rates
 
 
-def print_plan_time(statfile, max_time):
+def print_plan_time(statfile, max_time, algo_name=None):
     plantimes = np.array(statfile['times'])
     successes = np.array(statfile['successes'])
     num_nodes = np.array(statfile['num_nodes'])
@@ -35,6 +35,9 @@ def print_plan_time(statfile, max_time):
     plantimes[plantimes > max_time] = max_time
 
     plantimes[~successes] = max_time
+    if algo_name is not None:
+        print algo_name
+    print "Numb data", len(successes)
     print "Success rate", np.mean(successes)
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
     print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
@@ -90,13 +93,12 @@ def plot_learning_curve():
     for n_data in data_ranges:
         greedy = load_data('greedy', 1, 'two_arm_mover', n_data)
         greedy_dqn = load_data('greedy_dql', 1, 'two_arm_mover', n_data)
-        greedy_rate = print_plan_time(greedy, time_limit)
-        dqn_rate = print_plan_time(greedy_dqn, time_limit)
+        greedy_rate = print_plan_time(greedy, time_limit,'greedy')
+        dqn_rate = print_plan_time(greedy_dqn, time_limit,'greedy_dql')
 
         rates.append(greedy_rate)
         dqn_rates.append(dqn_rate)
-
-    #plt.errorbar(data_ranges, [hpn_rate] * len(data_ranges), label='HPN', color=[0, 0, 1], marker='o')
+    import pdb;pdb.set_trace()
     plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='RSC', color=[0, 0, 1], marker='o')
     plt.plot(data_ranges, rates, label='GreedyLM', color=[1, 0, 0], marker='o')
     plt.plot(data_ranges, dqn_rates, label='GreedyDQN', color=[0, 0.5, 0], marker='o')
@@ -160,8 +162,8 @@ def main():
     n_data = int(sys.argv[2])
 
     #plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
-    plot_scatter_plot(1, domain='two_arm_mover')
-    #plot_learning_curve()
+    #plot_scatter_plot(1, domain='two_arm_mover')
+    plot_learning_curve()
     pass
 
 
