@@ -110,6 +110,27 @@ def compute_heuristic(state, action, pap_model, problem_env):
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
                                                             actions[None, ...])
         return gnn_pred
+    elif config.hadd:
+        goal_regions = [goal_r for goal_r in state.goal_entities if 'region' in goal_r]
+        assert len(goal_regions) == 1
+        goal_r = goal_regions[0]
+        goal_objects = [goal_o for goal_o in state.goal_entities if 'region' not in goal_o]
+        hadd = 0
+        for goal_o in goal_objects:
+            #if state.binary_edges[(goal_o,goal_r)][0]:
+            #    continue
+
+            for entity, features in state.nodes.items():
+                features[8] = False
+            state.nodes[goal_o][8] = True
+            state.nodes[goal_r][8] = True
+
+            nodes, edges, actions, _ = extract_individual_example(state, action)
+            nodes = nodes[..., 6:]
+            gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
+                                                            actions[None, ...])
+            hadd += gnn_pred
+        return hadd
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
                                                             actions[None, ...])
@@ -674,6 +695,7 @@ if __name__ == '__main__':
     parser.add_argument('-domain', type=str, default='two_arm_mover')
     parser.add_argument('-nonmonotonic', action='store_true', default=False)
     parser.add_argument('-hcount', action='store_true', default=False)
+    parser.add_argument('-hadd', action='store_true', default=False)
 
     config = parser.parse_args()
     generate_training_data_single()
