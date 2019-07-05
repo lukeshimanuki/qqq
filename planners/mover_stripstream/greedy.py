@@ -83,6 +83,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
     else:
         o = action.discrete_parameters['object'].GetName()
         r = action.discrete_parameters['region'].name
+
     nodes, edges, actions, _ = extract_individual_example(state, action)
     nodes = nodes[..., 6:]
 
@@ -110,16 +111,19 @@ def compute_heuristic(state, action, pap_model, problem_env):
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
                                                             actions[None, ...])
-        obj_name = action.discrete_parameters['object'].GetName()
-        region_name = action.discrete_parameters['region'].name
-        is_reachable = state.is_entity_reachable(obj_name)
-        is_placeable = state.binary_edges[(obj_name, region_name)][2]
-        is_goal = obj_name in state.goal_entities
-        print "%15s %50s reachable %d placeable_in_region %d isgoal %d gnn %.4f num_in_goal %d " \
-              % (obj_name, region_name, is_reachable, is_placeable, is_goal, gnn_pred, number_in_goal)
+        if not is_two_arm_domain:
+            obj_name = action.discrete_parameters['object'].GetName()
+            region_name = action.discrete_parameters['region'].name
+            is_reachable = state.nodes[obj_name][-2] #state.is_entity_reachable(obj_name)
+            is_placeable = state.binary_edges[(obj_name, region_name)][2]
+            is_goal = state.nodes[obj_name][-3]
+            isgoal_region = state.nodes[region_name][-3]
+            is_in_region = state.binary_edges[(obj_name, region_name)][0]
+            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d " \
+                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal)
+        #print gnn_pred
 
         return -number_in_goal + gnn_pred
-
 
 def get_problem(mover):
     tt = time.time()
