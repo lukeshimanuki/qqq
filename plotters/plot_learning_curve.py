@@ -144,7 +144,6 @@ def plot_scatter_plot(n_objs,domain):
     stat = load_data('greedy_dql', 1, 'two_arm_mover', n_data=5000)
     idxs, dqn_times, dqn_ci = get_avg_time_per_pidx(stat, max_time)
 
-    import pdb;pdb.set_trace()
     plt.figure(figsize=(20, 3))
     idxs = range(len(idxs))
     plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='blue', label='RSC')
@@ -161,7 +160,7 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
+    plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
     #plot_scatter_plot(1, domain='two_arm_mover')
     #plot_learning_curve()
     pass
