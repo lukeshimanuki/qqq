@@ -117,9 +117,6 @@ def compute_heuristic(state, action, pap_model, problem_env):
         goal_objects = [goal_o for goal_o in state.goal_entities if 'region' not in goal_o]
         hadd = 0
         for goal_o in goal_objects:
-            #if state.binary_edges[(goal_o,goal_r)][0]:
-            #    continue
-
             for entity, features in state.nodes.items():
                 features[8] = False
             state.nodes[goal_o][8] = True
@@ -127,13 +124,11 @@ def compute_heuristic(state, action, pap_model, problem_env):
 
             nodes, edges, actions, _ = extract_individual_example(state, action)
             nodes = nodes[..., 6:]
-            gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                            actions[None, ...])
+            gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
             hadd += gnn_pred
         return hadd
     else:
-        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
-                                                            actions[None, ...])
+        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
         if not is_two_arm_domain:
             obj_name = action.discrete_parameters['object'].GetName()
             region_name = action.discrete_parameters['region'].name
@@ -483,12 +478,24 @@ def generate_training_data_single():
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/no_gnn/no_goal_obj_same_region/num_goals/'
+                            + '//no_gnn/no_goal_obj_same_region/num_goals/'
     elif config.dont_use_h:
         solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
                             + '/domain_' + config.domain \
                             + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/no_h/' \
+                            + '//no_h/' \
+                            + '/num_train_' + str(config.num_train) + '/'
+    elif config.hcount:
+        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
+                            + '/domain_' + config.domain \
+                            + '/n_objs_pack_' + str(config.n_objs_pack) \
+                            + '//hcount/' \
+                            + '/num_train_' + str(config.num_train) + '/'
+    elif config.hadd:
+        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
+                            + '/domain_' + config.domain \
+                            + '/n_objs_pack_' + str(config.n_objs_pack) \
+                            + '//hadd/' \
                             + '/num_train_' + str(config.num_train) + '/'
     else:
         """
