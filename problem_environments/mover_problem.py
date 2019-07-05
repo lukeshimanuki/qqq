@@ -24,7 +24,7 @@ max_length = 0.6
 OBST_COLOR = (1, 0, 0)
 OBST_TRANSPARENCY = .25
 
-N_OBJS = 7
+N_OBJS = 10
 
 def generate_rand(min, max):
     return np.random.rand() * (max - min) + min
@@ -315,12 +315,13 @@ def generate_shelf_obj_shapes():
     max_obj_height = 0.25
     min_obj_height = 0.15
 
-    l_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
-    ltop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
-    c_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
-    ctop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
-    r_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
-    rtop_obj_shapes = [[0.05, 0.05, generate_rand(min_obj_height, max_obj_height)] for _ in range(N_OBJS)]
+    same_height = 0.20
+    l_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
+    ltop_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
+    c_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
+    ctop_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
+    r_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
+    rtop_obj_shapes = [[0.05, 0.05, same_height] for _ in range(N_OBJS)]
 
     obj_shapes = {'l_obj_shapes': l_obj_shapes, 'ltop_obj_shapes': ltop_obj_shapes,
                   'c_obj_shapes': c_obj_shapes, 'ctop_obj_shapes': ctop_obj_shapes,
@@ -334,8 +335,7 @@ def create_shelf_objs(env, obj_shapes):
     #                              env=env)
     # left_top_objs = create_box_bodies(obj_shapes['ltop_obj_shapes'], color='green', name='ltop_obst',
     #                                  n_objs=n_objs, env=env)
-    center_objs = create_box_bodies(obj_shapes['c_obj_shapes'], color='blue', name='c_obst', n_objs=N_OBJS,
-                                    env=env)
+    center_objs = create_box_bodies(obj_shapes['c_obj_shapes'], color='blue', name='c_obst', n_objs=N_OBJS, env=env)
     #center_top_objs = create_box_bodies(obj_shapes['ctop_obj_shapes'], color='blue', name='ctop_obst', n_objs=N_OBJS,
     #                                    env=env)
     # right_objs = create_box_bodies(obj_shapes['r_obj_shapes'], color='red', name='r_obst',
