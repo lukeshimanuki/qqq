@@ -474,40 +474,19 @@ def generate_training_data_single():
     else:
         root_dir = '/data/public/rw/pass.port/tamp_q_results/'
 
+    solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d'\
+                        % (config.domain, config.n_objs_pack)
+
     if config.dont_use_gnn:
-        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                            + '/domain_' + config.domain \
-                            + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '//no_gnn/no_goal_obj_same_region/num_goals/'
+        solution_file_dir += '/no_gnn/'
     elif config.dont_use_h:
-        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                            + '/domain_' + config.domain \
-                            + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '//no_h/' \
-                            + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_no_h/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
     elif config.hcount:
-        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                            + '/domain_' + config.domain \
-                            + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '//hcount/' \
-                            + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/hcount/'
     elif config.hadd:
-        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                            + '/domain_' + config.domain \
-                            + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '//hadd/' \
-                            + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_hadd/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
     else:
-        """
-        redundant = state.binary_edges[(o, r)][0]
-        helps_goal = object_is_goal and region_is_goal and not redundant
-        unhelpful = object_is_goal and not region_is_goal
-        """
-        solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/' \
-                            + '/domain_' + config.domain \
-                            + '/n_objs_pack_' + str(config.n_objs_pack) \
-                            + '/test_purpose/no_goal_obj_same_region/num_goals/' \
-                            + '/loss_' +str(config.loss)  + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
