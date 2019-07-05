@@ -102,7 +102,9 @@ def compute_heuristic(state, action, pap_model, problem_env):
                         number_in_goal += is_i_in_r
     number_in_goal += int(region_is_goal)
 
-    if config.dont_use_gnn:
+    if config.hcount:
+        return compute_hcount(state, action, pap_model, problem_env)
+    elif config.dont_use_gnn:
         return -number_in_goal
     elif config.dont_use_h:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...],
@@ -125,6 +127,27 @@ def compute_heuristic(state, action, pap_model, problem_env):
         #print gnn_pred
 
         return -number_in_goal + gnn_pred
+
+def compute_hcount(state, action, pap_model, problem_env):
+    objects_to_move = set()
+    queue = Queue.Queue()
+    goal_r = [entity for entity in state.goal_entities if 'region' in entity][0]
+    for entity in state.goal_entities:
+        if 'region' not in entity and not problem_env.regions[goal_r].contains(problem_env.env.GetKinBody(entity).ComputeAABB()):
+            queue.put(entity)
+    while not queue.empty():
+        o = queue.get()
+        if o not in objects_to_move:
+            objects_to_move.add(o)
+            for o2 in problem_env.entity_names:
+                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in state.goal_entities if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
+                    queue.put(o2)
+
+    a_obj = action.discrete_parameters['two_arm_place_object']
+    if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or action.discrete_parameters['two_arm_place_region'] in state.goal_entities):
+        objects_to_move -= {a_obj}
+
+    return -len(objects_to_move)
 
 def get_problem(mover):
     tt = time.time()
@@ -650,6 +673,7 @@ if __name__ == '__main__':
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-domain', type=str, default='two_arm_mover')
     parser.add_argument('-nonmonotonic', action='store_true', default=False)
+    parser.add_argument('-hcount', action='store_true', default=False)
 
     config = parser.parse_args()
     generate_training_data_single()
