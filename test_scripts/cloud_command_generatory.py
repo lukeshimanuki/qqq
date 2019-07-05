@@ -1,15 +1,16 @@
-num_train = 100
-n_objs_pack = 1
+num_train = 5000
+n_objs_pack = 8
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 loss = 'dql'
-algorithm = 'hpn'
+algorithm = 'greedy'
 domain = 'two_arm_mover'
 
 if n_objs_pack == 8:
     pidxs = [[20000, 20100]]
-    pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
     #pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
+    #pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
+    pidxs = [[20000, 20100]]
 else:
     pidxs = [[20000, 20100]]
     #pidxs = [[20000, 20050]]
@@ -17,7 +18,7 @@ else:
 
 command = "cd /root/qqq ; git pull;  python test_scripts/threaded_test_%s.py" % algorithm
 if algorithm != 'hpn' and algorithm != 'greedy_no_gnn':
-    train_seed = [1, 4]
+    train_seed = [0, 5]
     command += " -domain %s -loss %s -num_train %d -n_objs_pack %d -time_limit %d " % (
         domain, loss, num_train, n_objs_pack, time_limit)
 else:

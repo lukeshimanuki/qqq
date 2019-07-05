@@ -125,7 +125,6 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 
 def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
-
     root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
     if algo == 'hpn':
         fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
@@ -148,14 +147,12 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
 
 
 def main():
-    #n_objs = int(sys.argv[1])
-    #n_train = int(sys.argv[2])
-    #algo = sys.argv[3]
-    n_objs=1
-    for algo in ['greedy', 'greedy_dql']:
-        for n_train in [100, 1000, 3000, 5000]:
-            test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
-            get_metrics(test_dir, test_files, n_objs, n_train)
+    n_objs = int(sys.argv[1])
+    n_train = int(sys.argv[2])
+    algo = sys.argv[3]
+    n_objs = 8
+    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
+    get_metrics(test_dir, test_files, n_objs, n_train)
 
 
 if __name__ == '__main__':
