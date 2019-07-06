@@ -1,9 +1,9 @@
 num_train = 5000
-n_objs_pack = 8
+n_objs_pack = 1
 time_limit = 300 * n_objs_pack
 planning_seed = range(5)
 loss = 'largemargin'
-algorithm = 'hpn'
+algorithm = 'greedy'
 domain = 'one_arm_mover'
 
 if n_objs_pack == 8:

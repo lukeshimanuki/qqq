@@ -70,7 +70,6 @@ def get_plan_times(test_dir, test_files, t_limit):
 
 
 def get_summary_stat_file_name(test_dir, n_data, n_objs):
-
     if test_dir.find('hpn') != -1:
         fname = 'hpn_n_objs_%d.pkl' % n_objs
     elif test_dir.find('greedy') != -1:
@@ -79,6 +78,8 @@ def get_summary_stat_file_name(test_dir, n_data, n_objs):
                 fname = 'greedy_n_objs_%d_no_gnn_num_goals.pkl' % n_objs
             else:
                 fname = 'greedy_n_objs_%d_no_gnn.pkl' % n_objs
+        elif test_dir.find('hcount') !=-1:
+            fname = 'hcount_n_objs_%d.pkl' % n_objs
         else:
             if test_dir.find('helps_goal') != -1:
                 fname = 'greedy_helps_goal_n_objs_%d_n_data_%d.pkl' % (n_objs, n_data)
@@ -141,10 +142,16 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
 
 def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
     root = '/home/beomjoon/Dropbox (MIT)/cloud_results/'
+
     if algo == 'hpn':
         fdir = root + 'prm_mcr_hpn_results_on_mover_domain/'
         fdir += domain
         fdir += "/%d/test_purpose/" % n_objs
+    elif algo == 'hcount':
+        fdir = root + 'greedy_results_on_mover_domain/'
+        fdir += 'domain_%s/' % domain
+        fdir += 'n_objs_pack_%d/' % n_objs
+        fdir += "/hcount/"
     elif algo.find('greedy') != -1:
         fdir = root + 'greedy_results_on_mover_domain/' \
                       'domain_%s/' \
@@ -165,7 +172,7 @@ def main():
     n_objs = int(sys.argv[1])
     n_train = int(sys.argv[2])
     algo = sys.argv[3]
-    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='one_arm_mover')
+    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 

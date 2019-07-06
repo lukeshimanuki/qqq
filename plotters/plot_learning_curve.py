@@ -26,15 +26,22 @@ def get_success_rate_at(time_data, success_data, interval):
     return rates
 
 
-def print_plan_time(statfile, max_time, algo_name=None):
+def print_plan_time(statfile, max_time=None, max_nodes=None, algo_name=None):
     plantimes = np.array(statfile['times'])
     successes = np.array(statfile['successes'])
     num_nodes = np.array(statfile['num_nodes'])
     planlength = np.array(statfile['plan_length'])
-    successes[plantimes > max_time] = False
-    plantimes[plantimes > max_time] = max_time
 
-    plantimes[~successes] = max_time
+    if max_nodes is not None:
+        successes[num_nodes > max_nodes] = False
+        num_nodes[num_nodes > max_nodes] = max_nodes
+        num_nodes[~successes] = max_nodes
+    else:
+        successes[plantimes > max_time] = False
+        plantimes[plantimes > max_time] = max_time
+        plantimes[~successes] = max_time
+
+
     if algo_name is not None:
         print algo_name
     print "Numb data", len(successes)
@@ -54,14 +61,18 @@ def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
     else:
         raise NotImplementedError
 
+    print "HPN"
     hpn = load_data('hpn', n_objs, domain)
     print_plan_time(hpn, max_time)
+    print "Greedy"
     greedy = load_data('greedy', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy, max_time)
-    nognn = load_data('greedy_no_gnn', n_objs, domain=domain)
-    print_plan_time(nognn, max_time)
+    print "Greedy DQL"
     greedy_dql = load_data('greedy_dql', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy_dql, max_time)
+    print "Hcount"
+    greedy_hcount = load_data('hcount', n_objs, domain=domain, n_data=n_data)
+    print_plan_time(greedy_hcount, max_time)
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -146,13 +157,25 @@ def plot_scatter_plot(n_objs,domain):
     max_time = n_objs * 300
     print 'greedy'
     stat = load_data('greedy_num_goals', n_objs, n_data=5000, domain=domain)
-    idxs, greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
+    greedy_idxs, greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
 
     print 'hpn'
     stat = load_data('hpn', n_objs, domain)
-    idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
+    hpn_idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
 
-    plt.plot(greedy_times, hpn_times, 'o', alpha=0.3)
+    idxs = set(greedy_idxs).intersection(set(hpn_idxs))
+    idxs = np.array(list(idxs))
+
+
+    hpn_times_ = []
+    greedy_times_ = []
+    for idx in idxs:
+        hidx = np.where(np.array(hpn_idxs) == idx)[0][0]
+        gidx = np.where(np.array(greedy_idxs) == idx)[0][0]
+        hpn_times_.append(hpn_times[hidx])
+        greedy_times_.append(greedy_times[gidx])
+
+    plt.plot(greedy_times_, hpn_times_, 'o', alpha=0.3)
     plt.plot(range(max_time+30), range(max_time+30), 'r')
     plt.xlim(0, max_time+30)
     plt.ylim(0, max_time+30)
@@ -165,8 +188,8 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
-    #plot_scatter_plot(n_objs, domain='two_arm_mover')
+    #plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
+    plot_scatter_plot(n_objs, domain='two_arm_mover')
     #plot_learning_curve()
     pass
 
