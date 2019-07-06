@@ -46,6 +46,17 @@ class OneArmPaPState(PaPState):
         else:
             self.compute_and_cache_ik_solutions(ikcachename)
 
+        # ik solutions contain 1000 paps.
+        # Suppose at each state, we try 15 ik attempts for each object (the number we have for  non-goal-entities).
+        # We have 10 objects
+        # On failure IK, it takes about 0.15 seconds
+        # On successful ones, it takes close-to-zero seconds. Say on average it succeeds half of the times.
+        # Average IK time is then 0.075
+        # 15*10*0.075 = 11.25 seconds.
+        # But we check collisions with cached IKs, which take about 4-5 seconds on average. Say it takes 4.5s.
+        # So this adds to about 6.25.
+        time.sleep(6.75)
+
         self.pick_used = {}
         self.place_used = {}
 
@@ -261,6 +272,9 @@ class OneArmPaPState(PaPState):
                 self.pap_params[(obj, r)] = []
                 self.place_params[(obj, r)] = []
 
+        num_iks = 0
+        # used to gauge how many iks we did, so that we can put sleep in our state computation
+        # num ik attempts is 5 for non-goal objects and 20 for goal objects. Let's say we do 10 on average?
         for obj in sorted_objects:
             if all_goals_are_reachable and obj not in self.goal_entities:
                 break
@@ -302,7 +316,7 @@ class OneArmPaPState(PaPState):
                 if (obj, r) in self.pap_params:
                     nocollision = False
                     self.problem_env.enable_objects()
-                    for pick_params, place_params in self.pap_params[(obj,r)]:
+                    for pick_params, place_params in self.pap_params[(obj, r)]:
                         collision = False
                         pick_op.continuous_parameters = pick_params
                         pick_op.execute()
