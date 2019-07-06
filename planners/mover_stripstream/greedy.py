@@ -291,7 +291,8 @@ def get_problem(mover):
             return None, iter
 
         iter += 1
-        time.sleep(3.5) # gauged using max_ik_attempts = 20
+        if 'one_arm' in mover.name:
+            time.sleep(2.5) # gauged using max_ik_attempts = 20
 
         if iter > 3000:
             print('failed to find plan: iteration limit')

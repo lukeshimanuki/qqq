@@ -25,7 +25,7 @@ def worker_wrapper_multi_input(multi_args):
 def main():
     configs = []
     seed = sys.argv[1]
-    data_range = [50,100] + range(1000, 6000, 1000)
+    data_range = [50, 100] + range(1000, 6000, 1000)
     for n_data in data_range:
         config = {'num_train': n_data, 'seed': seed}
         configs.append(config)
