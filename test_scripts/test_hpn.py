@@ -223,7 +223,6 @@ def main():
             break
         else:
             idx %= len(goal_object_names)
-    import pdb;pdb.set_trace()
 
     save_plan(total_plan, total_n_nodes, len(goal_object_names) - idx, found_solution, file_path, goal_entities,
               total_time_taken)
