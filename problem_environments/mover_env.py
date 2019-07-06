@@ -15,15 +15,14 @@ TARGET_OBJ_COLOR = (1, 0, 0)
 
 
 class Mover(ProblemEnvironment):
-    def __init__(self, problem_idx, nonmonotonic=False):
+    def __init__(self, problem_idx, problem_type='normal'):
         ProblemEnvironment.__init__(self, problem_idx)
         problem = MoverProblem(self.env)
         self.problem_config = problem.get_problem_config()
         self.robot = self.env.GetRobots()[0]
         self.objects = self.problem_config['packing_boxes']
 
-        if nonmonotonic:
-            self.set_nonmonotonic()
+        self.set_problem_type(problem_type)
 
         self.object_init_poses = {o.GetName(): get_body_xytheta(o).squeeze() for o in self.objects}
         self.initial_robot_base_pose = get_body_xytheta(self.robot)
@@ -49,29 +48,37 @@ class Mover(ProblemEnvironment):
         self.two_arm_place_continuous_constraint = None
         self.objects_to_check_collision = None
 
-    def set_nonmonotonic(self):
-        #from manipulation.primitives.display import set_viewer_options
-        #from mover_library.utils import set_color
-        #self.env.SetViewer('qtcoin')
-        #set_viewer_options(self.env)
+    def set_problem_type(self, problem_type):
+        if problem_type == 'normal':
+            pass
+        elif problem_type == 'nonmonotonic':
+            #from manipulation.primitives.display import set_viewer_options
+            from mover_library.utils import set_color
+            #self.env.SetViewer('qtcoin')
+            #set_viewer_options(self.env)
 
-        #set_color(self.objects[0], [1,1,1])
+            set_color(self.objects[0], [1,1,1])
+            set_color(self.objects[4], [0,0,0])
 
-        poses = [
-            [2.3, -6.5, 0],
-            [3.9, -6.2, 0],
-            [1.5, -6.3, 0],
-            [3.9, -5.5, 0],
-            [0.8, -5.5, 0],
-            [3.2, -6.2, 0],
-            [1.5, -5.5, 0],
-            [3.2, -5.5, 0],
-        ]
+            poses = [
+                [2.3, -6.4, 0],
+                [3.9, -6.2, 0],
+                [1.5, -6.3, 0],
+                [3.9, -5.5, 0],
+                [0.8, -5.5, 0],
+                [3.2, -6.2, 0],
+                [1.5, -5.5, 0],
+                [3.2, -5.5, 0],
+            ]
 
-        for obj, pose in zip(self.objects, poses):
-            set_obj_xytheta(pose, obj)
+            q = [2.3, -5.5, 0]
 
-        #import pdb; pdb.set_trace()
+            set_robot_config(q)
+
+            for obj, pose in zip(self.objects, poses):
+                set_obj_xytheta(pose, obj)
+
+            #import pdb; pdb.set_trace()
 
     def set_exception_objs_when_disabling_objects_in_region(self, p):
         self.objects_to_check_collision = p
