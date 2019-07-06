@@ -116,7 +116,6 @@ def parse_args():
     parser.add_argument('-num_train', type=int, default=5000)
     parser.add_argument('-val_portion', type=float, default=0.1)
     parser.add_argument('-top_k', type=int, default=1)
-    parser.add_argument('-use_mse', action='store_true', default=False)
     parser.add_argument('-donttrain', action='store_true', default=False)
     parser.add_argument('-same_vertex_model', action='store_true', default=False)
     parser.add_argument('-diff_weight_msg_passing', action='store_true', default=False)

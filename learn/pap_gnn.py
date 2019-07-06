@@ -267,9 +267,13 @@ class PaPGNN(GNN):
         alt_msgs = tf.keras.layers.Lambda(lambda args: get_alt_msgs(*args))
         alt_msg_layer = alt_msgs([value_layer, self.action_input])
 
-        loss_layer = tf.keras.layers.Lambda(
-            lambda args: compute_dql_loss(*args) if self.config.loss == 'dql' else (
-                    compute_rank_loss(*args) + self.config.mse_weight * compute_mse_loss(*args)))
+        if self.config.loss == 'mse':
+            loss_layer = tf.keras.layers.Lambda(
+                lambda args: compute_mse_loss(*args))
+        else:
+            loss_layer = tf.keras.layers.Lambda(
+                lambda args: compute_dql_loss(*args) if self.config.loss == 'dql' else (
+                        compute_rank_loss(*args) + self.config.mse_weight * compute_mse_loss(*args)))
         loss_layer = loss_layer([alt_msg_layer, q_layer, self.cost_input])
         loss_inputs = [self.node_input, self.edge_input, self.action_input, self.cost_input]
         loss_model = tf.keras.Model(loss_inputs, loss_layer)
