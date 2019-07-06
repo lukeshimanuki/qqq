@@ -7,7 +7,7 @@ else:
     time_limit = 300 * n_objs_pack
 
 planning_seed = range(1)
-loss = 'largemargin'
+loss = 'dql'
 algorithm = 'greedy' # greedy_hcount, greedy
 
 if n_objs_pack == 8:
