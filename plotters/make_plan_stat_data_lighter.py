@@ -93,6 +93,9 @@ def get_summary_stat_file_name(test_dir, n_data, n_objs):
     if test_dir.find('dql') != -1:
         fname = 'dql_' + fname
 
+    elif test_dir.find('mse') != -1:
+        fname = 'mse_' + fname
+
     return fname
 
 
@@ -159,8 +162,10 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
                       '/' % (domain, n_objs)
         if algo.find('no_gnn') != -1:
             fdir += 'no_gnn/'
-        elif algo.find('dql') == -1:
+        elif algo.find('dql') == -1 and algo.find('mse') == -1:
             fdir += 'gnn/loss_largemargin/num_train_%d/' % n_train
+        elif algo.find('mse') != -1:
+            fdir += 'gnn/loss_mse/num_train_%d/' % n_train
         else:
             fdir += 'gnn/loss_dql/num_train_%d/' % n_train
     else:

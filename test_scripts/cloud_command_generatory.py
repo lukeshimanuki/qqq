@@ -1,10 +1,14 @@
 num_train = 5000
 n_objs_pack = 1
-time_limit = 300 * n_objs_pack
-planning_seed = range(5)
-loss = 'mse'
-algorithm = 'greedy'
 domain = 'one_arm_mover'
+if 'one_arm' in domain:
+    time_limit = 500 * n_objs_pack
+else:
+    time_limit = 300 * n_objs_pack
+
+planning_seed = range(1)
+loss = 'largemargin'
+algorithm = 'greedy' # greedy_hcount, greedy
 
 if n_objs_pack == 8:
     pidxs = [[20000, 20100]]
@@ -12,7 +16,7 @@ if n_objs_pack == 8:
     #pidxs = [[20000, 20020], [20020, 20040], [20040, 20060], [20060, 20080], [20080, 20100]]
     pidxs = [[20000, 20030], [20030, 20060], [20060, 20100]]
 else:
-    pidxs = [[20000, 20020]]
+    pidxs = [[20000, 20002], [20002, 20004], [20004, 20006], [20006, 20008], [20008, 20010]]
     #pidxs = [[20000, 20050]]
 
 

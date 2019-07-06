@@ -14,7 +14,7 @@ from make_plan_stat_data_lighter import get_summary_stat_file_name, get_dir
 def load_data(algo, n_objs, domain, n_data=5000):
     test_dir, _ = get_dir(algo, n_objs, n_train=n_data, domain=domain)
     fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
-    #print fname
+    #yprint fname
     return pickle.load(open('./plotters/stats/' + fname, 'r'))
 
 
@@ -38,7 +38,7 @@ def print_plan_time(statfile, max_time=None, max_nodes=None, algo_name=None):
         num_nodes[~successes] = max_nodes
     else:
         successes[plantimes > max_time] = False
-        #plantimes[plantimes > max_time] = max_time
+        plantimes[plantimes > max_time] = max_time
         plantimes[~successes] = max_time
 
     if algo_name is not None:
@@ -66,9 +66,16 @@ def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
     print "Greedy"
     greedy = load_data('greedy', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy, max_time)
+
     print "Greedy DQL"
     greedy_dql = load_data('greedy_dql', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy_dql, max_time)
+
+
+    print "Greedy mse"
+    greedy = load_data('greedy_mse', n_objs, domain=domain, n_data=n_data)
+    print_plan_time(greedy, max_time)
+
     print "Hcount"
     greedy_hcount = load_data('hcount', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy_hcount, max_time)
