@@ -129,6 +129,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
         return hadd
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
+        """
         if not is_two_arm_domain:
             obj_name = action.discrete_parameters['object'].GetName()
             region_name = action.discrete_parameters['region'].name
@@ -141,6 +142,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
             print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d in_way_of_goal_pick %d" \
                   % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal, in_way_of_goal_pick)
         #print gnn_pred
+        """
 
         return -number_in_goal + gnn_pred
 
