@@ -291,6 +291,7 @@ def get_problem(mover):
             return None, iter
 
         iter += 1
+        time.sleep(3.5) # gauged using max_ik_attempts = 20
 
         if iter > 3000:
             print('failed to find plan: iteration limit')
@@ -430,10 +431,8 @@ def get_problem(mover):
                         action_queue.put((hval, float('nan'), newaction, newnode))
 
             if not success:
-                time.sleep(6) # gauged using max_ik_attempts = 20
                 print('failed to execute action')
             else:
-                time.sleep(1) # gauged using max_ik_attempts = 20
                 print('action successful')
 
         else:
