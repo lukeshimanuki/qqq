@@ -7,7 +7,7 @@ import multiprocessing
 
 
 def worker_p(config):
-    command = 'python -m learn.train -loss dql'
+    command = 'python -m learn.train -loss mse'
 
     for key, value in zip(config.keys(), config.values()):
         option = ' -'+str(key)+' ' + str(value)
