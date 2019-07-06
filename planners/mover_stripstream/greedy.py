@@ -93,17 +93,19 @@ def compute_heuristic(state, action, pap_model, problem_env):
     for i in state.nodes:
         if i == o:
             continue
-        for r in problem_env.regions:
-            if r in state.nodes:
-                is_r_goal_region = state.nodes[r][8]
+        for tmpr in problem_env.regions:
+            if tmpr in state.nodes:
+                is_r_goal_region = state.nodes[tmpr][8]
                 if is_r_goal_region:
-                    is_i_in_r = state.binary_edges[(i, r)][0]
+                    is_i_in_r = state.binary_edges[(i, tmpr)][0]
                     if is_r_goal_region:
                         number_in_goal += is_i_in_r
     number_in_goal += int(region_is_goal)
 
     if config.hcount:
-        return compute_hcount(state, action, pap_model, problem_env)
+        hcount = compute_hcount(state, action, pap_model, problem_env)
+        print "%s %s %.4f" % (o, r, hcount)
+        return hcount
     elif config.dont_use_gnn:
         return -number_in_goal
     elif config.dont_use_h:
@@ -129,7 +131,7 @@ def compute_heuristic(state, action, pap_model, problem_env):
         return hadd
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
-        """
+        hval = -number_in_goal + gnn_pred
         if not is_two_arm_domain:
             obj_name = action.discrete_parameters['object'].GetName()
             region_name = action.discrete_parameters['region'].name
@@ -138,13 +140,11 @@ def compute_heuristic(state, action, pap_model, problem_env):
             is_goal = state.nodes[obj_name][-3]
             isgoal_region = state.nodes[region_name][-3]
             is_in_region = state.binary_edges[(obj_name, region_name)][0]
-            in_way_of_goal_pick = any(state.binary_edges[(obj_name, other_name)][1] for other_name in state.goal_entities)
-            print "%15s %50s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d gnn %.4f num_in_goal %d in_way_of_goal_pick %d" \
-                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, gnn_pred, number_in_goal, in_way_of_goal_pick)
-        #print gnn_pred
-        """
+            in_way_of_goal_pap = obj_name in state.get_entities_in_way_to_goal_entities()
+            print "%15s %35s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d  num_in_goal %d in_way_of_goal_pap %d gnn %.4f hval %.4f" \
+                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, number_in_goal, in_way_of_goal_pap, -gnn_pred, hval)
 
-        return -number_in_goal + gnn_pred
+        return hval
 
 
 def compute_hcount(state, action, pap_model, problem_env):
@@ -162,7 +162,6 @@ def compute_hcount(state, action, pap_model, problem_env):
                 if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in state.goal_entities
                                                         if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
                     queue.put(o2)
-
 
     if 'two_arm' in problem_env.name:
         a_obj = action.discrete_parameters['two_arm_place_object']
@@ -282,9 +281,8 @@ def get_problem(mover):
     initial_state = state
     actions = get_actions(mover, goal, config)
     for a in actions:
-        hval = compute_heuristic(state,a,pap_model,mover)
+        hval = compute_heuristic(state, a, pap_model, mover)
         action_queue.put((hval, float('nan'), a, initnode))  # initial q
-    #import pdb;pdb.set_trace()
 
     iter = 0
     # beginning of the planner
@@ -388,13 +386,11 @@ def get_problem(mover):
 
                 success = True
 
-                #newstate.make_pklable()
-                #newnode = Node(node, action, newstate)
+                is_goal_achieved = \
+                    np.all([mover.regions['rectangular_packing_box1_region'].contains(
+                        mover.env.GetKinBody(o).ComputeAABB()) for o in obj_names[:n_objs_pack]])
 
-                if all(
-                        mover.regions['rectangular_packing_box1_region'].contains(mover.env.GetKinBody(o).ComputeAABB())
-                        for o in obj_names[:n_objs_pack]
-                ):
+                if is_goal_achieved:
                     print("found successful plan: {}".format(n_objs_pack))
                     trajectory = Trajectory(mover.seed, mover.seed)
                     plan = list(node.backtrack())[::-1]
@@ -426,14 +422,12 @@ def get_problem(mover):
                     pstats.Stats(pr).sort_stats('tottime').print_stats(30)
                     pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
                     print "New state computed"
-                    #newstate.make_pklable()
                     newnode = Node(node, action, newstate)
                     newactions = get_actions(mover, goal, config)
                     print "Old h value", curr_hval
                     for newaction in newactions:
                         hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
                         action_queue.put((hval, float('nan'), newaction, newnode))
-                    #import pdb;pdb.set_trace()
 
             if not success:
                 print('failed to execute action')
