@@ -11,6 +11,7 @@ from problem_environments.mover_env import Mover
 from problem_environments.one_arm_mover_env import OneArmMover
 from generators.PickUniform import PickWithBaseUnif
 from generators.PlaceUniform import PlaceUnif
+from generators.one_arm_pap_uniform_generator import OneArmPaPUniformGenerator
 # from operator_utils.grasp_utils import solveTwoArmIKs, compute_two_arm_grasp
 
 from trajectory_representation.operator import Operator
@@ -291,8 +292,8 @@ def get_problem(mover):
             return None, iter
 
         iter += 1
-        if 'one_arm' in mover.name:
-           time.sleep(3.5) # gauged using max_ik_attempts = 20
+        #if 'one_arm' in mover.name:
+        #   time.sleep(3.5) # gauged using max_ik_attempts = 20
 
         if iter > 3000:
             print('failed to find plan: iteration limit')
@@ -373,6 +374,19 @@ def get_problem(mover):
 
             if (o, r) in state.nocollision_place_op:
                 pick_op, place_op = node.state.nocollision_place_op[(o, r)]
+                pap_params = pick_op.continuous_parameters, place_op.continuous_parameters
+            else:
+                mover.enable_objects()
+                current_region = mover.get_region_containing(obj).name
+                papg = OneArmPaPUniformGenerator(action, mover, cached_picks=(node.state.iksolutions[current_region], node.state.iksolutions[r]))
+                pick_params, place_params, status = papg.sample_next_point(500)
+                if status == 'HasSolution':
+                    pap_params = pick_params, place_params
+                else:
+                    pap_params = None
+
+            if pap_params is not None:
+                pick_params, place_params = pap_params
                 action = Operator(
                     operator_type='one_arm_pick_one_arm_place',
                     discrete_parameters={
@@ -380,8 +394,8 @@ def get_problem(mover):
                         'region': mover.regions[r],
                     },
                     continuous_parameters={
-                        'pick': pick_op.continuous_parameters,
-                        'place': place_op.continuous_parameters,
+                        'pick': pick_params,
+                        'place': place_params,
                     }
                 )
                 action.execute()
