@@ -38,16 +38,15 @@ def print_plan_time(statfile, max_time=None, max_nodes=None, algo_name=None):
         num_nodes[~successes] = max_nodes
     else:
         successes[plantimes > max_time] = False
-        plantimes[plantimes > max_time] = max_time
+        #plantimes[plantimes > max_time] = max_time
         plantimes[~successes] = max_time
-
 
     if algo_name is not None:
         print algo_name
     print "Numb data", len(successes)
     print "Success rate", np.mean(successes)
     print "Plan times", np.mean(plantimes), np.std(plantimes) * 1.96 / np.sqrt(len(plantimes))
-    print "Nodes expandes", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
+    print "Nodes expanded", np.mean(num_nodes), np.std(num_nodes) * 1.96 / np.sqrt(len(num_nodes))
     print "Plan length", np.mean(planlength), np.std(planlength) * 1.96 / np.sqrt(len(planlength))
     print "=="
     return np.mean(successes)
@@ -166,7 +165,6 @@ def plot_scatter_plot(n_objs,domain):
     idxs = set(greedy_idxs).intersection(set(hpn_idxs))
     idxs = np.array(list(idxs))
 
-
     hpn_times_ = []
     greedy_times_ = []
     for idx in idxs:
@@ -188,8 +186,8 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    #plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
-    plot_scatter_plot(n_objs, domain='two_arm_mover')
+    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
+    #plot_scatter_plot(n_objs, domain='two_arm_mover')
     #plot_learning_curve()
     pass
 

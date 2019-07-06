@@ -172,7 +172,7 @@ def main():
     n_objs = int(sys.argv[1])
     n_train = int(sys.argv[2])
     algo = sys.argv[3]
-    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
+    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='one_arm_mover')
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 

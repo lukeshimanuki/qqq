@@ -36,6 +36,7 @@ class OneArmPaPState(PaPState):
         }
         self.object_names = [o for o in problem_env.entity_names if 'region' not in o]
         self.region_names = [o for o in problem_env.entity_names if 'region' in o]
+
         # cache ik solutions
         ikcachename = './ikcache.pkl'
         self.iksolutions = {}
@@ -55,7 +56,6 @@ class OneArmPaPState(PaPState):
         # 15*10*0.075 = 11.25 seconds.
         # But we check collisions with cached IKs, which take about 4-5 seconds on average. Say it takes 4.5s.
         # So this adds to about 6.25.
-        time.sleep(6.75)
 
         self.pick_used = {}
         self.place_used = {}
