@@ -102,11 +102,17 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
     plan_lengths = []
     pidxs = []
 
+    has = []
     for fidx, filename in enumerate(test_files):
         print "%d / %d" % (fidx, len(test_files))
         pidx = get_pidx(test_dir, filename)
         if pidx < 20000:
             continue
+        #seed = int(filename.split('seed_')[1].split('_')[0])
+        #train_seed = int(filename.split('train_seed_')[1].split('_')[0])
+        #has.append((seed,train_seed,pidx))
+        #print filename, seed, train_seed,pidx
+
 
         stat = pickle.load(open(test_dir + filename, 'r'))
         ftime_taken = get_time_taken(test_dir, stat)
@@ -119,6 +125,15 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
         time_taken.append(ftime_taken)
         successes.append(fsuccess)
         num_nodes.append(fnodes)
+        """
+    for pidx in range(20000,20100):
+        for planner_seed in [0,1,2,3,4]:
+            train_seed=0
+            if (planner_seed,train_seed,pidx) not in has:
+                print planner_seed, train_seed, pidx
+
+        """
+
     stat_summary = {'pidxs': pidxs, 'times': time_taken, 'successes': successes, 'num_nodes': num_nodes, 'plan_length': plan_lengths}
     fname = get_summary_stat_file_name(test_dir, n_data, n_objs)
     pickle.dump(stat_summary, open('./plotters/stats/' + fname, 'wb'))
@@ -134,13 +149,13 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
         fdir = root + 'greedy_results_on_mover_domain/' \
                       'domain_%s/' \
                       'n_objs_pack_%d/' \
-                      'test_purpose/' % (domain, n_objs)
+                      '/' % (domain, n_objs)
         if algo.find('no_gnn') != -1:
-            fdir += 'no_gnn/no_goal_obj_same_region/num_goals/'
+            fdir += 'no_gnn/'
         elif algo.find('dql') == -1:
-            fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_largemargin/num_train_%d/' % n_train
+            fdir += 'gnn/loss_largemargin/num_train_%d/' % n_train
         else:
-            fdir += 'gnn/no_goal_obj_same_region/num_goals/loss_dql/num_train_%d/' % n_train
+            fdir += 'gnn/loss_dql/num_train_%d/' % n_train
     else:
         raise NotImplementedError
     return fdir, os.listdir(fdir)
@@ -150,8 +165,7 @@ def main():
     n_objs = int(sys.argv[1])
     n_train = int(sys.argv[2])
     algo = sys.argv[3]
-    n_objs = 8
-    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
+    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='one_arm_mover')
     get_metrics(test_dir, test_files, n_objs, n_train)
 
 

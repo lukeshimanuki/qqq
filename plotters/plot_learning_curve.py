@@ -98,7 +98,8 @@ def plot_learning_curve():
 
         rates.append(greedy_rate)
         dqn_rates.append(dqn_rate)
-    import pdb;pdb.set_trace()
+
+    # todo avg over planner seeds
     plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='RSC', color=[0, 0, 1], marker='o')
     plt.plot(data_ranges, rates, label='GreedyLM', color=[1, 0, 0], marker='o')
     plt.plot(data_ranges, dqn_rates, label='GreedyDQN', color=[0, 0.5, 0], marker='o')
@@ -109,7 +110,7 @@ def plot_learning_curve():
 def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
     plan_times = {}
     nfail = 0
-    for pidx, plantime in zip(stat['pidxs'], stat['times']):
+    for pidx, plantime,success in zip(stat['pidxs'], stat['times'], stat['successes']):
         if pidx < 20000:
             continue
         if pidx == 20011 or pidx == 20023 or pidx == 20024 or pidx == 20049 or pidx == 20059 or pidx == 20094 or pidx == 20097:
@@ -119,9 +120,18 @@ def get_sorted_pidxs_and_plan_times_sorted_according_to_pidxs(stat, max_time):
             if plantime >= max_time:
                 nfail += 1
                 plantime = max_time
+            else:
+                try:
+                    assert success
+                except:
+                    print pidx
             plan_times[pidx].append(plantime)
         else:
-            plan_times[pidx] = []
+            if plantime >= max_time:
+                nfail += 1
+                plantime = max_time
+            plan_times[pidx] = [plantime]
+    print nfail / float(len(stat['pidxs']))
     return plan_times
 
 
@@ -134,25 +144,20 @@ def get_avg_time_per_pidx(stat, max_time):
 
 def plot_scatter_plot(n_objs,domain):
     max_time = n_objs * 300
-
+    print 'greedy'
     stat = load_data('greedy_num_goals', n_objs, n_data=5000, domain=domain)
     idxs, greedy_times, greedy_ci = get_avg_time_per_pidx(stat, max_time)
 
+    print 'hpn'
     stat = load_data('hpn', n_objs, domain)
     idxs, hpn_times, hpn_ci = get_avg_time_per_pidx(stat, max_time)
 
-    stat = load_data('greedy_dql', 1, 'two_arm_mover', n_data=5000)
-    idxs, dqn_times, dqn_ci = get_avg_time_per_pidx(stat, max_time)
+    plt.plot(greedy_times, hpn_times, 'o', alpha=0.3)
+    plt.plot(range(max_time+30), range(max_time+30), 'r')
+    plt.xlim(0, max_time+30)
+    plt.ylim(0, max_time+30)
 
-    plt.figure(figsize=(20, 3))
-    idxs = range(len(idxs))
-    plt.errorbar(idxs, hpn_times, hpn_ci, fmt='o', color='blue', label='RSC')
-    plt.errorbar(idxs, greedy_times, greedy_ci, fmt='o', color='r', label='GreedyLM')
-    plt.errorbar(idxs, dqn_times, dqn_ci, fmt='o', color=[0,0.5,0], label='GreedyDQN')
-    plt.margins(x=0.01)
-    plt.xticks(idxs[::2])
-
-    savefig("Problem instances", "Average times", './plotters/scatter')
+    savefig("GreedyLM average times", "RSC times", './plotters/scatter_%d' % n_objs)
 
 
 def main():
@@ -160,8 +165,8 @@ def main():
     n_objs = int(sys.argv[1])
     n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data, domain='two_arm_mover')
-    #plot_scatter_plot(1, domain='two_arm_mover')
+    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
+    #plot_scatter_plot(n_objs, domain='two_arm_mover')
     #plot_learning_curve()
     pass
 

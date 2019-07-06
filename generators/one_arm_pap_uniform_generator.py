@@ -105,7 +105,6 @@ class OneArmPaPUniformGenerator:
         # todo refactor this function
         robot_pose = utils.get_body_xytheta(self.robot)
         robot_config = self.robot.GetDOFValues()
-
         assert len(self.robot.GetGrabbed()) == 0
 
         if self.cached_picks is not None:
