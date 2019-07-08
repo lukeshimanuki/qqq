@@ -12,9 +12,6 @@ class PaPGNN(GNN):
     def __init__(self, num_entities, num_node_features, num_edge_features, config=None, entity_names=None, n_regions=2):
         self.n_regions = n_regions
         GNN.__init__(self, num_entities, num_node_features, num_edge_features, config, entity_names)
-        """
-        self.create_concat_model_for_verification()
-        """
 
         self.num_entities = num_entities
         self.activation = 'relu'

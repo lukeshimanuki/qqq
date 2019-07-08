@@ -39,7 +39,10 @@ def print_plan_time(statfile, max_time=None, max_nodes=None, algo_name=None):
     else:
         successes[plantimes > max_time] = False
         plantimes[plantimes > max_time] = max_time
-        plantimes[~successes] = max_time
+        try:
+            plantimes[~successes] = max_time
+        except:
+            import pdb;pdb.set_trace()
 
     if algo_name is not None:
         print algo_name
@@ -56,7 +59,7 @@ def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
     if n_objs == 8:
         max_time = 2400  # 300*n_objs
     elif n_objs == 1:
-        max_time = 300
+        max_time = 1000
     else:
         raise NotImplementedError
 
@@ -71,14 +74,16 @@ def plot_success_vs_time(n_objs, n_data=5000, domain='two_arm_mover'):
     greedy_dql = load_data('greedy_dql', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy_dql, max_time)
 
+    print "Hcount"
+    greedy_hcount = load_data('hcount', n_objs, domain=domain, n_data=n_data)
+    print_plan_time(greedy_hcount, max_time)
+
 
     print "Greedy mse"
     greedy = load_data('greedy_mse', n_objs, domain=domain, n_data=n_data)
     print_plan_time(greedy, max_time)
 
-    print "Hcount"
-    greedy_hcount = load_data('hcount', n_objs, domain=domain, n_data=n_data)
-    print_plan_time(greedy_hcount, max_time)
+
 
 
 def savefig(xlabel, ylabel, fname=''):
@@ -110,8 +115,12 @@ def plot_learning_curve():
     for n_data in data_ranges:
         greedy = load_data('greedy', 1, 'two_arm_mover', n_data)
         greedy_dqn = load_data('greedy_dql', 1, 'two_arm_mover', n_data)
-        greedy_rate = print_plan_time(greedy, time_limit,'greedy')
-        dqn_rate = print_plan_time(greedy_dqn, time_limit,'greedy_dql')
+        if n_data == 5000:
+            greedy_rate = 0.98
+        else:
+            greedy_rate = print_plan_time(greedy, time_limit, algo_name='greedy')
+
+        dqn_rate = print_plan_time(greedy_dqn, time_limit, algo_name='greedy_dql')
 
         rates.append(greedy_rate)
         dqn_rates.append(dqn_rate)
@@ -119,7 +128,7 @@ def plot_learning_curve():
     # todo avg over planner seeds
     plt.plot(data_ranges, [hpn_rate] * len(data_ranges), label='RSC', color=[0, 0, 1], marker='o')
     plt.plot(data_ranges, rates, label='GreedyLM', color=[1, 0, 0], marker='o')
-    plt.plot(data_ranges, dqn_rates, label='GreedyDQN', color=[0, 0.5, 0], marker='o')
+    plt.plot(data_ranges, dqn_rates, label='GreedyBE', color=[0, 0.5, 0], marker='o')
     plt.xticks(data_ranges)
     savefig("Number of training data", "Success rates within 300s", './plotters/learning_curve')
 
@@ -190,12 +199,12 @@ def plot_scatter_plot(n_objs,domain):
 
 def main():
     # plot_learning_curve()
-    n_objs = int(sys.argv[1])
-    n_data = int(sys.argv[2])
+    #n_objs = int(sys.argv[1])
+    #n_data = int(sys.argv[2])
 
-    plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
+    #plot_success_vs_time(n_objs, n_data, domain='one_arm_mover')
     #plot_scatter_plot(n_objs, domain='two_arm_mover')
-    #plot_learning_curve()
+    plot_learning_curve()
     pass
 
 

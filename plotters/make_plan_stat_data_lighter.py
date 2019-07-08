@@ -110,8 +110,8 @@ def get_metrics(test_dir, test_files, n_objs, n_data=None):
     for fidx, filename in enumerate(test_files):
         print "%d / %d" % (fidx, len(test_files))
         pidx = get_pidx(test_dir, filename)
-        if pidx < 20000:
-            continue
+        #if pidx < 20000:
+        #    continue
         #seed = int(filename.split('seed_')[1].split('_')[0])
         #train_seed = int(filename.split('train_seed_')[1].split('_')[0])
         #has.append((seed,train_seed,pidx))
@@ -163,11 +163,13 @@ def get_dir(algo, n_objs, n_train=5000, domain='two_arm_mover'):
         if algo.find('no_gnn') != -1:
             fdir += 'no_gnn/'
         elif algo.find('dql') == -1 and algo.find('mse') == -1:
-            fdir += 'gnn/loss_largemargin/num_train_%d/' % n_train
+            #fdir += 'gnn/loss_largemargin/num_train_%d/' % n_train
+            fdir += 'learning_curve_Jan7_1_18_pm/loss_largemargin/num_train_%d/' % n_train
         elif algo.find('mse') != -1:
             fdir += 'gnn/loss_mse/num_train_%d/' % n_train
         else:
-            fdir += 'gnn/loss_dql/num_train_%d/' % n_train
+            #fdir += 'gnn/loss_dql/num_train_%d/' % n_train
+            fdir += 'learning_curve_Jan7_1_18_pm/loss_dql/num_train_%d/' % n_train
     else:
         raise NotImplementedError
     return fdir, os.listdir(fdir)
@@ -177,8 +179,10 @@ def main():
     n_objs = int(sys.argv[1])
     n_train = int(sys.argv[2])
     algo = sys.argv[3]
-    test_dir, test_files = get_dir(algo, n_objs, n_train, domain='one_arm_mover')
-    get_metrics(test_dir, test_files, n_objs, n_train)
+    n_objs = 1
+    for n_train in [100, 1000, 3000, 5000]:
+        test_dir, test_files = get_dir(algo, n_objs, n_train, domain='two_arm_mover')
+        get_metrics(test_dir, test_files, n_objs, n_train)
 
 
 if __name__ == '__main__':

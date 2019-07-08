@@ -320,7 +320,7 @@ def get_problem(mover):
 
         # reset to state
         state.restore(mover)
-        utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
+        #utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
 
         if action.type == 'two_arm_pick_two_arm_place':
             smpler = PaPUniformGenerator(action, mover, None)
@@ -332,7 +332,7 @@ def get_problem(mover):
                 print "Action executed"
             else:
                 print "Failed to sample an action"
-                utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
+                #utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
                 continue
 
             is_goal_achieved = \
@@ -362,7 +362,7 @@ def get_problem(mover):
                     hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
                         (hval, float('nan'), newaction, newnode))
-            utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
+            #utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
 
         elif action.type == 'one_arm_pick_one_arm_place':
             success = False
