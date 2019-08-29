@@ -155,12 +155,17 @@ def compute_hcount(state, action, pap_model, problem_env):
     for entity in state.goal_entities:
         if 'region' not in entity and not problem_env.regions[goal_r].contains(problem_env.env.GetKinBody(entity).ComputeAABB()):
             queue.put(entity)
+
+    if 'two_arm' in problem_env.name:
+        regions = ['home_region', 'loading_region']
+    else:
+        raise NotImplementedError
     while not queue.empty():
         o = queue.get()
         if o not in objects_to_move:
             objects_to_move.add(o)
             for o2 in problem_env.entity_names:
-                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in state.goal_entities
+                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in regions
                                                         if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
                     queue.put(o2)
 
@@ -174,7 +179,8 @@ def compute_hcount(state, action, pap_model, problem_env):
     if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or a_region in state.goal_entities):
         objects_to_move -= {a_obj}
 
-    return -len(objects_to_move)
+    #return -len(objects_to_move)
+    return len(objects_to_move)
 
 
 def get_problem(mover):
@@ -494,7 +500,7 @@ def generate_training_data_single():
     elif config.dont_use_h:
         solution_file_dir += '/gnn_no_h/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
     elif config.hcount:
-        solution_file_dir += '/hcount/'
+        solution_file_dir += '/hcount_after_submission/'
     elif config.hadd:
         solution_file_dir += '/gnn_hadd/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
     else:
