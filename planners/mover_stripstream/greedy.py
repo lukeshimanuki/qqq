@@ -502,9 +502,9 @@ def generate_training_data_single():
     elif config.hcount:
         solution_file_dir += '/hcount_after_submission/'
     elif config.hadd:
-        solution_file_dir += '/gnn_hadd/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_hadd_after_submission/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
     else:
-        solution_file_dir += '/gnn/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_after_submission/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
