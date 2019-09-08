@@ -72,7 +72,6 @@ def get_actions(mover, goal, config):
             else:
                 raise NotImplementedError
             actions.append(action)
-
     return actions
 
 
@@ -159,7 +158,8 @@ def compute_hcount(state, action, pap_model, problem_env):
     if 'two_arm' in problem_env.name:
         regions = ['home_region', 'loading_region']
     else:
-        raise NotImplementedError
+        regions = ['center_shelf_region', 'rectangular_packing_box1_region']
+
     while not queue.empty():
         o = queue.get()
         if o not in objects_to_move:
