@@ -156,10 +156,11 @@ def compute_hcount(state, action, pap_model, problem_env):
     # Place goal objects not in the goal region
     for entity in state.goal_entities:
         is_entity_object = 'region' not in entity
-        goal_region_contains_goal_obj = not problem_env.regions[goal_r].contains(
-            problem_env.env.GetKinBody(entity).ComputeAABB())
-        if is_entity_object and goal_region_contains_goal_obj:
-            queue.put(entity)
+        if is_entity_object:
+            goal_region_contains_goal_obj = not problem_env.regions[goal_r].contains(
+                problem_env.env.GetKinBody(entity).ComputeAABB())
+            if goal_region_contains_goal_obj:
+                queue.put(entity)
 
     if 'two_arm' in problem_env.name:
         regions = ['home_region', 'loading_region']
