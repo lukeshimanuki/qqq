@@ -57,7 +57,7 @@ def get_actions(mover, goal, config):
             if o not in goal and r in goal:
                 # you cannot place non-goal object in the goal region
                 continue
-            if 'entire' in r: #and config.domain == 'two_arm_mover':
+            if 'entire' in r:  # and config.domain == 'two_arm_mover':
                 continue
 
             if config.domain == 'two_arm_mover':
@@ -135,14 +135,15 @@ def compute_heuristic(state, action, pap_model, problem_env):
         if not is_two_arm_domain:
             obj_name = action.discrete_parameters['object'].GetName()
             region_name = action.discrete_parameters['region'].name
-            is_reachable = state.nodes[obj_name][-2] #state.is_entity_reachable(obj_name)
+            is_reachable = state.nodes[obj_name][-2]  # state.is_entity_reachable(obj_name)
             is_placeable = state.binary_edges[(obj_name, region_name)][2]
             is_goal = state.nodes[obj_name][-3]
             isgoal_region = state.nodes[region_name][-3]
             is_in_region = state.binary_edges[(obj_name, region_name)][0]
             in_way_of_goal_pap = obj_name in state.get_entities_in_way_to_goal_entities()
             print "%15s %35s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d  num_in_goal %d in_way_of_goal_pap %d gnn %.4f hval %.4f" \
-                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region, number_in_goal, in_way_of_goal_pap, -gnn_pred, hval)
+                  % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region,
+                     number_in_goal, in_way_of_goal_pap, -gnn_pred, hval)
 
         return hval
 
@@ -151,8 +152,13 @@ def compute_hcount(state, action, pap_model, problem_env):
     objects_to_move = set()
     queue = Queue.Queue()
     goal_r = [entity for entity in state.goal_entities if 'region' in entity][0]
+
+    # Place goal objects not in the goal region
     for entity in state.goal_entities:
-        if 'region' not in entity and not problem_env.regions[goal_r].contains(problem_env.env.GetKinBody(entity).ComputeAABB()):
+        is_entity_object = 'region' not in entity
+        goal_region_contains_goal_obj = not problem_env.regions[goal_r].contains(
+            problem_env.env.GetKinBody(entity).ComputeAABB())
+        if is_entity_object and goal_region_contains_goal_obj:
             queue.put(entity)
 
     if 'two_arm' in problem_env.name:
@@ -165,8 +171,9 @@ def compute_hcount(state, action, pap_model, problem_env):
         if o not in objects_to_move:
             objects_to_move.add(o)
             for o2 in problem_env.entity_names:
-                if state.binary_edges[(o2,o)][1] or any(state.ternary_edges[(o,o2,r)][0] for r in regions
-                                                        if 'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
+                if state.binary_edges[(o2, o)][1] or \
+                        any(state.ternary_edges[(o, o2, r)][0] for r in regions if
+                            'region' in r and (r not in state.goal_entities or o2 in state.goal_entities)):
                     queue.put(o2)
 
     if 'two_arm' in problem_env.name:
@@ -179,7 +186,7 @@ def compute_hcount(state, action, pap_model, problem_env):
     if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or a_region in state.goal_entities):
         objects_to_move -= {a_obj}
 
-    #return -len(objects_to_move)
+    # return -len(objects_to_move)
     return len(objects_to_move)
 
 
@@ -200,6 +207,7 @@ def get_problem(mover):
                     return state
                 else:
                     print('failed to find any paps, trying again')
+
         statecls = create_one_arm_pap_state
         goal = ['rectangular_packing_box1_region'] + [obj.GetName() for obj in mover.objects[:n_objs_pack]]
     else:
@@ -216,7 +224,7 @@ def get_problem(mover):
     pstats.Stats(pr).sort_stats('tottime').print_stats(30)
     pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
 
-    #state.make_pklable()
+    # state.make_pklable()
 
     mconfig_type = collections.namedtuple('mconfig_type',
                                           'operator n_msg_passing n_layers num_fc_layers n_hidden no_goal_nodes top_k optimizer lr use_mse batch_size seed num_train val_portion num_test mse_weight diff_weight_msg_passing same_vertex_model weight_initializer loss')
@@ -298,7 +306,7 @@ def get_problem(mover):
             return None, iter
 
         iter += 1
-        #if 'one_arm' in mover.name:
+        # if 'one_arm' in mover.name:
         #   time.sleep(3.5) # gauged using max_ik_attempts = 20
 
         if iter > 3000:
@@ -308,7 +316,8 @@ def get_problem(mover):
         if action_queue.empty():
             actions = get_actions(mover, goal, config)
             for a in actions:
-                action_queue.put((compute_heuristic(initial_state, a, pap_model, mover), float('nan'), a, initnode))  # initial q
+                action_queue.put(
+                    (compute_heuristic(initial_state, a, pap_model, mover), float('nan'), a, initnode))  # initial q
 
         curr_hval, _, action, node = action_queue.get()
         state = node.state
@@ -326,7 +335,7 @@ def get_problem(mover):
 
         # reset to state
         state.restore(mover)
-        #utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
+        # utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
 
         if action.type == 'two_arm_pick_two_arm_place':
             smpler = PaPUniformGenerator(action, mover, None)
@@ -338,7 +347,7 @@ def get_problem(mover):
                 print "Action executed"
             else:
                 print "Failed to sample an action"
-                #utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
+                # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
                 continue
 
             is_goal_achieved = \
@@ -347,7 +356,7 @@ def get_problem(mover):
             if is_goal_achieved:
                 print("found successful plan: {}".format(n_objs_pack))
                 trajectory = Trajectory(mover.seed, mover.seed)
-                plan = list(node.backtrack())[::-1] # plan of length 0 is possible I think
+                plan = list(node.backtrack())[::-1]  # plan of length 0 is possible I think
                 trajectory.states = [nd.state for nd in plan]
                 trajectory.actions = [nd.action for nd in plan[1:]] + [action]
                 trajectory.rewards = [nd.reward for nd in plan[1:]] + [0]
@@ -365,10 +374,10 @@ def get_problem(mover):
                 for newaction in newactions:
                     hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
                     print "New state h value %.4f for %s %s" % (
-                    hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
+                        hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
                         (hval, float('nan'), newaction, newnode))
-            #utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
+            # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
 
         elif action.type == 'one_arm_pick_one_arm_place':
             success = False
@@ -384,7 +393,8 @@ def get_problem(mover):
             else:
                 mover.enable_objects()
                 current_region = mover.get_region_containing(obj).name
-                papg = OneArmPaPUniformGenerator(action, mover, cached_picks=(node.state.iksolutions[current_region], node.state.iksolutions[r]))
+                papg = OneArmPaPUniformGenerator(action, mover, cached_picks=(
+                node.state.iksolutions[current_region], node.state.iksolutions[r]))
                 pick_params, place_params, status = papg.sample_next_point(500)
                 if status == 'HasSolution':
                     pap_params = pick_params, place_params
@@ -492,7 +502,7 @@ def generate_training_data_single():
     else:
         root_dir = '/data/public/rw/pass.port/tamp_q_results/'
 
-    solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d'\
+    solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d' \
                         % (config.domain, config.n_objs_pack)
 
     if config.dont_use_gnn:
@@ -502,9 +512,11 @@ def generate_training_data_single():
     elif config.hcount:
         solution_file_dir += '/hcount_after_submission/'
     elif config.hadd:
-        solution_file_dir += '/gnn_hadd_after_submission/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_hadd_after_submission/loss_' + str(config.loss) + '/num_train_' + str(
+            config.num_train) + '/'
     else:
-        solution_file_dir += '/gnn_after_submission/loss_' + str(config.loss) + '/num_train_' + str(config.num_train) + '/'
+        solution_file_dir += '/gnn_after_submission/loss_' + str(config.loss) + '/num_train_' + str(
+            config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
                          '_planner_seed_' + str(config.planner_seed) + \
@@ -557,7 +569,7 @@ def generate_training_data_single():
     print('\n'.join(str(a.discrete_parameters.values()) for a in trajectory.actions))
 
     def draw_robot_line(env, q1, q2):
-        return draw_line(env, list(q1)[:2] + [.5], list(q2)[:2] + [.5], color=(0,0,0,1), width=3.)
+        return draw_line(env, list(q1)[:2] + [.5], list(q2)[:2] + [.5], color=(0, 0, 0, 1), width=3.)
 
     mover.reset_to_init_state_stripstream()
     if not config.dontsimulate:
@@ -707,7 +719,7 @@ if __name__ == '__main__':
     parser.add_argument('-dont_use_h', action='store_true', default=False)
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-domain', type=str, default='two_arm_mover')
-    parser.add_argument('-problem_type', type=str, default='normal') # supports normal, nonmonotonic
+    parser.add_argument('-problem_type', type=str, default='normal')  # supports normal, nonmonotonic
     parser.add_argument('-hcount', action='store_true', default=False)
     parser.add_argument('-hadd', action='store_true', default=False)
 

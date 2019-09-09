@@ -132,7 +132,6 @@ class ShortestPathPaPState(PaPState):
                 self.reachable_entities.append(obj)
             else:
                 path, _ = motion_planner.get_motion_plan(motion_plan_goals, cached_collisions={})
-
             assert path is not None
             self.cached_pick_paths[obj] = path
             op_instance.low_level_motion = path
