@@ -18,32 +18,37 @@
 	;	(Edge ?q2 ?q1)
 	;))
 
-	;(:stream gen-pick
-	;:inputs (?o)
-	;:domain (and
-	;	(Pickable ?o)
-	;)
-	;:outputs (?q ?g)
-	;:certified (and
-	;	(BaseConf ?q)
-	;	(Sampled ?q)
-	;	(Grasp ?g)
-	;	(GraspTransform ?o ?g ?q)
-	;))
+	(
+	:stream gen-pick
+	:inputs (?o ?p)
+	:domain (and
+		(Pickable ?o)
+		(Pose ?p)
+	)
+	:outputs (?q ?g ?gc)
+	:certified (and
+		(BaseConf ?q)
+		(Grasp ?o ?g ?gc)
+		(Pick ?o ?p ?q ?g ?gc)
+	))
 
-	;(:stream gen-place
-	;:inputs (?o ?r)
-	;:domain (and
-	;	(Pickable ?o)
-	;	(Region ?r)
-	;)
-	;:outputs (?q ?p)
-	;:certified (and
-	;	(BaseConf ?q)
-	;	(Sampled ?q)
-	;	(Pose ?o ?p)
-	;	(PlaceConf ?o ?p ?q ?r)
-	;))
+	(
+	:stream gen-place
+	:inputs (?o ?pickp ?pickq ?g ?gc ?r)
+	:domain (and
+		(Pickable ?o)
+		(Region ?r)
+		(Grasp ?o ?g ?gc)
+		(Pose ?pickp)
+		(BaseConf ?pickq)
+	)
+	:outputs (?placeq ?placep)
+	:certified (and
+		(BaseConf ?placeq)
+		(Pose ?placep)
+		(Place ?o ?placep ?placeq ?g ?gc)
+		(PoseInRegion ?placep ?r)
+	))
 
 	;(:stream front-place
 	; :inputs (?q)
@@ -62,13 +67,13 @@
 
 	;(:function (Distance ?q1 ?q2) (Edge ?q1 ?q2))
 
-	(:predicate (BlocksMove ?p ?q) (and
-	    (Pose ?p)
-		(BaseConf ?q)
-	))
+	;(:predicate (BlocksMove ?p ?q) (and
+	;    (Pose ?p)
+	;	(BaseConf ?q)
+	;))
 
-	(:predicate (BlocksPlace ?p1 ?p2) (and
-		(Pose ?p1)
-		(Pose ?p2)
-	))
+	;(:predicate (BlocksPlace ?p1 ?p2) (and
+	;	(Pose ?p1)
+	;	(Pose ?p2)
+	;))
 )

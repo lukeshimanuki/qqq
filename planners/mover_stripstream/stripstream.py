@@ -11,14 +11,6 @@ import cProfile
 import pstats
 import argparse
 
-sys.path.extend([
-    '/home/caelan/Programs/pddlstream/',
-    '/home/caelan/Programs/openrave_wrapper',
-    '/home/caelan/Programs/motion-planners',
-    '/home/beomjoon/pddlstream',
-    '/home/beomjoon/openrave_wrapper',
-])
-
 import pddlstream.algorithms.instantiate_task
 pddlstream.algorithms.instantiate_task.FD_INSTANTIATE = False
 
@@ -28,7 +20,7 @@ from pddlstream.language.constants import print_solution
 from pddlstream.utils import read
 from pddlstream.language.generator import from_gen_fn, from_list_fn, from_test, fn_from_constant, from_fn
 from pddlstream.algorithms.search import SERIALIZE
-import pdb;pdb.set_trace()
+#import pdb;pdb.set_trace()
 
 from problem_environments.mover_env import Mover
 from generators.PickUniform import PickWithBaseUnif
@@ -36,7 +28,7 @@ from generators.PlaceUniform import PlaceUnif
 
 from trajectory_representation.operator import Operator
 
-from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_place_object, \
+from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, two_arm_place_object, \
     get_body_xytheta
 
 from mover_library.motion_planner import rrt_region
@@ -555,10 +547,11 @@ def test_edge(problem):
 
 
 def gen_pick(problem, pick_unif):
-    def fcn(o):
+    def fcn(o, p):
         pick_unif.problem_env.reset_to_init_state_stripstream()
         obj = pick_unif.problem_env.env.GetKinBody(o)
-        import pdb;pdb.set_trace()
+        set_obj_xytheta(p, obj)
+        #import pdb;pdb.set_trace()
 
         while True:
             problem.reset_to_init_state_stripstream()
@@ -583,16 +576,18 @@ def gen_pick(problem, pick_unif):
             #	 #yield None
             #	 continue
 
-            yield pick_base_pose, grasp
+            yield pick_base_pose, grasp, g_config
 
     return fcn
 
 
 def gen_place(problem, place_unif):
-    def fcn(o, r):
+    def fcn(o, pickp, pickq, g, gc, r):
         while True:
             problem.reset_to_init_state_stripstream()
             obj = problem.env.GetKinBody(o)
+            action = {'base_pose': pickq, 'g_config': gc}
+            two_arm_pick_object(obj, action)
             # try:
             #	 problem.apply_two_arm_pick_action_stripstream((pick_base_pose, grasp), obj) # how do I ensure that we are in the same state in both openrave and stripstream?
             # except:
@@ -719,20 +714,20 @@ def get_problem(mover):
     stream_map = {
         # 'gen-grasp-traj': from_gen_fn(gen_grasp_traj(mover, pick_sampler)),
         # 'gen-placement': from_gen_fn(gen_placement(mover, place_sampler)),
-        'gen-edge': from_list_fn(gen_edge(mover)),
+        #'gen-edge': from_list_fn(gen_edge(mover)),
         # 'test-edge': from_test(test_edge(mover)),
         'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
         'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
-        'front-place': from_gen_fn(front_place(mover)),
+        #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
-        'BlocksMove': blocks_move(mover),
-        'BlocksPlace': blocks_place(mover),
+        #'BlocksMove': blocks_move(mover),
+        #'BlocksPlace': blocks_place(mover),
         # 'PlaceTrajPoseCollision': place_check_traj_collision(mover),
         # 'PickTrajPoseCollision': pick_check_traj_collision(mover),
         # 'ReachablePred': reachable_pred(mover),
         # 'ReachablePlacePred': reachable_place_pred(mover),
         # 'ReachableRegionPred': reachable_region_pred(mover),
-        'Distance': lambda q1, q2: np.linalg.norm((q2 - q1)[:2]),
+        #'Distance': lambda q1, q2: np.linalg.norm((q2 - q1)[:2]),
     }
     # stream_map = 'debug'
 
@@ -748,24 +743,26 @@ def get_problem(mover):
     # robot initialization
     init += [('EmptyArm',)]
     init += [('AtConf', initial_robot_conf)]
-    init += [('BaseConf', initial_robot_conf), ('Sampled', initial_robot_conf)]
+    init += [('BaseConf', initial_robot_conf)]
+    #init += [('BaseConf', initial_robot_conf), ('Sampled', initial_robot_conf)]
 
     # object initialization
     init += [('Pose', obj_pose) for obj_name, obj_pose in zip(obj_names, obj_poses)]
+    init += [('PoseInRegion', obj_pose, 'loading_region') for obj_name, obj_pose in zip(obj_names, obj_poses)]
     init += [('AtPose', obj_name, obj_pose) for obj_name, obj_pose in zip(obj_names, obj_poses)]
-    init += [('PlacedAt', obj_pose) for obj_pose in obj_poses]
+    #init += [('PlacedAt', obj_pose) for obj_pose in obj_poses]
 
     # prm initialization
-    init += [('BaseConf', q) for q in PRM_VERTICES]
-    init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
-             for q1, e in enumerate(PRM_EDGES) for q2 in e]
+    #init += [('BaseConf', q) for q in PRM_VERTICES]
+    #init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
+    #         for q1, e in enumerate(PRM_EDGES) for q2 in e]
     # TODO: goal serialization (can allow algorithm to pick the easist
     # TODO: selectively introduce objects
     # TODO: reachability test with only interesting pick/place confs
     # TODO: downsample the set of placements
 
-    poses = list(PRM_VERTICES) + obj_poses
-    init += [('PoseInRegion', q, 'home_region') for q in poses if -3 < q[1]]
+    #poses = list(PRM_VERTICES) + obj_poses
+    #init += [('PoseInRegion', q, 'home_region') for q in poses if -3 < q[1]]
     # init += [('PoseInRegion', q, 'home_region') for q in PRM_VERTICES if -3 < q[1]]
     # init += [('PoseInRegion', q, 'loading_region') for q in PRM_VERTICES if q[1] < -5]
 
@@ -775,12 +772,12 @@ def get_problem(mover):
     # init += [('FrontPlace', q, p) for q,p in pairs]
     # fpi = front_pick(mover)
     # poses = [p for q,p in pairs] + obj_poses
-    init += [('FrontPick', q, p) for q in PRM_VERTICES for p in poses
-             if test_front_pick(mover, q, p)]
+    #init += [('FrontPick', q, p) for q in PRM_VERTICES for p in poses
+    #         if test_front_pick(mover, q, p)]
     # init += [('FrontPlace', q, p) for q in PRM_VERTICES for p in poses if fpl(q,p)]
-    init += [('Edge', initial_robot_conf, q) for q in PRM_VERTICES
-             if np.linalg.norm(q - initial_robot_conf) < 1.2]
-    init += [('Pose', p) for p in poses]
+    #init += [('Edge', initial_robot_conf, q) for q in PRM_VERTICES
+    #         if np.linalg.norm(q - initial_robot_conf) < 1.2]
+    #init += [('Pose', p) for p in poses]
     # init += [('FrontPlace', initial_robot_conf, p) for p in fp(initial_robot_conf)]
     # init += [('Edge', PRM_VERTICES[q2], PRM_VERTICES[q1])
     #		 for q1, e in enumerate(prm_edges) for q2 in e]
@@ -800,13 +797,13 @@ def get_problem(mover):
 
     # import sys; sys.stderr.write(str(len([('BlocksMove', p, q) for p in obj_poses for q in PRM_VERTICES if bm('square_packing_box1', p, q)])))
     import sys;
-    sys.stderr.write('generated initial state\n')
+    #sys.stderr.write('generated initial state\n')
 
     goal = ['and'] + [('InRegion', obj_name, 'home_region')
-                      for obj_name in obj_names[0:4]]
-    goal = ['and'] + [('InRegion', obj_name, 'home_region')
-                      for obj_name in obj_names[0]]
-    # goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]
+                      for obj_name in obj_names[0:1]]
+    #goal = ['and'] + [('InRegion', obj_name, 'home_region')
+    #                  for obj_name in obj_names[0]]
+    #goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]
     # goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in set(obj_names) - {'rectangular_packing_box1'}]
     # goal = ['and'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names[0:2]]
     # goal = ('Holding', obj_names[1])
@@ -1018,17 +1015,19 @@ def solve_pddlstream(mover, execute=False, resolve=False, viewer=False):
     # planner = 'cea-wastar5' # Performs worse than ff-wastar
     # planner = 'ff-ehc' # Worse
 
-    import pdb;pdb.set_trace()
-    solution = solve_incremental(pddlstream_problem, unit_costs=True, max_time=10 * 60,
+    #import pdb;pdb.set_trace()
+    solution = solve_focused(pddlstream_problem, unit_costs=True, max_time=10 * 60,
+    #solution = solve_incremental(pddlstream_problem, unit_costs=True, max_time=10 * 60,
                                  planner=planner, debug=True, verbose=True)
     pr.disable()
     pstats.Stats(pr).sort_stats('tottime').print_stats(10)
     search_time = time.time() - stime
     #print_solution(solution)
     plan, cost, evaluations = solution
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
     if plan is not None:
         print('Success')
+        print(plan)
         pickle.dump(plan, open(solution_file_name, 'wb'))
         if execute:
             simulate_plan(mover, plan)
@@ -1069,11 +1068,11 @@ def generate_training_data_single(seed, examples, **kwargs):
     mover.init_saver = DynamicEnvironmentStateSaver(mover.env)
     # mover.env.SetViewer('qtcoin')
     # import pdb;pdb.set_trace()
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
 
     try:
         plan = solve_pddlstream(mover, **kwargs)
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
 
         # import pdb; pdb.set_trace()
 

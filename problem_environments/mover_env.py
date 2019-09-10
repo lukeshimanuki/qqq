@@ -229,14 +229,11 @@ class Mover(ProblemEnvironment):
                                        obj=obj_to_pick,
                                        robot=self.robot)
         g_config = solveTwoArmIKs(self.env, self.robot, obj_to_pick, grasps)
-        try:
-            assert g_config is not None
-        except:
-            pass
-            # import pdb; pdb.set_trace()
+        if g_config is None:
+            return None
 
         action = {'base_pose': pick_base_pose, 'g_config': g_config}
-        two_arm_pick_object(obj_to_pick, self.robot, action)
+        two_arm_pick_object(obj_to_pick, action)
 
         curr_state = self.get_state()
         reward = 0
