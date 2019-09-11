@@ -50,6 +50,19 @@
 		(PoseInRegion ?placep ?r)
 	))
 
+	;(
+	;:stream gen-conf
+	;:inputs (?r)
+	;:domain (and
+	;	(Region ?r)
+	;)
+	;:outputs (?q)
+	;:certified (and
+	;	(BaseConf ?q)
+	;	(ConfInRegion ?q ?r)
+	;))
+
+
 	;(:stream front-place
 	; :inputs (?q)
 	; :domain (and (BaseConf ?q))
@@ -76,4 +89,22 @@
 	;	(Pose ?p1)
 	;	(Pose ?p2)
 	;))
+
+	(:predicate (CollidesMove ?q1 ?q2 ?o ?p) (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
+		(Pickable ?o)
+		(Pose ?p)
+	))
+
+	(:predicate (CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p) (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
+		(Pickable ?oo)
+		(Grasp ?o ?g ?gc)
+		(Pose ?pickp)
+		(BaseConf ?pickq)
+		(Pickable ?o)
+		(Pose ?p)
+	))
 )

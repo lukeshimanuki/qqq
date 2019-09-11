@@ -472,6 +472,27 @@ def check_edge_collision(problem, qs, obj=None):
     return False
 
 
+def collides_move(problem):
+    def fcn(q1, q2, o, p):
+        obj = problem.env.GetKinBody(o)
+        problem.disable_objects()
+        obj.Enable(True)
+        set_obj_xytheta(p, obj)
+        n = 2 + int(np.linalg.norm(q1 - q2) / .8)
+        for i in range(n):
+            q = q1 + (q2 - q1) * i / (n - 1)
+            set_robot_config(q)
+            if problem.env.CheckCollision(problem.robot):
+                return True
+        return False
+
+    return fcn
+
+def collides_carry(problem):
+    def fcn(q1, q2, oo, g, gc, pickp, pickq, o, p):
+        return False
+    return fcn
+
 def blocks_move(problem):
     obj = problem.objects[0]
 
@@ -604,6 +625,28 @@ def gen_place(problem, place_unif):
 
     return fcn
 
+def gen_conf(problem, place_unif):
+    def fcn(r):
+        while True:
+            problem.reset_to_init_state_stripstream()
+            obj = problem.env.GetKinBody(o)
+            grab_obj(obj)
+            # try:
+            #	 problem.apply_two_arm_pick_action_stripstream((pick_base_pose, grasp), obj) # how do I ensure that we are in the same state in both openrave and stripstream?
+            # except:
+            #	 yield None
+            #	 continue
+            place_action = place_unif.predict(obj, problem.regions[r], n_iter=50)
+
+            place_base_pose = place_action['base_pose']
+            object_pose = place_action['object_pose']
+            if place_base_pose is None or object_pose is None:
+                yield None
+                continue
+            yield place_base_pose
+
+    return fcn
+
 
 def test_front_pick(problem, q, p):
     # TODO: KD-tree to do this more quickly
@@ -718,9 +761,12 @@ def get_problem(mover):
         # 'test-edge': from_test(test_edge(mover)),
         'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
         'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
+        'gen-conf': from_gen_fn(gen_conf(mover, place_sampler)),
         #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
         #'BlocksMove': blocks_move(mover),
+        'CollidesMove': collides_move(mover),
+        'CollidesCarry': collides_carry(mover),
         #'BlocksPlace': blocks_place(mover),
         # 'PlaceTrajPoseCollision': place_check_traj_collision(mover),
         # 'PickTrajPoseCollision': pick_check_traj_collision(mover),

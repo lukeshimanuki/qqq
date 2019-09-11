@@ -21,11 +21,15 @@
 
 		(Edge ?q1 ?q2)
 		(Reach ?q1 ?q2)
-		(UnsafeMove ?q)
+		(UnsafeMove2 ?q)
+		(UnsafeMove ?q1 ?q2)
+		(UnsafeCarry ?q1 ?q2 ?o ?g ?gc ?pickp ?pickq)
 		(UnsafePlace ?p)
 		(BlocksMove ?p ?q)
 		(BlocksPlace ?p1 ?p2)
 		(BlocksMoveS ?p ?q)
+		(CollidesMove ?q1 ?q2 ?o ?p)
+		(CollidesCarry ?q1 ?q2 ?held_obj ?g ?gc ?pickp ?pickq ?o ?p)
 		(Moved)
 
 		(FrontPlace ?q ?p)
@@ -104,6 +108,7 @@
 		(AtConf ?q1)
 		;(not (UnsafeConf ?q2))
 		;(Edge ?q1 ?q2)
+		(not (UnsafeMove ?q1 ?q2))
 	)
 	:effect (and
 		(AtConf ?q2)
@@ -127,6 +132,7 @@
 		(AtConf ?q1)
 		;(not (UnsafeConfCarry ?q2 ?o ?g ?gc ?pickp ?pickq))
 		;(Edge ?q1 ?q2)
+		;(not (UnsafeCarry ?q1 ?q2 ?o ?g ?gc ?pickp ?pickq))
 	)
 	:effect (and
 		(AtConf ?q2)
@@ -169,5 +175,15 @@
 	;	(BlocksPlace ?pose ?p)
 	;	(PlacedAt ?p)
 	;)))
+
+	(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
+		(AtPose ?o ?p)
+		(CollidesMove ?q1 ?q2 ?o ?p)
+	)))
+
+	(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq) (exists (?o ?p) (and
+		(AtPose ?o ?p)
+		(CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p)
+	)))
 )
 
