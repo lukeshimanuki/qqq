@@ -34,6 +34,11 @@
 
 		(FrontPlace ?q ?p)
 		(FrontPick ?q ?p)
+
+		(PaP ?o ?r ?pickt ?placet ?gc ?s ?t)
+		(AtState ?s)
+		(State ?s)
+		(PaP ?o ?r ?params ?s ?t)
 	)
 	;(:functions (Distance ?q1 ?q2))
 
@@ -51,93 +56,114 @@
 	;))
 
 	(
-	:action pick
-	:parameters (?o ?p ?q ?g ?gc)
+	:action pap
+	:parameters (?o ?r ?prev_r ?params ?s ?t)
 	:precondition (and
 		(Pickable ?o)
-		(Pose ?p)
-		(BaseConf ?q)
-		(Grasp ?o ?g ?gc)
-		(Pick ?o ?p ?q ?g ?gc)
-
-		(EmptyArm)
-		(AtPose ?o ?p)
-		(AtConf ?q)
-
-		;(not (UnsafePick ?o ?p ?q ?g))
-	)
-	:effect (and
-		(Picked ?o ?g ?gc ?p ?q)
-		(not (EmptyArm))
-		(not (AtPose ?o ?p))
-	))
-
-	(
-	:action place
-	:parameters (?o ?pickp ?placep ?pickq ?placeq ?g ?gc ?r)
-	:precondition (and
-		(Pickable ?o)
-		(Pose ?pickp)
-		(Pose ?placep)
-		(BaseConf ?pickq)
-		(BaseConf ?placeq)
-		(Grasp  ?o ?g ?gc)
-		(Place ?o ?placep ?placeq ?g ?gc)
 		(Region ?r)
+		(Region ?prev_r)
+		(State ?s)
+		(State ?t)
+		(PaP ?o ?r ?params ?s ?t)
 
-		(AtConf ?placeq)
-		(Picked ?o ?g ?gc ?pickp ?pickq)
-
-		;(not (UnsafePlace ?o ?p ?q ?g))
+		(InRegion ?o ?prev_r)
+		(AtState ?s)
 	)
 	:effect (and
-		(AtPose ?o ?placep)
-		(EmptyArm)
-		(not (Picked ?o ?g ?gc ?pickp ?pickq))
-		;(Moved)
+		(not (InRegion ?o ?prev_r))
+		(not (AtState ?s))
+		(AtState ?t)
+		(InRegion ?o ?r)
 	))
 
-	(
-	:action move
-	:parameters (?q1 ?q2)
-	:precondition (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
+	;(
+	;:action pick
+	;:parameters (?o ?p ?q ?g ?gc)
+	;:precondition (and
+	;	(Pickable ?o)
+	;	(Pose ?p)
+	;	(BaseConf ?q)
+	;	(Grasp ?o ?g ?gc)
+	;	(Pick ?o ?p ?q ?g ?gc)
 
-		(EmptyArm)
-		(AtConf ?q1)
-		;(not (UnsafeConf ?q2))
-		;(Edge ?q1 ?q2)
-		(not (UnsafeMove ?q1 ?q2))
-	)
-	:effect (and
-		(AtConf ?q2)
-		(not (AtConf ?q1))
-	))
+	;	(EmptyArm)
+	;	(AtPose ?o ?p)
+	;	(AtConf ?q)
 
-	(
-	:action carry
-	:parameters (?q1 ?q2 ?o ?g ?gc ?pickp ?pickq)
-	:precondition (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
+	;	;(not (UnsafePick ?o ?p ?q ?g))
+	;)
+	;:effect (and
+	;	(Picked ?o ?g ?gc ?p ?q)
+	;	(not (EmptyArm))
+	;	(not (AtPose ?o ?p))
+	;))
 
-		(Pickable ?o)
-		(Pose ?pickp)
-		(BaseConf ?pickq)
-		(Grasp ?o ?g ?gc)
+	;(
+	;:action place
+	;:parameters (?o ?pickp ?placep ?pickq ?placeq ?g ?gc ?r)
+	;:precondition (and
+	;	(Pickable ?o)
+	;	(Pose ?pickp)
+	;	(Pose ?placep)
+	;	(BaseConf ?pickq)
+	;	(BaseConf ?placeq)
+	;	(Grasp  ?o ?g ?gc)
+	;	(Place ?o ?placep ?placeq ?g ?gc)
+	;	(Region ?r)
 
-		(not (EmptyArm))
-		(Picked ?o ?g ?gc ?pickp ?pickq)
-		(AtConf ?q1)
-		;(not (UnsafeConfCarry ?q2 ?o ?g ?gc ?pickp ?pickq))
-		;(Edge ?q1 ?q2)
-		;(not (UnsafeCarry ?q1 ?q2 ?o ?g ?gc ?pickp ?pickq))
-	)
-	:effect (and
-		(AtConf ?q2)
-		(not (AtConf ?q1))
-	))
+	;	(AtConf ?placeq)
+	;	(Picked ?o ?g ?gc ?pickp ?pickq)
+
+	;	;(not (UnsafePlace ?o ?p ?q ?g))
+	;)
+	;:effect (and
+	;	(AtPose ?o ?placep)
+	;	(EmptyArm)
+	;	(not (Picked ?o ?g ?gc ?pickp ?pickq))
+	;	;(Moved)
+	;))
+
+	;(
+	;:action move
+	;:parameters (?q1 ?q2)
+	;:precondition (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
+
+	;	(EmptyArm)
+	;	(AtConf ?q1)
+	;	;(not (UnsafeConf ?q2))
+	;	;(Edge ?q1 ?q2)
+	;	(not (UnsafeMove ?q1 ?q2))
+	;)
+	;:effect (and
+	;	(AtConf ?q2)
+	;	(not (AtConf ?q1))
+	;))
+
+	;(
+	;:action carry
+	;:parameters (?q1 ?q2 ?o ?g ?gc ?pickp ?pickq)
+	;:precondition (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
+
+	;	(Pickable ?o)
+	;	(Pose ?pickp)
+	;	(BaseConf ?pickq)
+	;	(Grasp ?o ?g ?gc)
+
+	;	(not (EmptyArm))
+	;	(Picked ?o ?g ?gc ?pickp ?pickq)
+	;	(AtConf ?q1)
+	;	;(not (UnsafeConfCarry ?q2 ?o ?g ?gc ?pickp ?pickq))
+	;	;(Edge ?q1 ?q2)
+	;	;(not (UnsafeCarry ?q1 ?q2 ?o ?g ?gc ?pickp ?pickq))
+	;)
+	;:effect (and
+	;	(AtConf ?q2)
+	;	(not (AtConf ?q1))
+	;))
 
 	;(
 	;:action teleport
@@ -152,14 +178,14 @@
 	;	(not (AtConf ?q1))
 	;))
 
-	(:derived (InRegion ?o ?r) (exists (?p) (and
-		(Pickable ?o)
-		(Region ?r)
-		(Pose ?p)
-		(AtPose ?o ?p)
-		(PoseInRegion ?p ?r)
-		;(Moved)
-	)))
+	;(:derived (InRegion ?o ?r) (exists (?p) (and
+	;	(Pickable ?o)
+	;	(Region ?r)
+	;	(Pose ?p)
+	;	(AtPose ?o ?p)
+	;	(PoseInRegion ?p ?r)
+	;	;(Moved)
+	;)))
 
 	;(:derived (Reachable ?q) (or
 	;	 (and (BaseConf ?q) (AtConf ?q))
@@ -176,14 +202,14 @@
 	;	(PlacedAt ?p)
 	;)))
 
-	(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
-		(AtPose ?o ?p)
-		(CollidesMove ?q1 ?q2 ?o ?p)
-	)))
+	;(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
+	;	(AtPose ?o ?p)
+	;	(CollidesMove ?q1 ?q2 ?o ?p)
+	;)))
 
-	(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq) (exists (?o ?p) (and
-		(AtPose ?o ?p)
-		(CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p)
-	)))
+	;(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq) (exists (?o ?p) (and
+	;	(AtPose ?o ?p)
+	;	(CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p)
+	;)))
 )
 

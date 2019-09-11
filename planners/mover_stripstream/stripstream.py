@@ -25,11 +25,13 @@ from pddlstream.algorithms.search import SERIALIZE
 from problem_environments.mover_env import Mover
 from generators.PickUniform import PickWithBaseUnif
 from generators.PlaceUniform import PlaceUnif
+from generators.uniform import UniformGenerator, PaPUniformGenerator
 
 from trajectory_representation.operator import Operator
+from planners.subplanners.motion_planner import BaseMotionPlanner
 
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, two_arm_place_object, \
-    get_body_xytheta
+    get_body_xytheta, CustomStateSaver
 
 from mover_library.motion_planner import rrt_region
 
@@ -566,6 +568,22 @@ def test_edge(problem):
 
     return fcn
 
+def gen_pap(problem):
+    def fcn(o, r, s):
+        while True:
+            s.Restore()
+            action = Operator('two_arm_pick_two_arm_place', {'object': o, 'region': r})
+            sampler = PaPUniformGenerator(action, problem, None)
+            params = sampler.sample_next_point(action, n_iter=200, n_parameters_to_try_motion_planning=3)
+            if params['is_feasible']:
+                action.continuous_parameters = params
+                action.execute()
+                t = CustomStateSaver(problem.env)
+                yield params, t
+            else:
+                yield None
+    return fcn
+
 
 def gen_pick(problem, pick_unif):
     def fcn(o, p):
@@ -759,14 +777,15 @@ def get_problem(mover):
         # 'gen-placement': from_gen_fn(gen_placement(mover, place_sampler)),
         #'gen-edge': from_list_fn(gen_edge(mover)),
         # 'test-edge': from_test(test_edge(mover)),
-        'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
-        'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
-        'gen-conf': from_gen_fn(gen_conf(mover, place_sampler)),
+        'gen-pap': from_gen_fn(gen_pap(mover)),
+        #'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
+        #'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
+        #'gen-conf': from_gen_fn(gen_conf(mover, place_sampler)),
         #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
         #'BlocksMove': blocks_move(mover),
-        'CollidesMove': collides_move(mover),
-        'CollidesCarry': collides_carry(mover),
+        #'CollidesMove': collides_move(mover),
+        #'CollidesCarry': collides_carry(mover),
         #'BlocksPlace': blocks_place(mover),
         # 'PlaceTrajPoseCollision': place_check_traj_collision(mover),
         # 'PickTrajPoseCollision': pick_check_traj_collision(mover),
@@ -784,7 +803,12 @@ def get_problem(mover):
     # import pdb;pdb.set_trace()
 
     init = [('Pickable', obj_name) for obj_name in obj_names]
+    init += [('InRegion', obj_name, 'loading_region') for obj_name in obj_names]
     init += [('Region', region) for region in mover.regions]
+
+    init_state = CustomStateSaver(mover.env)
+    init += [('State', init_state)]
+    init += [('AtState', init_state)]
 
     # robot initialization
     init += [('EmptyArm',)]
@@ -1189,6 +1213,7 @@ if __name__ == '__main__':
     RaveSetDebugLevel(DebugLevel.Fatal)
     mover = Mover(problem_idx=0)
     mover.seed=0
+    mover.set_motion_planner(BaseMotionPlanner(mover, 'prm'))
     solve_pddlstream(mover)
     """
     if args.serial:

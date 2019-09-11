@@ -19,36 +19,50 @@
 	;))
 
 	(
-	:stream gen-pick
-	:inputs (?o ?p)
-	:domain (and
-		(Pickable ?o)
-		(Pose ?p)
-	)
-	:outputs (?q ?g ?gc)
-	:certified (and
-		(BaseConf ?q)
-		(Grasp ?o ?g ?gc)
-		(Pick ?o ?p ?q ?g ?gc)
-	))
-
-	(
-	:stream gen-place
-	:inputs (?o ?pickp ?pickq ?g ?gc ?r)
+	:stream gen-pap
+	:inputs (?o ?r ?s)
 	:domain (and
 		(Pickable ?o)
 		(Region ?r)
-		(Grasp ?o ?g ?gc)
-		(Pose ?pickp)
-		(BaseConf ?pickq)
+		(State ?s)
 	)
-	:outputs (?placeq ?placep)
+	:outputs (?params ?t)
 	:certified (and
-		(BaseConf ?placeq)
-		(Pose ?placep)
-		(Place ?o ?placep ?placeq ?g ?gc)
-		(PoseInRegion ?placep ?r)
+		(State ?t)
+		(PaP ?o ?r ?params ?s ?t)
 	))
+
+	;(
+	;:stream gen-pick
+	;:inputs (?o ?p)
+	;:domain (and
+	;	(Pickable ?o)
+	;	(Pose ?p)
+	;)
+	;:outputs (?q ?g ?gc)
+	;:certified (and
+	;	(BaseConf ?q)
+	;	(Grasp ?o ?g ?gc)
+	;	(Pick ?o ?p ?q ?g ?gc)
+	;))
+
+	;(
+	;:stream gen-place
+	;:inputs (?o ?pickp ?pickq ?g ?gc ?r)
+	;:domain (and
+	;	(Pickable ?o)
+	;	(Region ?r)
+	;	(Grasp ?o ?g ?gc)
+	;	(Pose ?pickp)
+	;	(BaseConf ?pickq)
+	;)
+	;:outputs (?placeq ?placep)
+	;:certified (and
+	;	(BaseConf ?placeq)
+	;	(Pose ?placep)
+	;	(Place ?o ?placep ?placeq ?g ?gc)
+	;	(PoseInRegion ?placep ?r)
+	;))
 
 	;(
 	;:stream gen-conf
@@ -90,21 +104,21 @@
 	;	(Pose ?p2)
 	;))
 
-	(:predicate (CollidesMove ?q1 ?q2 ?o ?p) (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
-		(Pickable ?o)
-		(Pose ?p)
-	))
+	;(:predicate (CollidesMove ?q1 ?q2 ?o ?p) (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
+	;	(Pickable ?o)
+	;	(Pose ?p)
+	;))
 
-	(:predicate (CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p) (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
-		(Pickable ?oo)
-		(Grasp ?o ?g ?gc)
-		(Pose ?pickp)
-		(BaseConf ?pickq)
-		(Pickable ?o)
-		(Pose ?p)
-	))
+	;(:predicate (CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p) (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
+	;	(Pickable ?oo)
+	;	(Grasp ?o ?g ?gc)
+	;	(Pose ?pickp)
+	;	(BaseConf ?pickq)
+	;	(Pickable ?o)
+	;	(Pose ?p)
+	;))
 )
