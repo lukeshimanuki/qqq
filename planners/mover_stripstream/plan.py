@@ -23,7 +23,7 @@ from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_pat
     two_arm_place_object, get_body_xytheta, grab_obj, release_obj, fold_arms, one_arm_pick_object, one_arm_place_object
 
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 import openravepy
 
 from generators.uniform import UniformGenerator, PaPUniformGenerator
@@ -33,7 +33,7 @@ from manipulation.primitives.display import set_viewer_options, draw_line, draw_
 from manipulation.primitives.savers import DynamicEnvironmentStateSaver
 
 from learn.data_traj import extract_individual_example
-from learn.pap_gnn import PaPGNN
+#from learn.pap_gnn import PaPGNN
 import collections
 
 prm_vertices, prm_edges = pickle.load(open('prm.pkl', 'rb'))
@@ -183,7 +183,7 @@ def compute_hcount(state, action, pap_model, problem_env):
     return len(objects_to_move)
 
 
-def solve_greedy(mover, config):
+def get_problem(mover):
     tt = time.time()
 
     obj_names = [obj.GetName() for obj in mover.objects]
@@ -478,10 +478,13 @@ def generate_training_data_single():
         mover = OneArmMover(config.pidx)
     else:
         raise NotImplementedError
+
     if config.solver == 'greedy':
-        solver = solve_greedy
+        from planners.mover_stripstream.greedy import solve_greedy as solver
     elif config.solver == 'stripstream':
-        solver = solve_stripstream
+        from planners.mover_stripstream.stripstream import solve_stripstream as solver
+    else:
+        raise NotImplementedError
     np.random.seed(config.planner_seed)
     random.seed(config.planner_seed)
     mover.set_motion_planner(BaseMotionPlanner(mover, 'prm'))
@@ -498,6 +501,8 @@ def generate_training_data_single():
 
     solution_file_dir = root_dir + '/test_results/greedy_results_on_mover_domain/domain_%s/n_objs_pack_%d'\
                         % (config.domain, config.n_objs_pack)
+
+    solution_file_dir += '/' + config.solver + '/'
 
     if config.dont_use_gnn:
         solution_file_dir += '/no_gnn/'
@@ -527,7 +532,7 @@ def generate_training_data_single():
             tottime = trajectory.metrics['tottime']
     else:
         t = time.time()
-        trajectory, num_nodes = solver(mover)
+        trajectory, num_nodes = solver(mover, config)
         tottime = time.time() - t
         success = trajectory is not None
         plan_length = len(trajectory.actions) if success else 0

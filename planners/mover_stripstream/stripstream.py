@@ -31,11 +31,12 @@ from trajectory_representation.operator import Operator
 from planners.subplanners.motion_planner import BaseMotionPlanner
 
 from mover_library.utils import set_robot_config, set_obj_xytheta, visualize_path, two_arm_pick_object, two_arm_place_object, \
-    get_body_xytheta, CustomStateSaver
+    get_body_xytheta, CustomStateSaver, set_color
 
 from mover_library.motion_planner import rrt_region
 
 from openravepy import RaveSetDebugLevel, DebugLevel
+from trajectory_representation.trajectory import Trajectory
 
 import numpy as np
 import openravepy
@@ -1108,6 +1109,65 @@ def solve_pddlstream(mover, execute=False, resolve=False, viewer=False):
 
     return plan
 
+def solve_stripstream(mover, config):
+    if config.visualize_plan:
+        mover.env.SetViewer('qtcoin')
+        set_viewer_options(mover.env)
+
+    for region in mover.regions:
+        if region in ['home_region']:  # home_region, entire_region, loading_region
+            mover.regions[region].draw(mover.env)
+    handles = []
+    for vertex in PRM_VERTICES:
+        handles.append(draw_vertex(mover.env, vertex, color=(1, 0, 0, 1), size=0.01))
+    print('Vertices:', len(PRM_VERTICES))
+    for i1, edges in enumerate(PRM_EDGES):  # prm_indices
+        for i2 in edges:
+            handles.append(draw_edge(mover.env, PRM_VERTICES[i1], PRM_VERTICES[i2], color=(1, 0, 0, 1), width=1.5))
+    print('Edges:', sum(len(edges) for edges in PRM_EDGES))
+
+    pddlstream_problem = get_problem(mover)
+    # raw_input('Start?')
+    # return None
+    stime = time.time()
+    pr = cProfile.Profile()
+    pr.enable()
+    # planner = 'ff-lazy' # -tiebreak
+    # planner = 'ff-eager-tiebreak' # -tiebreak
+    planner = 'ff-wastar5'
+    # planner = 'cea-wastar5' # Performs worse than ff-wastar
+    # planner = 'ff-ehc' # Worse
+
+    #import pdb;pdb.set_trace()
+    set_color(mover.objects[0], [1, 0, 0])
+    solution = solve_focused(pddlstream_problem, unit_costs=True, max_time=10 * 60,
+    #solution = solve_incremental(pddlstream_problem, unit_costs=True, max_time=10 * 60,
+                                 planner=planner, debug=True, verbose=True)
+    pr.disable()
+    pstats.Stats(pr).sort_stats('tottime').print_stats(10)
+    search_time = time.time() - stime
+    #print_solution(solution)
+    plan, cost, evaluations = solution
+    #import pdb;pdb.set_trace()
+    print("time: {}".format(search_time))
+    if plan is not None:
+        print('Success')
+
+        trajectory = Trajectory(mover.seed, mover.seed)
+        trajectory.actions = [
+            Operator('two_arm_pick_two_arm_place', {
+                'two_arm_place_object': action.args[0],
+                'two_arm_place_region': action.args[1],
+            }, action.args[3])
+            for action in plan
+        ]
+        trajectory.seed = mover.seed
+        print(trajectory)
+        return trajectory, 0 # TODO: count num nodes
+    else:
+        print("Plan not found")
+        return None, 0
+
 
 ##################################################
 
@@ -1211,6 +1271,8 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--viewer', action='store_true', help='Viewer')
     args = parser.parse_args()
     RaveSetDebugLevel(DebugLevel.Fatal)
+    np.random.seed(0)
+    random.seed(0)
     mover = Mover(problem_idx=0)
     mover.seed=0
     mover.set_motion_planner(BaseMotionPlanner(mover, 'prm'))
