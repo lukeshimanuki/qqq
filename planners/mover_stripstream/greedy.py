@@ -90,6 +90,9 @@ def compute_heuristic(state, action, pap_model, problem_env):
     region_is_goal = state.nodes[r][8]
     number_in_goal = 0
 
+    """
+    # This is wrong. We should be counting the number of goal objs in goal region. Also, why do you pass
+    # if i==o and why do you increment the number in goal by 1 if region is goal?
     for i in state.nodes:
         if i == o:
             continue
@@ -101,6 +104,17 @@ def compute_heuristic(state, action, pap_model, problem_env):
                     if is_r_goal_region:
                         number_in_goal += is_i_in_r
     number_in_goal += int(region_is_goal)
+    """
+    number_in_goal = 0
+    goal_objs = [tmp_o for tmp_o in state.goal_entities if 'box' in tmp_o]
+    if 'two_arm' in problem_env.name:
+        goal_region = 'home_region'
+        for obj_name in goal_objs:
+            is_obj_in_goal_region = state.binary_edges[(obj_name, goal_region)][0]
+            if is_obj_in_goal_region:
+                number_in_goal += 1
+    else:
+        raise NotImplementedError
 
     if config.hcount:
         hcount = compute_hcount(state, action, pap_model, problem_env)
@@ -131,7 +145,12 @@ def compute_heuristic(state, action, pap_model, problem_env):
         return hadd
     else:
         gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
-        hval = -number_in_goal + gnn_pred
+        #hval = -number_in_goal + gnn_pred
+        hcount = compute_hcount(state, action, pap_model, problem_env)
+        hval = hcount + gnn_pred
+        o_reachable = state.is_entity_reachable(o)
+        o_r_manip_free = state.binary_edges[(o, r)][-1]
+
         if not is_two_arm_domain:
             obj_name = action.discrete_parameters['object'].GetName()
             region_name = action.discrete_parameters['region'].name
@@ -144,6 +163,8 @@ def compute_heuristic(state, action, pap_model, problem_env):
             print "%15s %35s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d  num_in_goal %d in_way_of_goal_pap %d gnn %.4f hval %.4f" \
                   % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region,
                      number_in_goal, in_way_of_goal_pap, -gnn_pred, hval)
+        print 'n_in_goal %d %s %s prefree %d manipfree %d hcount %d gnn_pred %.4f hval %.4f' % (number_in_goal, o, r, o_reachable, o_r_manip_free, hcount, gnn_pred, hval)
+        #print "%s %s %.4f" % (o, r, hval)
 
         return hval
 
@@ -184,8 +205,16 @@ def compute_hcount(state, action, pap_model, problem_env):
         a_obj = action.discrete_parameters['object'].GetName()
         a_region = action.discrete_parameters['region'].name
 
+    is_a_obj_manip_free_to_a_region = state.binary_edges[(a_obj, a_region)][-1]
+    is_a_in_objects_to_move = a_obj in objects_to_move
+    is_a_obj_reachable = state.nodes[a_obj][9]
+    if is_a_obj_reachable and is_a_in_objects_to_move and is_a_obj_manip_free_to_a_region:
+        objects_to_move -= {a_obj}
+
+    """
     if state.nodes[a_obj][9] and (a_obj not in state.goal_entities or a_region in state.goal_entities):
         objects_to_move -= {a_obj}
+    """
 
     # return -len(objects_to_move)
     return len(objects_to_move)
@@ -218,12 +247,12 @@ def get_problem(mover):
         mover.env.SetViewer('qtcoin')
         set_viewer_options(mover.env)
 
-    pr = cProfile.Profile()
-    pr.enable()
+    #pr = cProfile.Profile()
+    #pr.enable()
     state = statecls(mover, goal)
-    pr.disable()
-    pstats.Stats(pr).sort_stats('tottime').print_stats(30)
-    pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
+    #pr.disable()
+    #pstats.Stats(pr).sort_stats('tottime').print_stats(30)
+    #pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
 
     # state.make_pklable()
 
@@ -345,7 +374,7 @@ def get_problem(mover):
             if smpled_param['is_feasible']:
                 action.continuous_parameters = smpled_param
                 action.execute()
-                print "Action executed"
+                print "Action executed",action.discrete_parameters['object'], action.discrete_parameters['region']
             else:
                 print "Failed to sample an action"
                 # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
@@ -373,9 +402,9 @@ def get_problem(mover):
                 newactions = get_actions(mover, goal, config)
                 print "Old h value", curr_hval
                 for newaction in newactions:
-                    hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
-                    print "New state h value %.4f for %s %s" % (
-                        hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
+                    hval = compute_heuristic(newstate, newaction, pap_model, mover) #- 1. * newnode.depth
+                    #print "New state h value %.4f for %s %s" % (
+                    #    hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
                         (hval, float('nan'), newaction, newnode))
             # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
@@ -516,7 +545,7 @@ def generate_training_data_single():
         solution_file_dir += '/gnn_hadd_after_submission/loss_' + str(config.loss) + '/num_train_' + str(
             config.num_train) + '/'
     else:
-        solution_file_dir += '/gnn_after_submission/loss_' + str(config.loss) + '/num_train_' + str(
+        solution_file_dir += '/gnn_and_hcount/loss_' + str(config.loss) + '/num_train_' + str(
             config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \

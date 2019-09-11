@@ -13,7 +13,9 @@ import time
 
 PR2_ARM_LENGTH = 0.9844
 
+FOLDED_LEFT_ARM = [0.0, 1.29023451, 0.0, -2.121308, 0.0, -0.69800004, 0.0]
 
+PR2_ARM_LENGTH = 0.9844
 def convert_collision_vec_to_one_hot(c_data):
     n_konf = c_data.shape[1]
     onehot_cdata = []
