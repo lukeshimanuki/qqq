@@ -46,7 +46,7 @@ DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 
 
-def get_actions(mover, goal, config):
+def get_actions(mover, goal):
     actions = []
     for o in mover.entity_names:
         if 'region' in o:
@@ -60,12 +60,12 @@ def get_actions(mover, goal, config):
             if 'entire' in r:  # and config.domain == 'two_arm_mover':
                 continue
 
-            if config.domain == 'two_arm_mover':
+            if mover.name == 'two_arm_mover':
                 action = Operator('two_arm_pick_two_arm_place', {'two_arm_place_object': o, 'two_arm_place_region': r})
                 # following two lines are for legacy reasons, will fix later
                 action.discrete_parameters['object'] = action.discrete_parameters['two_arm_place_object']
                 action.discrete_parameters['region'] = action.discrete_parameters['two_arm_place_region']
-            elif config.domain == 'one_arm_mover':
+            elif mover.name == 'one_arm_mover':
                 action = Operator('one_arm_pick_one_arm_place',
                                   {'object': mover.env.GetKinBody(o), 'region': mover.regions[r]})
 
@@ -83,7 +83,6 @@ def compute_heuristic(state, action, pap_model, problem_env):
     else:
         o = action.discrete_parameters['object'].GetName()
         r = action.discrete_parameters['region'].name
-
     nodes, edges, actions, _ = extract_individual_example(state, action)
     nodes = nodes[..., 6:]
 
@@ -144,10 +143,14 @@ def compute_heuristic(state, action, pap_model, problem_env):
             hadd += gnn_pred
         return hadd
     else:
-        gnn_pred = -pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
+        all_actions = get_actions(problem_env, state.goal_entities)
+        q_vals = [np.exp(pap_model.predict(state, a)) for a in all_actions]
+        q_val_on_curr_a = pap_model.predict_with_raw_input_format(nodes[None, ...], edges[None, ...], actions[None, ...])
+        q_bonus = np.exp(q_val_on_curr_a) / np.sum(q_vals)
+
         #hval = -number_in_goal + gnn_pred
         hcount = compute_hcount(state, action, pap_model, problem_env)
-        hval = hcount + gnn_pred
+        hval = hcount - q_bonus
         o_reachable = state.is_entity_reachable(o)
         o_r_manip_free = state.binary_edges[(o, r)][-1]
 
@@ -162,8 +165,8 @@ def compute_heuristic(state, action, pap_model, problem_env):
             in_way_of_goal_pap = obj_name in state.get_entities_in_way_to_goal_entities()
             print "%15s %35s reachable %d placeable_in_region %d isgoal %d isgoal_region %d is_in_region %d  num_in_goal %d in_way_of_goal_pap %d gnn %.4f hval %.4f" \
                   % (obj_name, region_name, is_reachable, is_placeable, is_goal, isgoal_region, is_in_region,
-                     number_in_goal, in_way_of_goal_pap, -gnn_pred, hval)
-        print 'n_in_goal %d %s %s prefree %d manipfree %d hcount %d gnn_pred %.4f hval %.4f' % (number_in_goal, o, r, o_reachable, o_r_manip_free, hcount, gnn_pred, hval)
+                     number_in_goal, in_way_of_goal_pap, -q_bonus, hval)
+        print 'n_in_goal %d %s %s prefree %d manipfree %d hcount %d gnn_pred %.4f hval %.4f' % (number_in_goal, o, r, o_reachable, o_r_manip_free, hcount, -q_bonus, hval)
         #print "%s %s %.4f" % (o, r, hval)
 
         return hval
@@ -178,9 +181,9 @@ def compute_hcount(state, action, pap_model, problem_env):
     for entity in state.goal_entities:
         is_entity_object = 'region' not in entity
         if is_entity_object:
-            goal_region_contains_goal_obj = not problem_env.regions[goal_r].contains(
+            goal_region_contains_goal_obj = problem_env.regions[goal_r].contains(
                 problem_env.env.GetKinBody(entity).ComputeAABB())
-            if goal_region_contains_goal_obj:
+            if not goal_region_contains_goal_obj:
                 queue.put(entity)
 
     if 'two_arm' in problem_env.name:
@@ -324,7 +327,7 @@ def get_problem(mover):
     action_queue = Queue.PriorityQueue()  # (heuristic, nan, operator skeleton, state. trajectory)
     initnode = Node(None, None, state)
     initial_state = state
-    actions = get_actions(mover, goal, config)
+    actions = get_actions(mover, goal)
     for a in actions:
         hval = compute_heuristic(state, a, pap_model, mover)
         action_queue.put((hval, float('nan'), a, initnode))  # initial q
@@ -344,7 +347,7 @@ def get_problem(mover):
             return None, iter
 
         if action_queue.empty():
-            actions = get_actions(mover, goal, config)
+            actions = get_actions(mover, goal)
             for a in actions:
                 action_queue.put(
                     (compute_heuristic(initial_state, a, pap_model, mover), float('nan'), a, initnode))  # initial q
@@ -352,8 +355,7 @@ def get_problem(mover):
         curr_hval, _, action, node = action_queue.get()
         state = node.state
 
-        print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
-        print("{}".format(action.discrete_parameters.values()))
+        #print('\n'.join([str(parent.action.discrete_parameters.values()) for parent in list(node.backtrack())[-2::-1]]))
 
         if node.depth >= 2 and action.type == 'two_arm_pick' and node.parent.action.discrete_parameters['object'] == \
                 action.discrete_parameters['object']:  # and plan[-1][1] == r:
@@ -368,13 +370,14 @@ def get_problem(mover):
         # utils.set_color(action.discrete_parameters['object'], [1, 0, 0])  # visualization purpose
 
         if action.type == 'two_arm_pick_two_arm_place':
+            print("Sampling for {}".format(action.discrete_parameters.values()))
             smpler = PaPUniformGenerator(action, mover, None)
             smpled_param = smpler.sample_next_point(action, n_iter=200, n_parameters_to_try_motion_planning=3,
                                                     cached_collisions=state.collides, cached_holding_collisions=None)
             if smpled_param['is_feasible']:
                 action.continuous_parameters = smpled_param
                 action.execute()
-                print "Action executed",action.discrete_parameters['object'], action.discrete_parameters['region']
+                print "Action executed", action.discrete_parameters['object'], action.discrete_parameters['region']
             else:
                 print "Failed to sample an action"
                 # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
@@ -399,7 +402,7 @@ def get_problem(mover):
                 print "New state computed"
                 newstate.make_pklable()
                 newnode = Node(node, action, newstate)
-                newactions = get_actions(mover, goal, config)
+                newactions = get_actions(mover, goal)
                 print "Old h value", curr_hval
                 for newaction in newactions:
                     hval = compute_heuristic(newstate, newaction, pap_model, mover) #- 1. * newnode.depth
@@ -407,6 +410,7 @@ def get_problem(mover):
                     #    hval, newaction.discrete_parameters['object'], newaction.discrete_parameters['region'])
                     action_queue.put(
                         (hval, float('nan'), newaction, newnode))
+
             # utils.set_color(action.discrete_parameters['object'], [0, 1, 0])  # visualization purpose
 
         elif action.type == 'one_arm_pick_one_arm_place':
@@ -485,7 +489,7 @@ def get_problem(mover):
                     pstats.Stats(pr).sort_stats('cumtime').print_stats(30)
                     print "New state computed"
                     newnode = Node(node, action, newstate)
-                    newactions = get_actions(mover, goal, config)
+                    newactions = get_actions(mover, goal)
                     print "Old h value", curr_hval
                     for newaction in newactions:
                         hval = compute_heuristic(newstate, newaction, pap_model, mover) - 1. * newnode.depth
@@ -545,7 +549,7 @@ def generate_training_data_single():
         solution_file_dir += '/gnn_hadd_after_submission/loss_' + str(config.loss) + '/num_train_' + str(
             config.num_train) + '/'
     else:
-        solution_file_dir += '/gnn_and_hcount/loss_' + str(config.loss) + '/num_train_' + str(
+        solution_file_dir += '/qbonus_and_hcount/loss_' + str(config.loss) + '/num_train_' + str(
             config.num_train) + '/'
 
     solution_file_name = 'pidx_' + str(config.pidx) + \
