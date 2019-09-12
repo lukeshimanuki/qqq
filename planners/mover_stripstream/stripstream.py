@@ -765,7 +765,7 @@ def gen_placement(problem, place_unif):
     return fcn
 
 
-def get_problem(mover):
+def get_problem(mover, n_objs_pack=1):
     directory = os.path.dirname(os.path.abspath(__file__))
     domain_pddl = read(os.path.join(directory, 'domain.pddl'))
     stream_pddl = read(os.path.join(directory, 'stream.pddl'))
@@ -871,7 +871,7 @@ def get_problem(mover):
     #sys.stderr.write('generated initial state\n')
 
     goal = ['and'] + [('InRegion', obj_name, 'home_region')
-                      for obj_name in obj_names[0:1]]
+                      for obj_name in obj_names[0:n_objs_pack]]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
     #goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]
@@ -1126,7 +1126,7 @@ def solve_stripstream(mover, config):
             handles.append(draw_edge(mover.env, PRM_VERTICES[i1], PRM_VERTICES[i2], color=(1, 0, 0, 1), width=1.5))
     print('Edges:', sum(len(edges) for edges in PRM_EDGES))
 
-    pddlstream_problem = get_problem(mover)
+    pddlstream_problem = get_problem(mover, config.n_objs_pack)
     # raw_input('Start?')
     # return None
     stime = time.time()
