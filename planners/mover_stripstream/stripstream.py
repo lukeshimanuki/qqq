@@ -1087,8 +1087,8 @@ def solve_pddlstream(mover, execute=False, resolve=False, viewer=False):
     # planner = 'ff-ehc' # Worse
 
     #import pdb;pdb.set_trace()
-    solution = solve_focused(pddlstream_problem, unit_costs=True, max_time=10 * 60,
-    #solution = solve_incremental(pddlstream_problem, unit_costs=True, max_time=10 * 60,
+    solution = solve_focused(pddlstream_problem, unit_costs=True, max_time=config.timelimit,
+    #solution = solve_incremental(pddlstream_problem, unit_costs=True, max_time=config.timelimit,
                                  planner=planner, debug=True, verbose=True)
     pr.disable()
     pstats.Stats(pr).sort_stats('tottime').print_stats(10)
