@@ -26,6 +26,7 @@ from problem_environments.mover_env import Mover
 from generators.PickUniform import PickWithBaseUnif
 from generators.PlaceUniform import PlaceUnif
 from generators.uniform import UniformGenerator, PaPUniformGenerator
+from generators.one_arm_pap_uniform_generator import OneArmPaPUniformGenerator
 
 from trajectory_representation.operator import Operator
 from planners.subplanners.motion_planner import BaseMotionPlanner
@@ -54,6 +55,11 @@ PRM_INDICES = {tuple(v): i for i, v in enumerate(PRM_VERTICES)}
 DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 MAX_PICK_DISTANCE = 1.0  # Previously 1.5 for pick and 1.0 for place
+
+# cache ik solutions
+ikcachename = './ikcache.pkl'
+iksolutions = {}
+iksolutions = pickle.load(open(ikcachename, 'r'))
 
 
 def gen_grasp(pick_unif):
@@ -573,16 +579,41 @@ def gen_pap(problem):
     def fcn(o, r, s):
         while True:
             s.Restore()
-            action = Operator('two_arm_pick_two_arm_place', {'object': o, 'region': r})
-            sampler = PaPUniformGenerator(action, problem, None)
-            params = sampler.sample_next_point(action, n_iter=200, n_parameters_to_try_motion_planning=3)
-            if params['is_feasible']:
-                action.continuous_parameters = params
-                action.execute()
-                t = CustomStateSaver(problem.env)
-                yield params, t
+            if problem.name == 'two_arm_mover':
+                action = Operator('two_arm_pick_two_arm_place', {'object': o, 'region': r})
+                sampler = PaPUniformGenerator(action, problem, None)
+                params = sampler.sample_next_point(action, n_iter=200, n_parameters_to_try_motion_planning=3)
+                if params['is_feasible']:
+                    action.continuous_parameters = params
+                    action.execute()
+                    t = CustomStateSaver(problem.env)
+                    yield params, t
+                else:
+                    yield None
+
+                if params['is_feasible']:
+                    action.continuous_parameters = params
+                    action.execute()
+                    t = CustomStateSaver(problem.env)
+                    yield params, t
+                else:
+                    yield None
+            elif problem.name == 'one_arm_mover':
+                action = Operator('one_arm_pick_one_arm_place', {'object': problem.env.GetKinBody(o), 'region': problem.regions[r]})
+                current_region = problem.get_region_containing(problem.env.GetKinBody(o)).name
+                sampler = OneArmPaPUniformGenerator(action, problem, cached_picks=(iksolutions[current_region], iksolutions[r]))
+                pick_params, place_params, status = sampler.sample_next_point(action)
+
+                if status == 'HasSolution':
+                    action.continuous_parameters = {'pick': pick_params, 'place': place_params}
+                    action.execute()
+                    t = CustomStateSaver(problem.env)
+                    yield action.continuous_parameters, t
+                else:
+                    yield None
             else:
-                yield None
+                raise NotImplementedError
+
     return fcn
 
 
@@ -804,12 +835,21 @@ def get_problem(mover, n_objs_pack=1):
     # import pdb;pdb.set_trace()
 
     init = [('Pickable', obj_name) for obj_name in obj_names]
-    init += [('InRegion', obj_name, 'loading_region') for obj_name in obj_names]
+    init += [('InRegion', obj_name, mover.get_region_containing(mover.env.GetKinBody(obj_name)).name) for obj_name in obj_names]
     init += [('Region', region) for region in mover.regions]
 
     goal_objects = obj_names[0:n_objs_pack]
+
+    if mover.name == 'two_arm_mover':
+        goal_regions = ['home_region']
+        nongoal_regions = ['loading_region']
+    elif mover.name == 'one_arm_mover':
+        goal_regions = mover.target_box_region.name
+        nongoal_regions = list(mover.shelf_regions)
+    else:
+        raise NotImplementedError
     init += [('GoalObject', obj_name) for obj_name in goal_objects]
-    init += [('NonGoalRegion', region) for region in ['loading_region']]
+    init += [('NonGoalRegion', region) for region in nongoal_regions]
 
     init_state = CustomStateSaver(mover.env)
     init += [('State', init_state)]
@@ -874,7 +914,7 @@ def get_problem(mover, n_objs_pack=1):
     import sys;
     #sys.stderr.write('generated initial state\n')
 
-    goal = ['and'] + [('InRegion', obj_name, 'home_region')
+    goal = ['and'] + [('InRegion', obj_name, goal_regions)
                       for obj_name in goal_objects]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
