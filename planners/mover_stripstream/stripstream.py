@@ -807,6 +807,10 @@ def get_problem(mover, n_objs_pack=1):
     init += [('InRegion', obj_name, 'loading_region') for obj_name in obj_names]
     init += [('Region', region) for region in mover.regions]
 
+    goal_objects = obj_names[0:n_objs_pack]
+    init += [('GoalObject', obj_name) for obj_name in goal_objects]
+    init += [('NonGoalRegion', region) for region in ['loading_region']]
+
     init_state = CustomStateSaver(mover.env)
     init += [('State', init_state)]
     init += [('AtState', init_state)]
@@ -871,7 +875,7 @@ def get_problem(mover, n_objs_pack=1):
     #sys.stderr.write('generated initial state\n')
 
     goal = ['and'] + [('InRegion', obj_name, 'home_region')
-                      for obj_name in obj_names[0:n_objs_pack]]
+                      for obj_name in goal_objects]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
     #goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]

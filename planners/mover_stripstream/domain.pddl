@@ -19,6 +19,9 @@
 		(PlacedAt ?p)
 		(Grasp ?o ?g ?gc)
 
+		(GoalObject ?o)
+		(NonGoalRegion ?r)
+
 		(Edge ?q1 ?q2)
 		(Reach ?q1 ?q2)
 		(UnsafeMove2 ?q)
@@ -60,7 +63,30 @@
 	:parameters (?o ?r ?prev_r ?params ?s ?t)
 	:precondition (and
 		(Pickable ?o)
+		(GoalObject ?o)
 		(Region ?r)
+		(Region ?prev_r)
+		(State ?s)
+		(State ?t)
+		(PaP ?o ?r ?params ?s ?t)
+
+		(InRegion ?o ?prev_r)
+		(AtState ?s)
+	)
+	:effect (and
+		(not (InRegion ?o ?prev_r))
+		(not (AtState ?s))
+		(AtState ?t)
+		(InRegion ?o ?r)
+	))
+
+	(
+	:action nongoalpap
+	:parameters (?o ?r ?prev_r ?params ?s ?t)
+	:precondition (and
+		(Pickable ?o)
+		(Region ?r)
+		(NonGoalRegion ?r)
 		(Region ?prev_r)
 		(State ?s)
 		(State ?t)
