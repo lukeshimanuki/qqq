@@ -841,10 +841,10 @@ def get_problem(mover, n_objs_pack=1):
     goal_objects = obj_names[0:n_objs_pack]
 
     if mover.name == 'two_arm_mover':
-        goal_regions = ['home_region']
+        goal_region = 'home_region'
         nongoal_regions = ['loading_region']
     elif mover.name == 'one_arm_mover':
-        goal_regions = mover.target_box_region.name
+        goal_region = mover.target_box_region.name
         nongoal_regions = list(mover.shelf_regions)
     else:
         raise NotImplementedError
@@ -914,7 +914,7 @@ def get_problem(mover, n_objs_pack=1):
     import sys;
     #sys.stderr.write('generated initial state\n')
 
-    goal = ['and'] + [('InRegion', obj_name, goal_regions)
+    goal = ['and'] + [('InRegion', obj_name, goal_region)
                       for obj_name in goal_objects]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
