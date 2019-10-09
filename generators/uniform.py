@@ -38,7 +38,8 @@ class UniformGenerator(Generator):
 
         if sampled_feasible_parameters:
             chosen_op_param = params[0]
-            chosen_op_param['motion'] = [chosen_op_param['q_goal']]
+            if 'q_goal' in chosen_op_param:
+                chosen_op_param['motion'] = [chosen_op_param['q_goal']]
             chosen_op_param['is_feasible'] = True
         else:
             chosen_op_param = {'is_feasible': False}

@@ -479,6 +479,11 @@ def generate_training_data_single():
     else:
         raise NotImplementedError
 
+    if config.n_objects is not None:
+        for obj in mover.objects[config.n_objects:]:
+            mover.env.Remove(obj)
+        mover.objects = mover.objects[:config.n_objects]
+
     if config.solver == 'greedy':
         from planners.mover_stripstream.greedy import solve_greedy as solver
     elif config.solver == 'stripstream':
@@ -720,6 +725,7 @@ if __name__ == '__main__':
     parser.add_argument('-hcount', action='store_true', default=False)
     parser.add_argument('-hadd', action='store_true', default=False)
     parser.add_argument('-solver', type=str, default='greedy')
+    parser.add_argument('-n_objects', type=int, default=None)
 
     config = parser.parse_args()
     generate_training_data_single()
