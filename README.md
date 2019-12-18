@@ -1,1 +1,1 @@
-# qqq
+# This branch is obsolete. Look at guiding_gtamp repo for CoRL results.
