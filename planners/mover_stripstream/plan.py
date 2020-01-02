@@ -7,8 +7,6 @@ import Queue
 
 import cProfile
 import pstats
-from problem_environments.mover_env import Mover
-from problem_environments.one_arm_mover_env import OneArmMover
 from generators.PickUniform import PickWithBaseUnif
 from generators.PlaceUniform import PlaceUnif
 from generators.one_arm_pap_uniform_generator import OneArmPaPUniformGenerator
@@ -473,9 +471,15 @@ def generate_training_data_single():
     np.random.seed(config.pidx)
     random.seed(config.pidx)
     if config.domain == 'two_arm_mover':
+        from problem_environments.mover_env import Mover
         mover = Mover(config.pidx, config.problem_type)
     elif config.domain == 'one_arm_mover':
-        mover = OneArmMover(config.pidx)
+        if config.environment == 'openrave':
+            from problem_environments.one_arm_mover_env import OneArmMover
+            mover = OneArmMover(config.pidx)
+        elif config.environment == 'pybullet':
+            from problem_environments.one_arm_pb import OneArmPB
+            mover = OneArmPB(config.pidx)
     else:
         raise NotImplementedError
 
@@ -538,6 +542,7 @@ def generate_training_data_single():
     else:
         t = time.time()
         trajectory, num_nodes = solver(mover, config)
+        import pdb;pdb.set_trace()
         tottime = time.time() - t
         success = trajectory is not None
         plan_length = len(trajectory.actions) if success else 0
@@ -721,6 +726,7 @@ if __name__ == '__main__':
     parser.add_argument('-dont_use_h', action='store_true', default=False)
     parser.add_argument('-loss', type=str, default='largemargin')
     parser.add_argument('-domain', type=str, default='two_arm_mover')
+    parser.add_argument('-environment', type=str, default='openrave')
     parser.add_argument('-problem_type', type=str, default='normal') # supports normal, nonmonotonic
     parser.add_argument('-hcount', action='store_true', default=False)
     parser.add_argument('-hadd', action='store_true', default=False)

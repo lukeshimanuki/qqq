@@ -45,6 +45,7 @@ prm_indices = {tuple(v): i for i, v in enumerate(prm_vertices)}
 DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 
+config = None
 
 def get_actions(mover, goal, config):
     actions = []
@@ -183,7 +184,10 @@ def compute_hcount(state, action, pap_model, problem_env):
     return len(objects_to_move)
 
 
-def solve_greedy(mover, config):
+def solve_greedy(mover, _config):
+    global config
+    config = _config
+
     tt = time.time()
 
     obj_names = [obj.GetName() for obj in mover.objects]
@@ -250,8 +254,14 @@ def solve_greedy(mover, config):
         num_entities = 11
         n_regions = 2
     elif config.domain == 'one_arm_mover':
-        num_entities = 12
-        n_regions = 2
+        if config.environment == 'openrave':
+            num_entities = 12
+            n_regions = 2
+        elif config.environment == 'pybullet':
+            num_entities = 3
+            n_regions = 2
+        else:
+            raise NotImplementedError
     else:
         raise NotImplementedError
     num_node_features = 10
