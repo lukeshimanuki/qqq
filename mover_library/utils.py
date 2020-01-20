@@ -382,6 +382,7 @@ def one_arm_place_object(place_action):
     assert len(openravepy.RaveGetEnvironments()) == 1
     env = openravepy.RaveGetEnvironment(1)
     robot = env.GetRobot('pr2')
+    obj = robot.GetGrabbed()[0]
 
     manip = robot.GetManipulator('rightarm_torso')
     robot.SetActiveDOFs(manip.GetArmIndices(), DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis, [0, 0, 1])
@@ -389,6 +390,9 @@ def one_arm_place_object(place_action):
     set_active_config(place_config)
     release_obj()
     open_gripper(robot)
+    #TODO: fix SetTransform and SetDOFValues to do this correctly
+    set_obj_xytheta(place_action['object_pose'], obj)
+    set_point(obj, place_action['object_point'])
 
 
 def two_arm_place_object(place_action):

@@ -3,7 +3,7 @@ import numpy as np
 import random
 import copy
 
-from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta, set_robot_config, release_obj
+from mover_library.utils import get_pick_base_pose_and_grasp_from_pick_parameters, get_body_xytheta, set_robot_config, release_obj, get_point
 from mover_library import utils
 from manipulation.bodies.bodies import set_color
 from generators.uniform import UniformGenerator
@@ -153,6 +153,7 @@ class OneArmPaPUniformGenerator:
 
             place_params['operator_name'] = 'one_arm_place'
             place_params['object_pose'] = place_pose
+            place_params['object_point'] = get_point(self.target_obj)
             place_params['action_parameters'] = place_pose
             place_params['base_pose'] = place_base_pose
             place_params['q_goal'][-3:] = place_base_pose
