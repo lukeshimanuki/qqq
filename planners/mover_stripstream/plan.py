@@ -45,6 +45,8 @@ prm_indices = {tuple(v): i for i, v in enumerate(prm_vertices)}
 DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 
+config = None
+
 
 def get_actions(mover, goal, config):
     actions = []
@@ -485,7 +487,9 @@ def generate_training_data_single():
         mover.objects = mover.objects[:config.n_objects]
 
     if config.solver == 'greedy':
+        from planners.mover_stripstream import greedy
         from planners.mover_stripstream.greedy import solve_greedy as solver
+        greedy.config = config
     elif config.solver == 'stripstream':
         from planners.mover_stripstream.stripstream import solve_stripstream as solver
     else:

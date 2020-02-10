@@ -45,6 +45,8 @@ prm_indices = {tuple(v): i for i, v in enumerate(prm_vertices)}
 DISABLE_COLLISIONS = False
 MAX_DISTANCE = 1.0
 
+config = None
+
 
 def get_actions(mover, goal, config):
     actions = []
