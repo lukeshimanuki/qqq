@@ -492,6 +492,8 @@ def generate_training_data_single():
         greedy.config = config
     elif config.solver == 'stripstream':
         from planners.mover_stripstream.stripstream import solve_stripstream as solver
+    elif config.solver == 'ssprm':
+        from planners.mover_stripstream.ssprm import solve_stripstream as solver
     else:
         raise NotImplementedError
     np.random.seed(config.planner_seed)
