@@ -18,51 +18,55 @@
 	;	(Edge ?q2 ?q1)
 	;))
 
-	(
-	:stream gen-pap
-	:inputs (?o ?r ?s)
-	:domain (and
-		(Pickable ?o)
-		(Region ?r)
-		(State ?s)
-	)
-	:outputs (?params ?t)
-	:certified (and
-		(State ?t)
-		(PaP ?o ?r ?params ?s ?t)
-	))
-
 	;(
-	;:stream gen-pick
-	;:inputs (?o ?p)
-	;:domain (and
-	;	(Pickable ?o)
-	;	(Pose ?p)
-	;)
-	;:outputs (?q ?g ?gc)
-	;:certified (and
-	;	(BaseConf ?q)
-	;	(Grasp ?o ?g ?gc)
-	;	(Pick ?o ?p ?q ?g ?gc)
-	;))
-
-	;(
-	;:stream gen-place
-	;:inputs (?o ?pickp ?pickq ?g ?gc ?r)
+	;:stream gen-pap
+	;:inputs (?o ?r ?s)
 	;:domain (and
 	;	(Pickable ?o)
 	;	(Region ?r)
-	;	(Grasp ?o ?g ?gc)
-	;	(Pose ?pickp)
-	;	(BaseConf ?pickq)
+	;	(State ?s)
 	;)
-	;:outputs (?placeq ?placep)
+	;:outputs (?params ?t)
 	;:certified (and
-	;	(BaseConf ?placeq)
-	;	(Pose ?placep)
-	;	(Place ?o ?placep ?placeq ?g ?gc)
-	;	(PoseInRegion ?placep ?r)
+	;	(State ?t)
+	;	(PaP ?o ?r ?params ?s ?t)
 	;))
+
+	(
+	:stream gen-pick
+	:inputs (?o ?p)
+	:domain (and
+		(Pickable ?o)
+		(Pose ?p)
+		;(BaseConf ?prm_q)
+	)
+	:outputs (?q ?g)
+	:certified (and
+		(Sampled ?q)
+		(Grasp ?g)
+		(Pick ?o ?p ?q ?g)
+		;(Near ?prm_q ?q)
+	))
+
+	(
+	:stream gen-place
+	:inputs (?o ?pickp ?pickq ?g ?r)
+	:domain (and
+		(Pickable ?o)
+		(Pose ?pickp)
+		(Sampled ?pickq)
+		(Grasp ?g)
+		(Pick ?o ?pickp ?pickq ?g)
+		(Region ?r)
+		;(BaseConf ?prm_q)
+	)
+	:outputs (?placeq ?placep)
+	:certified (and
+		(Sampled ?placeq)
+		(Pose ?placep)
+		(Place ?o ?placep ?placeq ?g ?r)
+		;(Near ?prm_q ?placeq)
+	))
 
 	;(
 	;:stream gen-conf
@@ -93,6 +97,11 @@
 	;))
 
 	;(:function (Distance ?q1 ?q2) (Edge ?q1 ?q2))
+
+	;(:predicate (NotNear ?q1 ?q2) (and
+	;	(BaseConf ?q1)
+	;	(Sampled ?q2)
+	;))
 
 	;(:predicate (BlocksMove ?p ?q) (and
 	;    (Pose ?p)

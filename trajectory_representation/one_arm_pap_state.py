@@ -107,7 +107,7 @@ class OneArmPaPState(PaPState):
         #    o.Enable(False)
         self.problem_env.disable_objects()
         self.iksolutions = {}
-        o = u'c_obst0'
+        o = self.problem_env.objects[0].GetName()
         obj = self.problem_env.env.GetKinBody(o)
         if True:
         #for o, obj in self.objects.items():

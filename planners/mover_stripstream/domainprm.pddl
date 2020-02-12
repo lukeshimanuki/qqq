@@ -13,14 +13,19 @@
 		(Region ?r)
 		(IntendedRegion ?region)
 		(Pose ?p)
-		(Pick ?o ?p ?q ?g ?gc)
-		(Place ?o ?p ?q ?g ?gc)
-		(Picked ?o ?g ?gc ?p ?q)
+		(Pick ?o ?p ?q ?g)
+		(Place ?o ?p ?q ?g ?r)
+		(Picked ?o ?p ?q ?g)
 		(PlacedAt ?p)
-		(Grasp ?o ?g ?gc)
+		(Grasp ?g)
 
 		(GoalObject ?o)
+		(NonGoalObject ?o)
+		(GoalRegion ?r)
 		(NonGoalRegion ?r)
+
+		(InGoal ?o)
+		(Near ?q1 ?q2) ; prm_q, sampled_q
 
 		(Edge ?q1 ?q2)
 		(Reach ?q1 ?q2)
@@ -58,96 +63,94 @@
 	;	 ;(not (Picked ?o))
 	;))
 
+	; move from q1 to q2, pick, move back to q1
 	(
-	:action pap
-	:parameters (?o ?r ?prev_r ?params ?s ?t)
+	:action pick
+	:parameters (?q1 ?o ?p ?q2 ?g ?r)
 	:precondition (and
+		(BaseConf ?q1)
 		(Pickable ?o)
-		(GoalObject ?o)
+		(Pose ?p)
+		(Sampled ?q2)
+		(Grasp ?g)
+		(Pick ?o ?p ?q2 ?g)
 		(Region ?r)
-		(Region ?prev_r)
-		(State ?s)
-		(State ?t)
-		(PaP ?o ?r ?params ?s ?t)
 
-		(InRegion ?o ?prev_r)
-		(AtState ?s)
+		(EmptyArm)
+		(InRegion ?o ?r)
+		(AtPose ?o ?p)
+		(AtConf ?q1)
+
+		(Near ?q1 ?q2)
+		;(not (UnsafeCarry ?q1 ?o ?p ?q2 ?g))
+		;(not (UnsafeCarry ?q2 ?o ?p ?q2 ?g))
 	)
 	:effect (and
-		(not (InRegion ?o ?prev_r))
-		(not (AtState ?s))
-		(AtState ?t)
-		(InRegion ?o ?r)
+		(Picked ?o ?p ?q2 ?g)
+		(not (EmptyArm))
+		(not (InRegion ?o ?r))
+		(not (AtPose ?o ?p))
 	))
 
 	(
-	:action nongoalpap
-	:parameters (?o ?r ?prev_r ?params ?s ?t)
+	:action place
+	:parameters (?q ?o ?pickp ?placep ?pickq ?placeq ?g ?r)
 	:precondition (and
+		(BaseConf ?q)
 		(Pickable ?o)
+		;(NonGoalObject ?o)
+		(Pose ?pickp)
+		(Pose ?placep)
+		(Sampled ?pickq)
+		(Sampled ?placeq)
+		(Grasp ?g)
 		(Region ?r)
 		(NonGoalRegion ?r)
-		(Region ?prev_r)
-		(State ?s)
-		(State ?t)
-		(PaP ?o ?r ?params ?s ?t)
+		(Place ?o ?placep ?placeq ?g ?r)
 
-		(InRegion ?o ?prev_r)
-		(AtState ?s)
+		(AtConf ?q)
+		(Picked ?o ?pickp ?pickq ?g)
+
+		;(Near ?q ?placeq)
+		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
 	)
 	:effect (and
-		(not (InRegion ?o ?prev_r))
-		(not (AtState ?s))
-		(AtState ?t)
+		(AtPose ?o ?placep)
+		(EmptyArm)
+		(not (Picked ?o ?pickp ?pickq ?g))
+		;(not (InGoal ?o))
 		(InRegion ?o ?r)
 	))
 
-	;(
-	;:action pick
-	;:parameters (?o ?p ?q ?g ?gc)
-	;:precondition (and
-	;	(Pickable ?o)
-	;	(Pose ?p)
-	;	(BaseConf ?q)
-	;	(Grasp ?o ?g ?gc)
-	;	(Pick ?o ?p ?q ?g ?gc)
+	(
+	:action placegoal
+	:parameters (?q ?o ?pickp ?placep ?pickq ?placeq ?g ?r)
+	:precondition (and
+		(BaseConf ?q)
+		(Pickable ?o)
+		(GoalObject ?o)
+		(Pose ?pickp)
+		(Pose ?placep)
+		(Sampled ?pickq)
+		(Sampled ?placeq)
+		(Grasp ?g)
+		(Region ?r)
+		(GoalRegion ?r)
+		(Place ?o ?placep ?placeq ?g ?r)
 
-	;	(EmptyArm)
-	;	(AtPose ?o ?p)
-	;	(AtConf ?q)
+		(AtConf ?q)
+		(Picked ?o ?pickp ?pickq ?g)
 
-	;	;(not (UnsafePick ?o ?p ?q ?g))
-	;)
-	;:effect (and
-	;	(Picked ?o ?g ?gc ?p ?q)
-	;	(not (EmptyArm))
-	;	(not (AtPose ?o ?p))
-	;))
-
-	;(
-	;:action place
-	;:parameters (?o ?pickp ?placep ?pickq ?placeq ?g ?gc ?r)
-	;:precondition (and
-	;	(Pickable ?o)
-	;	(Pose ?pickp)
-	;	(Pose ?placep)
-	;	(BaseConf ?pickq)
-	;	(BaseConf ?placeq)
-	;	(Grasp  ?o ?g ?gc)
-	;	(Place ?o ?placep ?placeq ?g ?gc)
-	;	(Region ?r)
-
-	;	(AtConf ?placeq)
-	;	(Picked ?o ?g ?gc ?pickp ?pickq)
-
-	;	;(not (UnsafePlace ?o ?p ?q ?g))
-	;)
-	;:effect (and
-	;	(AtPose ?o ?placep)
-	;	(EmptyArm)
-	;	(not (Picked ?o ?g ?gc ?pickp ?pickq))
-	;	;(Moved)
-	;))
+		;(Near ?q ?placeq)
+		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
+	)
+	:effect (and
+		(AtPose ?o ?placep)
+		(EmptyArm)
+		(not (Picked ?o ?pickp ?pickq ?g))
+		;(InGoal ?o)
+		(InRegion ?o ?r)
+	))
 
 	;(
 	;:action move
@@ -191,18 +194,19 @@
 	;	(not (AtConf ?q1))
 	;))
 
-	;(
-	;:action teleport
-	;:parameters (?q1 ?q2)
-	;:precondition (and
-	;	(AtConf ?q1)
-	;	(BaseConf ?q1)
-	;	(BaseConf ?q2)
-	;)
-	;:effect (and
-	;	(AtConf ?q2)
-	;	(not (AtConf ?q1))
-	;))
+	(
+	:action teleport
+	:parameters (?q1 ?q2)
+	:precondition (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
+
+		(AtConf ?q1)
+	)
+	:effect (and
+		(AtConf ?q2)
+		(not (AtConf ?q1))
+	))
 
 	;(:derived (InRegion ?o ?r) (exists (?p) (and
 	;	(Pickable ?o)

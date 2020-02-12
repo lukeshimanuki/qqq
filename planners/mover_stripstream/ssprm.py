@@ -502,6 +502,12 @@ def collides_carry(problem):
         return False
     return fcn
 
+def not_near(problem):
+    def fcn(q1, q2):
+        return np.linalg.norm(q1[:2] - q2[:2]) < 1.2
+
+    return fcn
+
 def blocks_move(problem):
     obj = problem.objects[0]
 
@@ -618,14 +624,13 @@ def gen_pap(problem):
 
 
 def gen_pick(problem, pick_unif):
-    def fcn(o, p):
-        pick_unif.problem_env.reset_to_init_state_stripstream()
+    def fcn(o, p, prm_q=None):
         obj = pick_unif.problem_env.env.GetKinBody(o)
-        set_obj_xytheta(p, obj)
-        #import pdb;pdb.set_trace()
 
         while True:
+            print('gen-pick')
             problem.reset_to_init_state_stripstream()
+            set_obj_xytheta(p, obj)
             action = pick_unif.predict(obj, pick_unif.problem_env.regions['entire_region'], n_iter=50)
             pick_base_pose = action['base_pose']
             if pick_base_pose is None:
@@ -647,16 +652,18 @@ def gen_pick(problem, pick_unif):
             #	 #yield None
             #	 continue
 
-            yield pick_base_pose, grasp, g_config
+            yield pick_base_pose, (grasp, g_config)
 
     return fcn
 
 
 def gen_place(problem, place_unif):
-    def fcn(o, pickp, pickq, g, gc, r):
+    def fcn(o, pickp, pickq, (g, gc), r, prm_q=None):
+        obj = problem.env.GetKinBody(o)
         while True:
+            print('gen-place')
             problem.reset_to_init_state_stripstream()
-            obj = problem.env.GetKinBody(o)
+            set_obj_xytheta(pickp, obj)
             action = {'base_pose': pickq, 'g_config': gc}
             two_arm_pick_object(obj, action)
             # try:
@@ -809,9 +816,10 @@ def get_problem(mover, n_objs_pack=1):
         # 'gen-placement': from_gen_fn(gen_placement(mover, place_sampler)),
         #'gen-edge': from_list_fn(gen_edge(mover)),
         # 'test-edge': from_test(test_edge(mover)),
-        'gen-pap': from_gen_fn(gen_pap(mover)),
-        #'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
-        #'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
+        #'gen-pap': from_gen_fn(gen_pap(mover)),
+        'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
+        'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
+        #'NotNear': not_near(mover),
         #'gen-conf': from_gen_fn(gen_conf(mover, place_sampler)),
         #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
@@ -836,9 +844,10 @@ def get_problem(mover, n_objs_pack=1):
 
     init = [('Pickable', obj_name) for obj_name in obj_names]
     init += [('InRegion', obj_name, mover.get_region_containing(mover.env.GetKinBody(obj_name)).name) for obj_name in obj_names]
-    init += [('Region', region) for region in mover.regions]
+    init += [('Region', region) for region in mover.regions if region != 'entire_region']
 
     goal_objects = obj_names[0:n_objs_pack]
+    #non_goal_objects = obj_names[n_objs_pack:]
 
     if mover.name == 'two_arm_mover':
         goal_region = 'home_region'
@@ -848,12 +857,14 @@ def get_problem(mover, n_objs_pack=1):
         nongoal_regions = list(mover.shelf_regions)
     else:
         raise NotImplementedError
+    #init += [('NonGoalObject', obj_name) for obj_name in non_goal_objects]
     init += [('GoalObject', obj_name) for obj_name in goal_objects]
     init += [('NonGoalRegion', region) for region in nongoal_regions]
+    init += [('GoalRegion', goal_region)]
 
-    init_state = CustomStateSaver(mover.env)
-    init += [('State', init_state)]
-    init += [('AtState', init_state)]
+    #init_state = CustomStateSaver(mover.env)
+    #init += [('State', init_state)]
+    #init += [('AtState', init_state)]
 
     # robot initialization
     init += [('EmptyArm',)]
@@ -863,12 +874,12 @@ def get_problem(mover, n_objs_pack=1):
 
     # object initialization
     init += [('Pose', obj_pose) for obj_name, obj_pose in zip(obj_names, obj_poses)]
-    init += [('PoseInRegion', obj_pose, 'loading_region') for obj_name, obj_pose in zip(obj_names, obj_poses)]
+    #init += [('PoseInRegion', obj_pose, 'loading_region') for obj_name, obj_pose in zip(obj_names, obj_poses)]
     init += [('AtPose', obj_name, obj_pose) for obj_name, obj_pose in zip(obj_names, obj_poses)]
     #init += [('PlacedAt', obj_pose) for obj_pose in obj_poses]
 
     # prm initialization
-    #init += [('BaseConf', q) for q in PRM_VERTICES]
+    init += [('BaseConf', q) for q in PRM_VERTICES]
     #init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
     #         for q1, e in enumerate(PRM_EDGES) for q2 in e]
     # TODO: goal serialization (can allow algorithm to pick the easist
@@ -916,6 +927,7 @@ def get_problem(mover, n_objs_pack=1):
 
     goal = ['and'] + [('InRegion', obj_name, goal_region)
                       for obj_name in goal_objects]
+    #goal = ['not', ('EmptyArm',)]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
     #goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]
