@@ -61,6 +61,9 @@ ikcachename = './ikcache.pkl'
 iksolutions = {}
 iksolutions = pickle.load(open(ikcachename, 'r'))
 
+PRM_VERTICES = PRM_VERTICES[::10]
+PRM_EDGES = []
+
 
 def gen_grasp(pick_unif):
     # note generate grasp, ik solution gc, relative base conf, and absolute base transform for grasping
@@ -498,7 +501,11 @@ def collides_move(problem):
     return fcn
 
 def collides_carry(problem):
-    def fcn(q1, q2, oo, g, gc, pickp, pickq, o, p):
+    def fcn(o, p, q1, q2, oo=None, g=None):
+        if oo is None:
+            pass
+        else:
+            assert g is not None
         return False
     return fcn
 
@@ -617,6 +624,29 @@ def gen_pap(problem):
                     yield action.continuous_parameters, t
                 else:
                     yield None
+            else:
+                raise NotImplementedError
+
+    return fcn
+
+
+def transform_pick(problem):
+    def fcn(o, g, q):
+        obj = problem.env.GetKinBody(o)
+        while True:
+            if problem.name == 'two_arm_mover':
+                problem.reset_to_init_state_stripstream()
+                s = q + .001 # TODO: gen random
+                pickp, pickq, grasp, grasp_config = g
+                set_obj_xytheta(pickp, obj)
+                action = {'base_pose': pickq, 'g_config': grasp_config}
+                two_arm_pick_object(o, action)
+                set_robot_config(s)
+                placep = get_body_xytheta(obj)
+                problem.reset_to_init_state_stripstream()
+                yield placep,s
+            elif problem.name == 'one_arm_mover':
+                raise NotImplementedError
             else:
                 raise NotImplementedError
 
@@ -817,14 +847,15 @@ def get_problem(mover, n_objs_pack=1):
         #'gen-edge': from_list_fn(gen_edge(mover)),
         # 'test-edge': from_test(test_edge(mover)),
         #'gen-pap': from_gen_fn(gen_pap(mover)),
-        'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
-        'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
+        'transform-pick': from_gen_fn(transform_pick(mover)),
+        #'gen-pick': from_gen_fn(gen_pick(mover, pick_sampler)),
+        #'gen-place': from_gen_fn(gen_place(mover, place_sampler)),
         #'NotNear': not_near(mover),
         #'gen-conf': from_gen_fn(gen_conf(mover, place_sampler)),
         #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
         #'BlocksMove': blocks_move(mover),
-        #'CollidesMove': collides_move(mover),
+        #'CollidesMove': collides_carry(mover),
         #'CollidesCarry': collides_carry(mover),
         #'BlocksPlace': blocks_place(mover),
         # 'PlaceTrajPoseCollision': place_check_traj_collision(mover),
@@ -844,7 +875,39 @@ def get_problem(mover, n_objs_pack=1):
 
     init = [('Pickable', obj_name) for obj_name in obj_names]
     init += [('InRegion', obj_name, mover.get_region_containing(mover.env.GetKinBody(obj_name)).name) for obj_name in obj_names]
+    init += [('QInRegion', q, 'home_region' if mover.regions['home_region'].contains_point(list(q[:2])+[1]) else 'loading_region') for q in PRM_VERTICES]
     init += [('Region', region) for region in mover.regions if region != 'entire_region']
+
+
+    for o,p in zip(obj_names, obj_poses):
+        num_grasps = 0
+        num_tries = 0
+        while num_grasps < 2 and num_tries < 10:
+            num_tries += 1
+            mover.reset_to_init_state_stripstream()
+            action = pick_sampler.predict(mover.env.GetKinBody(o), mover.regions['entire_region'], n_iter=50)
+
+            pickq = action['base_pose']
+            if pickq is None:
+                continue
+            grasp = action['grasp_params']
+            grasp_config = action['g_config']
+            if grasp_config is None:
+                continue
+            if grasp is None:
+                continue
+
+            num_grasps += 1
+            g = p, pickq, grasp, grasp_config
+            init += [('Grasp', g)]
+            init += [('Sampled', pickq)]
+            init += [('Q', pickq)]
+            init += [
+                ('Pick', o, p, q, pickq, g)
+                for q in PRM_VERTICES
+                if np.linalg.norm(q[:2] - pickq[:2]) < 1.2
+            ]
+    mover.reset_to_init_state_stripstream()
 
     goal_objects = obj_names[0:n_objs_pack]
     #non_goal_objects = obj_names[n_objs_pack:]
@@ -870,6 +933,7 @@ def get_problem(mover, n_objs_pack=1):
     init += [('EmptyArm',)]
     init += [('AtConf', initial_robot_conf)]
     init += [('BaseConf', initial_robot_conf)]
+    init += [('Q', initial_robot_conf)]
     #init += [('BaseConf', initial_robot_conf), ('Sampled', initial_robot_conf)]
 
     # object initialization
@@ -880,8 +944,9 @@ def get_problem(mover, n_objs_pack=1):
 
     # prm initialization
     init += [('BaseConf', q) for q in PRM_VERTICES]
-    #init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
-    #         for q1, e in enumerate(PRM_EDGES) for q2 in e]
+    #init += [('Q', q) for q in PRM_VERTICES]
+    init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
+             for q1, e in enumerate(PRM_EDGES) for q2 in e]
     # TODO: goal serialization (can allow algorithm to pick the easist
     # TODO: selectively introduce objects
     # TODO: reachability test with only interesting pick/place confs
@@ -901,8 +966,8 @@ def get_problem(mover, n_objs_pack=1):
     #init += [('FrontPick', q, p) for q in PRM_VERTICES for p in poses
     #         if test_front_pick(mover, q, p)]
     # init += [('FrontPlace', q, p) for q in PRM_VERTICES for p in poses if fpl(q,p)]
-    #init += [('Edge', initial_robot_conf, q) for q in PRM_VERTICES
-    #         if np.linalg.norm(q - initial_robot_conf) < 1.2]
+    init += [('Edge', initial_robot_conf, q) for q in PRM_VERTICES
+             if np.linalg.norm(q - initial_robot_conf) < 1.2]
     #init += [('Pose', p) for p in poses]
     # init += [('FrontPlace', initial_robot_conf, p) for p in fp(initial_robot_conf)]
     # init += [('Edge', PRM_VERTICES[q2], PRM_VERTICES[q1])
@@ -928,6 +993,7 @@ def get_problem(mover, n_objs_pack=1):
     goal = ['and'] + [('InRegion', obj_name, goal_region)
                       for obj_name in goal_objects]
     #goal = ['not', ('EmptyArm',)]
+    #goal = ['and'] + [('Moved', goal_objects[0])]
     #goal = ['and'] + [('InRegion', obj_name, 'home_region')
     #                  for obj_name in obj_names[0]]
     #goal = ['or'] + [('InRegion', obj_name, 'home_region') for obj_name in obj_names]

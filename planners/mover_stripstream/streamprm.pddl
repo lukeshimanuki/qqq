@@ -33,40 +33,55 @@
 	;))
 
 	(
-	:stream gen-pick
-	:inputs (?o ?p)
+	:stream transform-pick
+	:inputs (?o ?g ?q)
 	:domain (and
 		(Pickable ?o)
-		(Pose ?p)
-		;(BaseConf ?prm_q)
-	)
-	:outputs (?q ?g)
-	:certified (and
-		(Sampled ?q)
 		(Grasp ?g)
-		(Pick ?o ?p ?q ?g)
-		;(Near ?prm_q ?q)
+		(BaseConf ?q)
+	)
+	:outputs (?p ?s)
+	:certified (and
+		(Pose ?p)
+		(Sampled ?s)
+		(Pick ?o ?p ?q ?s ?g)
 	))
 
-	(
-	:stream gen-place
-	:inputs (?o ?pickp ?pickq ?g ?r)
-	:domain (and
-		(Pickable ?o)
-		(Pose ?pickp)
-		(Sampled ?pickq)
-		(Grasp ?g)
-		(Pick ?o ?pickp ?pickq ?g)
-		(Region ?r)
-		;(BaseConf ?prm_q)
-	)
-	:outputs (?placeq ?placep)
-	:certified (and
-		(Sampled ?placeq)
-		(Pose ?placep)
-		(Place ?o ?placep ?placeq ?g ?r)
-		;(Near ?prm_q ?placeq)
-	))
+	;(
+	;:stream gen-pick
+	;:inputs (?o ?p)
+	;:domain (and
+	;	(Pickable ?o)
+	;	(Pose ?p)
+	;	;(BaseConf ?prm_q)
+	;)
+	;:outputs (?q ?g)
+	;:certified (and
+	;	(Sampled ?q)
+	;	(Grasp ?g)
+	;	(Pick ?o ?p ?q ?g)
+	;	;(Near ?prm_q ?q)
+	;))
+
+	;(
+	;:stream gen-place
+	;:inputs (?o ?pickp ?pickq ?g ?r)
+	;:domain (and
+	;	(Pickable ?o)
+	;	(Pose ?pickp)
+	;	(Sampled ?pickq)
+	;	(Grasp ?g)
+	;	(Pick ?o ?pickp ?pickq ?g)
+	;	(Region ?r)
+	;	;(BaseConf ?prm_q)
+	;)
+	;:outputs (?placeq ?placep)
+	;:certified (and
+	;	(Sampled ?placeq)
+	;	(Pose ?placep)
+	;	(Place ?o ?placep ?placeq ?g ?r)
+	;	(NearPose ?placeq ?placep)
+	;))
 
 	;(
 	;:stream gen-conf

@@ -13,9 +13,9 @@
 		(Region ?r)
 		(IntendedRegion ?region)
 		(Pose ?p)
-		(Pick ?o ?p ?q ?g)
+		(Pick ?o ?p ?q ?s ?g) ; s is sampled baseconf near q
 		(Place ?o ?p ?q ?g ?r)
-		(Picked ?o ?p ?q ?g)
+		(Picked ?o ?g)
 		(PlacedAt ?p)
 		(Grasp ?g)
 
@@ -23,6 +23,7 @@
 		(NonGoalObject ?o)
 		(GoalRegion ?r)
 		(NonGoalRegion ?r)
+		(QInRegion ?q ?r)
 
 		(InGoal ?o)
 		(Near ?q1 ?q2) ; prm_q, sampled_q
@@ -66,27 +67,26 @@
 	; move from q1 to q2, pick, move back to q1
 	(
 	:action pick
-	:parameters (?q1 ?o ?p ?q2 ?g ?r)
+	:parameters (?o ?p ?q ?s ?g ?r)
 	:precondition (and
-		(BaseConf ?q1)
 		(Pickable ?o)
 		(Pose ?p)
-		(Sampled ?q2)
+		(BaseConf ?q)
+		(Sampled ?s)
 		(Grasp ?g)
-		(Pick ?o ?p ?q2 ?g)
+		(Pick ?o ?p ?q ?s ?g)
 		(Region ?r)
 
 		(EmptyArm)
 		(InRegion ?o ?r)
 		(AtPose ?o ?p)
-		(AtConf ?q1)
+		(AtConf ?q)
 
-		(Near ?q1 ?q2)
-		;(not (UnsafeCarry ?q1 ?o ?p ?q2 ?g))
-		;(not (UnsafeCarry ?q2 ?o ?p ?q2 ?g))
+		;(not (UnsafeCarry ?s ?o ?g))
+		;(not (UnsafeCarry ?q ?o ?g))
 	)
 	:effect (and
-		(Picked ?o ?p ?q2 ?g)
+		(Picked ?o ?g)
 		(not (EmptyArm))
 		(not (InRegion ?o ?r))
 		(not (AtPose ?o ?p))
@@ -94,62 +94,70 @@
 
 	(
 	:action place
-	:parameters (?q ?o ?pickp ?placep ?pickq ?placeq ?g ?r)
+	:parameters (?o ?p ?q ?s ?g ?r)
 	:precondition (and
-		(BaseConf ?q)
 		(Pickable ?o)
-		;(NonGoalObject ?o)
-		(Pose ?pickp)
-		(Pose ?placep)
-		(Sampled ?pickq)
-		(Sampled ?placeq)
+		(Pose ?p)
+		(BaseConf ?q)
+		(Sampled ?s)
 		(Grasp ?g)
+		(Pick ?o ?p ?q ?s ?g)
 		(Region ?r)
 		(NonGoalRegion ?r)
-		(Place ?o ?placep ?placeq ?g ?r)
+		(QInRegion ?q ?r)
 
 		(AtConf ?q)
-		(Picked ?o ?pickp ?pickq ?g)
+		(Picked ?o ?g)
 
-		;(Near ?q ?placeq)
 		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
 	)
 	:effect (and
-		(AtPose ?o ?placep)
+		(AtPose ?o ?p)
 		(EmptyArm)
-		(not (Picked ?o ?pickp ?pickq ?g))
-		;(not (InGoal ?o))
+		(not (Picked ?o ?g))
 		(InRegion ?o ?r)
 	))
 
 	(
 	:action placegoal
-	:parameters (?q ?o ?pickp ?placep ?pickq ?placeq ?g ?r)
+	:parameters (?o ?p ?q ?s ?g ?r)
 	:precondition (and
-		(BaseConf ?q)
 		(Pickable ?o)
 		(GoalObject ?o)
-		(Pose ?pickp)
-		(Pose ?placep)
-		(Sampled ?pickq)
-		(Sampled ?placeq)
+		(Pose ?p)
+		(BaseConf ?q)
+		(Sampled ?s)
 		(Grasp ?g)
+		(Pick ?o ?p ?q ?s ?g)
 		(Region ?r)
 		(GoalRegion ?r)
-		(Place ?o ?placep ?placeq ?g ?r)
+		(QInRegion ?q ?r)
 
 		(AtConf ?q)
-		(Picked ?o ?pickp ?pickq ?g)
+		(Picked ?o ?g)
 
-		;(Near ?q ?placeq)
 		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
 	)
 	:effect (and
-		(AtPose ?o ?placep)
+		(AtPose ?o ?p)
 		(EmptyArm)
-		(not (Picked ?o ?pickp ?pickq ?g))
-		;(InGoal ?o)
+		(not (Picked ?o ?g))
 		(InRegion ?o ?r)
+	))
+
+	(
+	:action move
+	:parameters (?q1 ?q2)
+	:precondition (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
+		(Edge ?q1 ?q2)
+
+		(AtConf ?q1)
+	)
+	:effect (and
+		(AtConf ?q2)
+		(not (AtConf ?q1))
 	))
 
 	;(
@@ -194,19 +202,19 @@
 	;	(not (AtConf ?q1))
 	;))
 
-	(
-	:action teleport
-	:parameters (?q1 ?q2)
-	:precondition (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
+	;(
+	;:action teleport
+	;:parameters (?q1 ?q2)
+	;:precondition (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
 
-		(AtConf ?q1)
-	)
-	:effect (and
-		(AtConf ?q2)
-		(not (AtConf ?q1))
-	))
+	;	(AtConf ?q1)
+	;)
+	;:effect (and
+	;	(AtConf ?q2)
+	;	(not (AtConf ?q1))
+	;))
 
 	;(:derived (InRegion ?o ?r) (exists (?p) (and
 	;	(Pickable ?o)
