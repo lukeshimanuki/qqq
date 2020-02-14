@@ -44,6 +44,7 @@
 	:certified (and
 		(Pose ?p)
 		(Sampled ?s)
+		(Q ?s)
 		(Pick ?o ?p ?q ?s ?g)
 	))
 
@@ -128,21 +129,19 @@
 	;	(Pose ?p2)
 	;))
 
-	;(:predicate (CollidesMove ?q1 ?q2 ?o ?p) (and
-	;	(BaseConf ?q1)
-	;	(BaseConf ?q2)
+	;(:predicate (CollidesMove ?o ?p ?q1 ?q2) (and
 	;	(Pickable ?o)
 	;	(Pose ?p)
+	;	(Q ?q1)
+	;	(Q ?q2)
 	;))
 
-	;(:predicate (CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p) (and
-	;	(BaseConf ?q1)
-	;	(BaseConf ?q2)
-	;	(Pickable ?oo)
-	;	(Grasp ?o ?g ?gc)
-	;	(Pose ?pickp)
-	;	(BaseConf ?pickq)
+	;(:predicate (CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g) (and
 	;	(Pickable ?o)
 	;	(Pose ?p)
+	;	(Q ?q1)
+	;	(Q ?q2)
+	;	(Pickable ?oo)
+	;	(Grasp ?g)
 	;))
 )

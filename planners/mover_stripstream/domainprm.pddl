@@ -24,6 +24,7 @@
 		(GoalRegion ?r)
 		(NonGoalRegion ?r)
 		(QInRegion ?q ?r)
+		(Q ?q)
 
 		(InGoal ?o)
 		(Near ?q1 ?q2) ; prm_q, sampled_q
@@ -32,14 +33,14 @@
 		(Reach ?q1 ?q2)
 		(UnsafeMove2 ?q)
 		(UnsafeMove ?q1 ?q2)
-		(UnsafeCarry ?q1 ?q2 ?o ?g ?gc ?pickp ?pickq)
+		(UnsafeCarry ?q1 ?q2 ?o ?g)
 		(UnsafePlace ?p)
 		(BlocksMove ?p ?q)
 		(BlocksPlace ?p1 ?p2)
 		(BlocksMoveS ?p ?q)
-		(CollidesMove ?q1 ?q2 ?o ?p)
-		(CollidesCarry ?q1 ?q2 ?held_obj ?g ?gc ?pickp ?pickq ?o ?p)
-		(Moved)
+		(CollidesMove ?o ?p ?q1 ?q2)
+		(CollidesCarry ?o ?p ?q1 ?q2 ?held_obj ?g)
+		(Moved ?o)
 
 		(FrontPlace ?q ?p)
 		(FrontPick ?q ?p)
@@ -82,8 +83,8 @@
 		(AtPose ?o ?p)
 		(AtConf ?q)
 
-		;(not (UnsafeCarry ?s ?o ?g))
-		;(not (UnsafeCarry ?q ?o ?g))
+		;(not (UnsafeMove ?q ?s))
+		;(not (UnsafeCarry ?s ?q ?o ?g))
 	)
 	:effect (and
 		(Picked ?o ?g)
@@ -116,6 +117,7 @@
 		(EmptyArm)
 		(not (Picked ?o ?g))
 		(InRegion ?o ?r)
+		(Moved ?o)
 	))
 
 	(
@@ -130,8 +132,8 @@
 		(Grasp ?g)
 		(Pick ?o ?p ?q ?s ?g)
 		(Region ?r)
-		(GoalRegion ?r)
-		(QInRegion ?q ?r)
+		;(GoalRegion ?r)
+		QInRegion ?q ?r)
 
 		(AtConf ?q)
 		(Picked ?o ?g)
@@ -143,6 +145,7 @@
 		(EmptyArm)
 		(not (Picked ?o ?g))
 		(InRegion ?o ?r)
+		(Moved ?o)
 	))
 
 	(
@@ -202,19 +205,19 @@
 	;	(not (AtConf ?q1))
 	;))
 
-	;(
-	;:action teleport
-	;:parameters (?q1 ?q2)
-	;:precondition (and
-	;	(BaseConf ?q1)
-	;	(BaseConf ?q2)
+	(
+	:action teleport
+	:parameters (?q1 ?q2)
+	:precondition (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
 
-	;	(AtConf ?q1)
-	;)
-	;:effect (and
-	;	(AtConf ?q2)
-	;	(not (AtConf ?q1))
-	;))
+		(AtConf ?q1)
+	)
+	:effect (and
+		(AtConf ?q2)
+		(not (AtConf ?q1))
+	))
 
 	;(:derived (InRegion ?o ?r) (exists (?p) (and
 	;	(Pickable ?o)
@@ -245,9 +248,14 @@
 	;	(CollidesMove ?q1 ?q2 ?o ?p)
 	;)))
 
-	;(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq) (exists (?o ?p) (and
+	;(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
 	;	(AtPose ?o ?p)
-	;	(CollidesCarry ?q1 ?q2 ?oo ?g ?gc ?pickp ?pickq ?o ?p)
+	;	(CollidesMove ?o ?p ?q1 ?q2)
+	;)))
+
+	;(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g) (exists (?o ?p) (and
+	;	(AtPose ?o ?p)
+	;	(CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g)
 	;)))
 )
 
