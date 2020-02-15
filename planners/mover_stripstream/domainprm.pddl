@@ -83,8 +83,8 @@
 		(AtPose ?o ?p)
 		(AtConf ?q)
 
-		;(not (UnsafeMove ?q ?s))
-		;(not (UnsafeCarry ?s ?q ?o ?g))
+		(not (UnsafeMove ?q ?s))
+		(not (UnsafeCarry ?s ?q ?o ?g))
 	)
 	:effect (and
 		(Picked ?o ?g)
@@ -110,7 +110,8 @@
 		(AtConf ?q)
 		(Picked ?o ?g)
 
-		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
+		(not (UnsafeCarry ?q ?s ?o ?g))
+		(not (UnsafeMove ?s ?q))
 	)
 	:effect (and
 		(AtPose ?o ?p)
@@ -138,7 +139,8 @@
 		(AtConf ?q)
 		(Picked ?o ?g)
 
-		;(not (UnsafeCarry ?placeq ?o ?pickp ?pickq ?g))
+		(not (UnsafeCarry ?q ?s ?o ?g))
+		(not (UnsafeMove ?s ?q))
 	)
 	:effect (and
 		(AtPose ?o ?p)
@@ -157,6 +159,29 @@
 		(Edge ?q1 ?q2)
 
 		(AtConf ?q1)
+		(EmptyArm)
+
+		(not (UnsafeMove ?q1 ?q2))
+	)
+	:effect (and
+		(AtConf ?q2)
+		(not (AtConf ?q1))
+	))
+
+	(
+	:action carry
+	:parameters (?q1 ?q2 ?o ?g)
+	:precondition (and
+		(BaseConf ?q1)
+		(BaseConf ?q2)
+		(Edge ?q1 ?q2)
+		(Pickable ?o)
+		(Grasp ?g)
+
+		(AtConf ?q1)
+		(Picked ?o ?g)
+
+		(not (UnsafeCarry ?q1 ?q2 ?o ?g))
 	)
 	:effect (and
 		(AtConf ?q2)
