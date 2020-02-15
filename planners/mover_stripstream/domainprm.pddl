@@ -132,8 +132,8 @@
 		(Grasp ?g)
 		(Pick ?o ?p ?q ?s ?g)
 		(Region ?r)
-		;(GoalRegion ?r)
-		QInRegion ?q ?r)
+		(GoalRegion ?r)
+		(QInRegion ?q ?r)
 
 		(AtConf ?q)
 		(Picked ?o ?g)
@@ -205,19 +205,19 @@
 	;	(not (AtConf ?q1))
 	;))
 
-	(
-	:action teleport
-	:parameters (?q1 ?q2)
-	:precondition (and
-		(BaseConf ?q1)
-		(BaseConf ?q2)
+	;(
+	;:action teleport
+	;:parameters (?q1 ?q2)
+	;:precondition (and
+	;	(BaseConf ?q1)
+	;	(BaseConf ?q2)
 
-		(AtConf ?q1)
-	)
-	:effect (and
-		(AtConf ?q2)
-		(not (AtConf ?q1))
-	))
+	;	(AtConf ?q1)
+	;)
+	;:effect (and
+	;	(AtConf ?q2)
+	;	(not (AtConf ?q1))
+	;))
 
 	;(:derived (InRegion ?o ?r) (exists (?p) (and
 	;	(Pickable ?o)

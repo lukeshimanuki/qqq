@@ -61,8 +61,18 @@ ikcachename = './ikcache.pkl'
 iksolutions = {}
 iksolutions = pickle.load(open(ikcachename, 'r'))
 
-PRM_VERTICES = PRM_VERTICES[::10]
-PRM_EDGES = []
+downfactor = 5
+PRM_VERTICES = PRM_VERTICES[::downfactor]
+PRM_EDGES = [{
+    v / downfactor
+    for v in edges
+    if v % downfactor == 0
+} for edges in PRM_EDGES[::downfactor]]
+PRM_EDGES = [{
+    i
+    for i,v in enumerate(PRM_VERTICES)
+    if np.linalg.norm(u[:2] - v[:2]) < 2.
+} for u in PRM_VERTICES]
 
 
 def gen_grasp(pick_unif):
