@@ -865,8 +865,8 @@ def get_problem(mover, n_objs_pack=1):
         #'front-place': from_gen_fn(front_place(mover)),
         # 'FrontPick': front_pick(mover),
         #'BlocksMove': blocks_move(mover),
-        #'CollidesMove': collides_carry(mover),
-        #'CollidesCarry': collides_carry(mover),
+        'CollidesMove': collides_carry(mover),
+        'CollidesCarry': collides_carry(mover),
         #'BlocksPlace': blocks_place(mover),
         # 'PlaceTrajPoseCollision': place_check_traj_collision(mover),
         # 'PickTrajPoseCollision': pick_check_traj_collision(mover),
@@ -954,7 +954,7 @@ def get_problem(mover, n_objs_pack=1):
 
     # prm initialization
     init += [('BaseConf', q) for q in PRM_VERTICES]
-    #init += [('Q', q) for q in PRM_VERTICES]
+    init += [('Q', q) for q in PRM_VERTICES]
     init += [('Edge', PRM_VERTICES[q1], PRM_VERTICES[q2])
              for q1, e in enumerate(PRM_EDGES) for q2 in e]
     # TODO: goal serialization (can allow algorithm to pick the easist

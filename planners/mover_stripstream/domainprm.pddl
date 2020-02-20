@@ -72,7 +72,9 @@
 	:precondition (and
 		(Pickable ?o)
 		(Pose ?p)
+		(Q ?q)
 		(BaseConf ?q)
+		(Q ?s)
 		(Sampled ?s)
 		(Grasp ?g)
 		(Pick ?o ?p ?q ?s ?g)
@@ -99,7 +101,9 @@
 	:precondition (and
 		(Pickable ?o)
 		(Pose ?p)
+		(Q ?q)
 		(BaseConf ?q)
+		(Q ?s)
 		(Sampled ?s)
 		(Grasp ?g)
 		(Pick ?o ?p ?q ?s ?g)
@@ -128,7 +132,9 @@
 		(Pickable ?o)
 		(GoalObject ?o)
 		(Pose ?p)
+		(Q ?q)
 		(BaseConf ?q)
+		(Q ?s)
 		(Sampled ?s)
 		(Grasp ?g)
 		(Pick ?o ?p ?q ?s ?g)
@@ -154,7 +160,9 @@
 	:action move
 	:parameters (?q1 ?q2)
 	:precondition (and
+		(Q ?q1)
 		(BaseConf ?q1)
+		(Q ?q2)
 		(BaseConf ?q2)
 		(Edge ?q1 ?q2)
 
@@ -172,7 +180,9 @@
 	:action carry
 	:parameters (?q1 ?q2 ?o ?g)
 	:precondition (and
+		(Q ?q1)
 		(BaseConf ?q1)
+		(Q ?q2)
 		(BaseConf ?q2)
 		(Edge ?q1 ?q2)
 		(Pickable ?o)
@@ -273,14 +283,18 @@
 	;	(CollidesMove ?q1 ?q2 ?o ?p)
 	;)))
 
-	;(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
-	;	(AtPose ?o ?p)
-	;	(CollidesMove ?o ?p ?q1 ?q2)
-	;)))
+	(:derived (UnsafeMove ?q1 ?q2) (exists (?o ?p) (and
+		(AtPose ?o ?p)
+		(Q ?q1)
+		(Q ?q2)
+		(CollidesMove ?o ?p ?q1 ?q2)
+	)))
 
-	;(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g) (exists (?o ?p) (and
-	;	(AtPose ?o ?p)
-	;	(CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g)
-	;)))
+	(:derived (UnsafeCarry ?q1 ?q2 ?oo ?g) (exists (?o ?p) (and
+		(AtPose ?o ?p)
+		(Q ?q1)
+		(Q ?q2)
+		(CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g)
+	)))
 )
 

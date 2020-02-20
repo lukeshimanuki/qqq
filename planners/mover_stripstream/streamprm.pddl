@@ -129,19 +129,19 @@
 	;	(Pose ?p2)
 	;))
 
-	;(:predicate (CollidesMove ?o ?p ?q1 ?q2) (and
-	;	(Pickable ?o)
-	;	(Pose ?p)
-	;	(Q ?q1)
-	;	(Q ?q2)
-	;))
+	(:predicate (CollidesMove ?o ?p ?q1 ?q2) (and
+		(Pickable ?o)
+		(Pose ?p)
+		(Q ?q1)
+		(Q ?q2)
+	))
 
-	;(:predicate (CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g) (and
-	;	(Pickable ?o)
-	;	(Pose ?p)
-	;	(Q ?q1)
-	;	(Q ?q2)
-	;	(Pickable ?oo)
-	;	(Grasp ?g)
-	;))
+	(:predicate (CollidesCarry ?o ?p ?q1 ?q2 ?oo ?g) (and
+		(Pickable ?o)
+		(Pose ?p)
+		(Q ?q1)
+		(Q ?q2)
+		(Pickable ?oo)
+		(Grasp ?g)
+	))
 )
