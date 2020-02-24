@@ -1286,14 +1286,51 @@ def solve_stripstream(mover, config):
         print('Success')
 
         trajectory = Trajectory(mover.seed, mover.seed)
-        trajectory.actions = [
-            Operator('two_arm_pick_two_arm_place', {
-                'two_arm_place_object': action.args[0],
-                'two_arm_place_region': action.args[1],
-            }, action.args[3])
-            for action in plan
-        ]
         trajectory.seed = mover.seed
+        pick = None
+        pick_motion = []
+        place_motion = []
+        for action in plan:
+            if action.name == 'move':
+                assert pick is None
+                pick_motion.append(action.args[0])
+            elif action.name == 'carry':
+                assert pick is not None
+                place_motion.append(action.args[0])
+            elif action.name == 'pick':
+                pick_motion += [action.args[2], action.args[3]]
+                place_motion = [action.args[3]]
+                pick = action
+            elif 'place' in action.name:
+                place_motion += [action.args[2], action.args[3]]
+                trajectory.actions.append(Operator('two_arm_pick_two_arm_place', {
+                    'two_arm_place_object': action.args[0],
+                    'two_arm_place_region': action.args[5],
+                }, {
+                    'pick': {
+                        'operator_name': 'two_arm_pick',
+                        'q_goal': pick.args[3],
+                        'grasp_params': pick.args[4][2],
+                        'g_config': pick.args[4][3],
+                        'motion': pick_motion,
+                        #'action_parameters': list(pick.args[4][2]) + [portion, base_angle, facing_angle],
+                        'is_feasible': True,
+                    },
+                    'place': {
+                        'operator_name': 'two_arm_place',
+                        'q_goal': action.args[3],
+                        'object_pose': action.args[1],
+                        'action_parameters': action.args[1],
+                        'motion': place_motion,
+                    },
+                    'is_feasible': True,
+                }))
+
+                pick = None
+                pick_motion = [action.args[3]]
+                place_motion = []
+            else:
+                raise NotImplementedError
         print(trajectory)
         return trajectory, 0 # TODO: count num nodes
     else:

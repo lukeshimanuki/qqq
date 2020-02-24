@@ -611,10 +611,10 @@ def generate_training_data_single():
                 full_path = [get_body_xytheta(mover.robot)[0]] + pick_params['motion'] + [pick_params['q_goal']] + \
                             place_params['motion'] + [place_params['q_goal']]
                 for i, (q1, q2) in enumerate(zip(full_path[:-1], full_path[1:])):
-                    if np.linalg.norm(np.squeeze(q1)[:2] - np.squeeze(q2)[:2]) > 1:
+                    if np.linalg.norm(np.squeeze(q1)[:2] - np.squeeze(q2)[:2]) > 1.5:
                         print(i, q1, q2)
-                        import pdb;
-                        pdb.set_trace()
+                        #import pdb;
+                        #pdb.set_trace()
 
                 pickq = pick_params['q_goal']
                 pickt = pick_params['motion']
