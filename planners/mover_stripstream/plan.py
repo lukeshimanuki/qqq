@@ -561,8 +561,8 @@ def generate_training_data_single():
 
         with open(solution_file_name, 'wb') as f:
             pickle.dump(trajectory, f)
-    print 'Time: %.2f Success: %d Plan length: %d Num nodes: %d' % (tottime, success, trajectory.metrics['plan_length'],
-                                                                    trajectory.metrics['num_nodes'])
+    print 'Time: %.2f Success: %d Plan length: %d Num nodes: %d Domain: %s Solver: %s NumObjects: %d Pidx: %d Seed: %d' % (tottime, success, trajectory.metrics['plan_length'],
+                                                                    trajectory.metrics['num_nodes'], config.domain, config.solver, config.n_objs_pack, config.pidx, config.planner_seed)
 
     """
     print("time: {}".format(','.join(str(trajectory.metrics[m]) for m in [
