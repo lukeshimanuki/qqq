@@ -1,0 +1,3 @@
+[submodule "openrave_wrapper"]
+	path = openrave_wrapper
+	url = https://github.mit.edu/beomjoon/openrave_wrapper.git
