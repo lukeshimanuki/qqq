@@ -1,0 +1,120 @@
+from primitives.utils import *
+
+# General
+#CAMERA_TRANS = trans_from_pose(np.concatenate((quatFromAxisAngle((-5*PI/6, 0, 0)), (0, -4, 6))))
+CAMERA_TRANS = camera_look_at((0, -4, 5), look_point=(0, -1, 0))
+CAMERA_POINT_SCALE = 1.5
+VIEWER_NAME = 'Manipulation problem'
+VIEWER_SIZE = (640, 480)
+VIEWER_POSITION = (0, 0)
+DEBUG = False
+DRAW_REGIONS = False
+DRAW_GOALS = True
+
+# Misc
+WORKSPACE_ROBOT_LENGTHS = 1.5
+EXECUTE_TRAJECTORIES = lambda t: execute_trajectories(t, time_step=None) # execute_trajectories(t, time_step=None) | step_trajectories | step_sample_trajectories | step_waypoint_trajectories
+
+PRE_SMOOTH_TRAJECTORIES = False
+REPLAN_TRAJECTORIES = False
+SMOOTH_TRAJECTORIES = identity_trajectories # identity_trajectories | smooth_trajectories
+
+# PRE_SMOOTH_TRAJECTORIES = True
+# REPLAN_TRAJECTORIES = True
+# SMOOTH_TRAJECTORIES = identity_trajectories # identity_trajectories | smooth_trajectories
+# assert not PRE_SMOOTH_TRAJECTORIES or REPLAN_TRAJECTORIES
+# TODO - smooth these trajectories before I begin execution
+
+# Collision
+COLLISION_CHECKER = 'ode' # ode | pqp | bullet | fcl # TODO - bullet and fcl not correctly connected yet
+MIN_DELTA = 0.05 # TODO - adjust for different planners. Can be greater for the base if expect only larger objects
+BASE_TRAJECTORY_COLLISIONS = False
+COMPUTE_BASE_TRAJECTORY = True
+ONLY_HOLDING_COLLISIONS = False
+
+# Inverse Reachability
+FORCE_CREATE_IR = False
+IR_DATABASE_SAMPLES = 1000
+PRELOAD_DATABASES = True
+
+# Grasps
+GRASP_APPROACHES = enum('SIDE', 'TOP')
+GRASP_TYPES = enum('GRASP', 'TOUCH', 'COLLIDE') # TODO - put this in the grasp class itself
+USE_GRASP_APPROACH = GRASP_APPROACHES.SIDE # SIDE | TOP
+USE_GRASP_TYPE = GRASP_TYPES.TOUCH # GRASP | TOUCH | COLLIDE
+FORCE_CREATE_GRASPS = False
+ONLY_UNDER_GRASPS = True # TODO - should make a separate grasp approach
+MAX_GRASPS = 4 # 1 | 4 | INF
+
+# Manipulation
+APPROACH_DISTANCE = .15
+CHECK_BASE_REACHABLE = True
+SAMPLE_VECTOR_TRAJ = True
+SAMPLE_ARM_TRAJ = True
+OPENRAVE_ARM_TRAJ = False
+
+REARRANGEMENT = False
+if REARRANGEMENT:
+  BASE_TRAJECTORY_COLLISIONS = False
+  COMPUTE_BASE_TRAJECTORY = True
+  #SAMPLE_VECTOR_TRAJ = False
+  #SAMPLE_ARM_TRAJ = False
+  USE_GRASP_APPROACH = GRASP_APPROACHES.TOP
+  MAX_GRASPS = 1
+
+# Arms
+#ACTIVE_ARM = 'leftarm' # leftarm | rightarm | leftarm_torso | rightarm_torso # TODO - remove
+ACTIVE_LEFT = True
+ACTIVE_RIGHT = False
+ACTIVE_TORSO = False
+PARALLEL_LEFT_ARM = [0.0, 0.0, 0.0, -1.50000054e-01, 0.0, -1.00000036e-01, 0.0]
+FOLDED_LEFT_ARM = [0., 1.29023451, 0., -2.12130808, 0., -0.69800004, 0.]
+
+TOP_HOLDING_LEFT_ARM = [0.67717021, -0.34313199, 1.2, -1.46688405, 1.24223229, -1.95442826, 2.22254125]
+LOW_TOP_HOLDING_LEFT_ARM = [0.59642818, 0.36619909, 1.3, -2.00408877, 1.81074355, -1.95737387, 1.8315577]
+LOWER_TOP_HOLDING_LEFT_ARM = [0.78678281, 1.00150856, 1.5, -2.02697131, 2.51282656, -1.9880726, 2.15496453]
+
+SIDE_HOLDING_LEFT_ARM = [0.39277395, 0.33330058, 0., -1.52238431, 2.72170996, -1.21946936, -2.98914779]
+LOW_HOLDING_LEFT_ARM = [0.39277395, 1.09703207, 0., -1.28959056, 2.00351198, -0.43522285, -2.04193583]
+LOW_INSIDE_HOLDING_LEFT_ARM = [1.45450906, 0.97548138, 2.4, -1.84560467, -1.84637587, -0.97654187, 1.36006987]
+WIDE_HOLDING_LEFT_ARM = [0.89388633, 0.98496515, 0., -1.40566817, 1.88789915, -0.96213752, -2.09185575]
+FAR_HOLDING_LEFT_ARM = [0.84600108, 1.27597555, 1.1, -1.54004262, -2.19663412, -0.28231813, 1.94687274]
+
+if USE_GRASP_APPROACH == GRASP_APPROACHES.TOP:
+  HOLDING_LEFT_ARM = TOP_HOLDING_LEFT_ARM
+else:
+  HOLDING_LEFT_ARM = SIDE_HOLDING_LEFT_ARM
+#REST_LEFT_ARM = [2.13539289, 1.29629967, 3.74999698, -0.15000005, 10000., -0.10000004, 10000.]
+REST_LEFT_ARM = [2.135, 1.296, 3.749, -0.16, 10000., -0.10000004, 10000.]
+
+# Offsets
+REGION_Z_OFFSET = 1e-4 # .002
+BODY_Z_OFFSET = 1e-5 # .001
+REGION_PLACEMENT_Z_OFFSET = 1e-3 # .003
+BODY_PLACEMENT_Z_OFFSET = 1e-3 # .001
+
+# PAP
+PAP_MAX_FAILURES = 15
+SYMMETRICAL_PAPS = True
+
+# Push
+PUSH_MAX_DISTANCE = .3 # .5 seems to be too far
+LINEAR_PUSH_MAX_FAILURES = 4
+PUSH_MAX_FAILURES = 30
+
+# Motion Planning
+RRT_ITERATIONS = 20
+RRT_RESTARTS = 2
+RRT_SMOOTHING = 20
+
+#FFROB = True # Want higher quality primitives
+#if FFROB:
+#  APPROACH_DISTANCE = .2
+#  RRT_SMOOTHING = 50
+
+# Region colors
+transparency = .5
+FLOOR_COLOR = (.82,.70,.55,transparency)
+TABLE_COLOR = (.55,.27,.075,transparency)
+SINK_COLOR = (1,1,1,transparency)
+STOVE_COLOR = (0,0,0,transparency)
