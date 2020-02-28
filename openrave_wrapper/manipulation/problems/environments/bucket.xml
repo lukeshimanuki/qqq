@@ -1,0 +1,29 @@
+<Environment>
+  <camtrans>0 -4 6</camtrans>
+  <camrotationaxis>-1 0 0 150</camrotationaxis>
+  <camfocal>0</camfocal>
+
+  <Robot file="robots/pr2-beta-static.zae">
+    <translation>-1.5 0 0.075</translation>
+  </Robot>
+
+  <KinBody name="floorwalls">
+    <Body type="static">
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <extents>2.5 2.5 0.005</extents>
+        <translation>0 0 -0.005</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+
+  <KinBody name="table1" file="../pr_bodies/data/objects/bin.kinbody.xml">
+    <!--Translation>0 0 0.1</-Translation-->
+      <Translation>0 0 0.25</Translation>
+  </KinBody>
+
+      <!--KinBody name="table1" file="models/objects/recyclingbin.iv">
+    <Translation>0 0 0.01</Translation>
+  </KinBody-->
+</Environment>

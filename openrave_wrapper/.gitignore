@@ -1,0 +1,10 @@
+*.pyc
+**/*.pyc
+.idea
+logs/
+.DS_Store
+**/.DS_Store
+manipulation/problems/ycb/
+manipulation/problems/pr_bodies/
+simulations/
+*.swp

@@ -1,0 +1,107 @@
+<Environment>
+  <camtrans>0 -4 6</camtrans>
+  <camrotationaxis>-1 0 0 150</camrotationaxis>
+  <camfocal>0</camfocal>
+
+  <Robot file="robots/pr2-beta-static.zae">
+    <translation>0 0 0.075</translation>
+  </Robot>
+
+  <KinBody name="floorwalls">
+    <Body type="static">
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <extents>2.5 2.5 0.005</extents>
+        <translation>0 0 -0.005</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 -2.5 0.2</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 2.5 0.2</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>2.5 0 0.2</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>-2.5 0 0.2</translation>
+        <diffuseColor>.82 .70 .55</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+
+  <KinBody name="table1" file="models/furniture/rolly-table.iv">
+    <Translation>1.75 0 0</Translation>
+    <rotationaxis>1 0 0 90</rotationaxis>
+  </KinBody>
+
+   <KinBody name="plate1" file="data/jsk-plate.zae">
+    <Translation>1.75 -.45 .7</Translation>
+    <rotationaxis>1 0 0 0</rotationaxis>
+  </KinBody>
+
+   <KinBody name="plate2" file="data/jsk-plate.zae">
+    <Translation>1.75 .45 .7</Translation>
+    <rotationaxis>1 0 0 0</rotationaxis>
+  </KinBody>
+
+    <!--KinBody name="champagne" file="models/objects/champagne.iv">
+    <Translation>1.75 0 .7</Translation>
+    <rotationaxis>1 0 0 90</rotationaxis>
+  </KinBody-->
+
+   <KinBody name="chair1" file="models/furniture/rolly-chair.iv">
+    <Translation>1.8 -.75 0</Translation>
+    <rotationmat>-1 0 0 0 0 1 0 1 0</rotationmat>
+  </KinBody>
+
+   <KinBody name="chair2" file="models/furniture/rolly-chair.iv">
+    <Translation>1.7 .75 0</Translation>
+    <rotationmat>1 0 0 0 0 -1 0 1 0</rotationmat>
+  </KinBody>
+
+  <KinBody name="shelves" file="data/ikeashelf.kinbody.xml">
+    <Translation>-1.5 1.75 0</Translation>
+    <rotationaxis>0 0 1 -90</rotationaxis>
+  </KinBody>
+
+    <!--http://www.wolframalpha.com/input/?i=%5B%5B1,+0,+0%5D,+%5B0,+0,+1%5D,+%5B0,+-1,+0%5D%5D*%5B%5B0,+-1,+0%5D,+%5B1,+0,+0%5D,+%5B0,+0,+1%5D%5D-->
+   <!--KinBody name="shelves" file="data/shelf.kinbody.xml">
+    <Translation>-1 1.75 0</Translation>
+     <rotationmat>0 0 -1 1 0 0 0 -1 0</rotationmat>
+  </KinBody-->
+
+    <!--KinBody name="shelves" file="models/furniture/simpleShelves.iv">
+    <Translation>-2 0 0</Translation>
+    <rotationaxis>1 0 0 90</rotationaxis>
+  </KinBody-->
+
+    <!--KinBody name="shelves" file="models/furniture/wallShelves.iv">
+    <Translation>-2 0 0</Translation>
+    <rotationaxis>1 0 0 90</rotationaxis>
+  </KinBody-->
+
+  <!--modelsdir>../pr_bodies/data/kitchen</modelsdir-->
+  <KinBody name="washer" file="../pr_bodies/data/kitchen/prkitchen_dishwasher.kinbody.xml">
+    <Translation>-.5 1.75 0</Translation>
+    <rotationaxis>0 0 1 -90</rotationaxis>
+  </KinBody>
+
+    <KinBody name="kitchen_table" file="data/ikeatable.kinbody.xml">
+    <Translation>.5 1.75 0.7479</Translation>
+    <rotationaxis>0 0 1 90</rotationaxis>
+  </KinBody>
+
+  <KinBody name="microwave" file="../pr_bodies/data/kitchen/prkitchen_microwave.kinbody.xml">
+    <Translation>.5 1.75 0.72</Translation>
+    <rotationaxis>0 0 1 90</rotationaxis>
+  </KinBody>
+</Environment>
