@@ -32,6 +32,9 @@ RUN pip install --upgrade --ignore-installed numpy==1.14.5 scipy==1.1.0 pybullet
 RUN git clone git://github.com/caelan/pddlstream.git
 RUN cd pddlstream && git checkout d7645b96906e9c6167af631fb9dc16e4b784d61d && git submodule update --init --recursive && ./FastDownward/build.py
 
+# minio client
+RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x mc && mv mc /usr/bin
+
 # copy qqq
 COPY . /qqq
 
