@@ -33,6 +33,7 @@ RUN git clone git://github.com/caelan/pddlstream.git
 RUN cd pddlstream && git checkout d7645b96906e9c6167af631fb9dc16e4b784d61d && git submodule update --init --recursive && ./FastDownward/build.py
 
 # minio client
+RUN apt-get -y install --no-install-recommends wget
 RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x mc && mv mc /usr/bin
 
 # copy qqq
